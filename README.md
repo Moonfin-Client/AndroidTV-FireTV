@@ -24,6 +24,13 @@ Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted 
 - Smooth crossfade transitions as items change, with matching backdrop images
 - Height and positioning tuned for viewing from the couch
 
+### 🧭 Dynamic Navigation Toolbar
+- Quick access home button (house icon) and search (magnifying glass)
+- Shuffle button for instant random movie/TV show discovery
+- Dynamic library buttons automatically populate based on your Jellyfin libraries
+- One-click navigation to any library or collection directly from the toolbar
+- Cleaner icon-based design for frequently used actions
+
 ### 📊 Enhanced Details Screen
 - Metadata organized into clear sections: genres, directors, writers, studios, and runtime
 - Taglines displayed above the description where available
@@ -43,9 +50,9 @@ Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted 
 
 ## Screenshots
 
-<img width="1920" height="1080" alt="Screenshot_20251120_191359" src="https://github.com/user-attachments/assets/8c356be0-49f1-4113-ab7a-e4e90dee812f" />
+<img width="1920" height="1080" alt="Screenshot_20251121_001408" src="https://github.com/user-attachments/assets/4f244266-f945-467d-be78-267d34c33256" />
 
-<img width="1920" height="1080" alt="Screenshot_20251120_191506" src="https://github.com/user-attachments/assets/f27f90d9-8e74-479f-a632-0fd57e31ae3e" />
+<img width="1920" height="1080" alt="Screenshot_20251121_001419" src="https://github.com/user-attachments/assets/47e60727-608d-4b24-a03f-cf836d3fca76" />
 
 <img width="1920" height="1080" alt="Screenshot_20251120_191533" src="https://github.com/user-attachments/assets/02fdbb8f-a109-4bcd-81b6-fe0c3a9bf3e9" />
 

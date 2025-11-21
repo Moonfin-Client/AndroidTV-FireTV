@@ -30,6 +30,7 @@ class HomeFragment : Fragment() {
 	private var infoRowView: SimpleInfoRowView? = null
 	private var summaryView: TextView? = null
 	private var backgroundImage: ImageView? = null
+	private var rowsFragment: HomeRowsFragment? = null
 
 	override fun onCreateView(
 		inflater: LayoutInflater,
@@ -60,7 +61,7 @@ class HomeFragment : Fragment() {
 		super.onViewCreated(view, savedInstanceState)
 
 		// Observe selected item state from HomeRowsFragment
-		val rowsFragment = childFragmentManager.findFragmentById(R.id.rowsFragment) as? HomeRowsFragment
+		rowsFragment = childFragmentManager.findFragmentById(R.id.rowsFragment) as? HomeRowsFragment
 
 		rowsFragment?.selectedItemStateFlow
 			?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
@@ -71,6 +72,14 @@ class HomeFragment : Fragment() {
 				
 				// Update info row with metadata - simple property assignment
 				infoRowView?.setItem(state.baseItem)
+			}
+			?.launchIn(lifecycleScope)
+
+		// Observe selected row position to hide media bar backdrop when moving to other rows
+		rowsFragment?.selectedPositionFlow
+			?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+			?.onEach { position ->
+				updateMediaBarBackground()
 			}
 			?.launchIn(lifecycleScope)
 
@@ -93,42 +102,43 @@ class HomeFragment : Fragment() {
 	}
 
 	private fun updateMediaBarBackground() {
+		val state = mediaBarViewModel.state.value
 		val isFocused = mediaBarViewModel.isFocused.value
+		val selectedPosition = rowsFragment?.selectedPositionFlow?.value ?: -1
 		
-		if (isFocused) {
-			// Show background and logo when media bar is focused
-			val state = mediaBarViewModel.state.value
+		// Determine if we should show media bar content
+		// Show if: media bar is focused OR we're at position 0 (media bar row) OR position is -1 (toolbar/no selection)
+		val shouldShowMediaBar = isFocused || selectedPosition == 0 || selectedPosition == -1
+		
+		if (state is org.jellyfin.androidtv.ui.home.mediabar.MediaBarState.Ready && shouldShowMediaBar) {
 			val playbackState = mediaBarViewModel.playbackState.value
+			val currentItem = state.items.getOrNull(playbackState.currentIndex)
+			val backdropUrl = currentItem?.backdropUrl
+			val logoUrl = currentItem?.logoUrl
 			
-			if (state is org.jellyfin.androidtv.ui.home.mediabar.MediaBarState.Ready) {
-				val currentItem = state.items.getOrNull(playbackState.currentIndex)
-				val backdropUrl = currentItem?.backdropUrl
-				val logoUrl = currentItem?.logoUrl
-				
-				// Update backdrop with smooth crossfade transition
-				if (backdropUrl != null) {
-					backgroundImage?.isVisible = true
-					backgroundImage?.load(backdropUrl) {
-						crossfade(400) // 400ms crossfade - faster and smoother
-					}
-				} else {
-					backgroundImage?.isVisible = false
+			// Show background if we have a backdrop URL
+			if (backdropUrl != null) {
+				backgroundImage?.isVisible = true
+				backgroundImage?.load(backdropUrl) {
+					crossfade(400) // 400ms crossfade - faster and smoother
 				}
-				
-				// Update logo with smooth crossfade - show logo if available, otherwise show title text
-				if (logoUrl != null) {
-					logoView?.isVisible = true
-					titleView?.isVisible = false
-					logoView?.load(logoUrl) {
-						crossfade(300) // 300ms crossfade - faster and smoother
-					}
-				} else {
-					logoView?.isVisible = false
-					titleView?.isVisible = true
+			} else {
+				backgroundImage?.isVisible = false
+			}
+			
+			// Show logo if available, otherwise show title
+			if (logoUrl != null) {
+				logoView?.isVisible = true
+				titleView?.isVisible = false
+				logoView?.load(logoUrl) {
+					crossfade(300) // 300ms crossfade - faster and smoother
 				}
+			} else {
+				logoView?.isVisible = false
+				titleView?.isVisible = true
 			}
 		} else {
-			// Hide background and logo when media bar loses focus, restore title
+			// Hide background and logo when on other rows
 			backgroundImage?.isVisible = false
 			logoView?.isVisible = false
 			titleView?.isVisible = true
@@ -142,5 +152,6 @@ class HomeFragment : Fragment() {
 		summaryView = null
 		infoRowView = null
 		backgroundImage = null
+		rowsFragment = null
 	}
 }

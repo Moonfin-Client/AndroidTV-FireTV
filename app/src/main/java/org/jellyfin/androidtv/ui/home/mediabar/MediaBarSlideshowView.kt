@@ -57,7 +57,7 @@ fun MediaBarSlideshowView(
 	Box(
 		modifier = modifier
 			.fillMaxWidth()
-			.height(217.dp) // Reduced ~10% from 241dp
+			.height(235.dp) // Increased 8% from 217dp
 			.onFocusChanged { focusState ->
 				viewModel.setFocused(focusState.hasFocus)
 			}
@@ -101,31 +101,12 @@ fun MediaBarSlideshowView(
 				LoadingView()
 			}
 			is MediaBarState.Ready -> {
-				// Show only the logo, not the backdrop image (backdrop shown in background)
-				if (currentState.items.isNotEmpty()) {
-					val currentItem = currentState.items.getOrNull(playbackState.currentIndex)
-					if (currentItem != null) {
-						// Logo image only
-						currentItem.logoUrl?.let { url ->
-							AsyncImage(
-								model = url,
-								contentDescription = "${currentItem.title} logo",
-								contentScale = ContentScale.Fit,
-								modifier = Modifier
-									.align(Alignment.BottomStart)
-									.padding(start = 43.dp, bottom = 198.dp)
-									.width(360.dp)
-									.height(135.dp)
-							)
-						}
-					}
-				}
-
+				// Logo and backdrop are managed by HomeFragment
 				// Media info overlay (with padding)
 				Box(
 					modifier = Modifier
 						.align(Alignment.BottomStart)
-						.padding(horizontal = 43.dp, vertical = 29.dp)
+						.padding(horizontal = 43.dp, vertical = 5.dp)
 				) {
 					val item = currentState.items.getOrNull(playbackState.currentIndex)
 					if (item != null) {
@@ -137,11 +118,11 @@ fun MediaBarSlideshowView(
 				
 				// Navigation arrows (without padding, close to edges, raised by 40%)
 				if (currentState.items.size > 1) {
-					// Left arrow - closer to left edge, raised 40%
+					// Left arrow - closer to left edge
 					Box(
 						modifier = Modifier
 							.align(Alignment.TopStart)
-							.padding(start = 16.dp, top = 20.dp)
+							.padding(start = 16.dp, top = 0.dp)
 							.size(48.dp)
 							.background(Color.Black.copy(alpha = 0.3f), CircleShape),
 						contentAlignment = Alignment.Center
@@ -153,11 +134,11 @@ fun MediaBarSlideshowView(
 						)
 					}
 					
-					// Right arrow - closer to right edge, raised 40%
+					// Right arrow - closer to right edge
 					Box(
 						modifier = Modifier
 							.align(Alignment.TopEnd)
-							.padding(end = 16.dp, top = 20.dp)
+							.padding(end = 16.dp, top = 0.dp)
 							.size(48.dp)
 							.background(Color.Black.copy(alpha = 0.3f), CircleShape),
 						contentAlignment = Alignment.Center
