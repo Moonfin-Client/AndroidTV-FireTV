@@ -52,9 +52,11 @@ interface ServerRepository {
 	suspend fun deleteServer(server: UUID): Boolean
 
 	companion object {
-		val minimumServerVersion = Jellyfin.minimumVersion.copy(build = null)
+		// Minimum supported server version for the app (relaxed to allow 10.10.x series).
+		val minimumServerVersion = ServerVersion(10, 10, 0)
 		val recommendedServerVersion = Jellyfin.apiVersion.copy(build = null)
 
+		// Servers older than this will show an "update soon" notification.
 		val upcomingMinimumServerVersion = ServerVersion(10, 11, 0)
 	}
 }

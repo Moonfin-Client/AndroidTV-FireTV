@@ -3,6 +3,7 @@ package org.jellyfin.androidtv.ui.home.mediabar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +39,7 @@ class MediaBarSlideshowViewModel(
 	val isFocused: StateFlow<Boolean> = _isFocused.asStateFlow()
 
 	private var items: List<MediaBarSlideItem> = emptyList()
+	private var autoAdvanceJob: Job? = null
 
 	init {
 		loadSlideshowItems()
@@ -144,14 +146,20 @@ class MediaBarSlideshowViewModel(
 	 * Start automatic slideshow playback
 	 */
 	private fun startAutoPlay() {
-		viewModelScope.launch {
-			while (true) {
-				delay(config.shuffleIntervalMs)
-				if (!_playbackState.value.isPaused && !_playbackState.value.isTransitioning) {
-					nextSlide()
-				}
+		autoAdvanceJob?.cancel()
+		autoAdvanceJob = viewModelScope.launch {
+			delay(config.shuffleIntervalMs)
+			if (!_playbackState.value.isPaused && !_playbackState.value.isTransitioning) {
+				nextSlide()
 			}
 		}
+	}
+	
+	/**
+	 * Reset the auto-advance timer
+	 */
+	private fun resetAutoAdvanceTimer() {
+		startAutoPlay()
 	}
 
 	/**
@@ -171,6 +179,8 @@ class MediaBarSlideshowViewModel(
 		viewModelScope.launch {
 			delay(config.fadeTransitionDurationMs)
 			_playbackState.value = _playbackState.value.copy(isTransitioning = false)
+			// Reset the auto-advance timer after manual or automatic navigation
+			resetAutoAdvanceTimer()
 		}
 	}
 
@@ -191,6 +201,8 @@ class MediaBarSlideshowViewModel(
 		viewModelScope.launch {
 			delay(config.fadeTransitionDurationMs)
 			_playbackState.value = _playbackState.value.copy(isTransitioning = false)
+			// Reset the auto-advance timer after manual navigation
+			resetAutoAdvanceTimer()
 		}
 	}
 

@@ -60,9 +60,11 @@
             android:fontFamily="sans-serif-light"
             android:maxLines="2"
             android:textSize="30sp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
             app:layout_constraintBottom_toTopOf="@id/fdMainInfoRow"
-            app:layout_constraintEnd_toEndOf="@id/guide_right_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start"
             tools:text="fdTitle" />
 
         <LinearLayout
@@ -71,17 +73,21 @@
             android:layout_height="20sp"
             android:dividerPadding="4sp"
             android:orientation="horizontal"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
             app:layout_constraintBottom_toTopOf="@id/fdGenreRow"
-            app:layout_constraintEnd_toEndOf="@id/guide_right_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start" />
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start" />
 
         <TextView
             android:id="@+id/fdGenreRow"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
             app:layout_constraintBottom_toTopOf="@id/guide_top"
-            app:layout_constraintEnd_toEndOf="@id/guide_right_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start"
             tools:text="fdGenreRow" />
 
         <!-- Left -->
@@ -172,8 +178,10 @@
             android:textStyle="italic"
             android:fontFamily="sans-serif-light"
             android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="@id/guide_main_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start"
             app:layout_constraintTop_toBottomOf="@id/fdGenreRow"
             tools:text="A love story unlike any other"
             tools:visibility="visible" />
@@ -188,8 +196,10 @@
             android:fontFamily="sans-serif-light"
             android:maxLines="6"
             android:textSize="16sp"
-            app:layout_constraintEnd_toEndOf="@id/guide_main_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start"
             app:layout_constraintTop_toBottomOf="@id/fdTagline"
             tools:text="fdSummaryText" />
 
@@ -200,12 +210,13 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:orientation="vertical"
-            app:layout_constraintEnd_toEndOf="@id/guide_right_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start"
             app:layout_constraintTop_toBottomOf="@id/fdSummaryText">
 
             <!-- Genres -->
-                    android:layout_width="100dp"
             <!-- Genres -->
             <LinearLayout
                 android:id="@+id/fdGenresGroup"
@@ -382,8 +393,9 @@
             android:divider="@drawable/blank10x10"
             android:orientation="horizontal"
             android:showDividers="none"
-            app:layout_constraintEnd_toEndOf="@id/guide_main_end"
-            app:layout_constraintStart_toStartOf="@id/guide_main_start"
+            android:gravity="center_horizontal"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/fdMetadataGroup" />
 
         <!-- Right -->

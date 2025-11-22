@@ -233,6 +233,18 @@ private fun MainToolbar(
 					)
 				}
 				
+				// Genres button (masks icon)
+				IconButton(
+					onClick = {
+						navigationRepository.navigate(Destinations.allGenres)
+					},
+				) {
+					Icon(
+						imageVector = ImageVector.vectorResource(R.drawable.ic_masks),
+						contentDescription = stringResource(R.string.lbl_genres),
+					)
+				}
+				
 				// Dynamic library buttons
 				ProvideTextStyle(JellyfinTheme.typography.default.copy(fontWeight = FontWeight.Bold)) {
 					userViews.forEach { library ->

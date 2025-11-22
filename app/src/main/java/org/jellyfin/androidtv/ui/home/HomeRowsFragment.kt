@@ -228,12 +228,25 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 			// Reduce item prefetch distance for faster initial load
 			setItemViewCacheSize(20)
 			
-			setOnKeyListener { _, keyCode, event ->
-				if (event.action == android.view.KeyEvent.ACTION_DOWN && 
+			setOnKeyListener { v, keyCode, event ->
+				// Handle upward navigation from first row to toolbar
+				if (event.action == android.view.KeyEvent.ACTION_DOWN &&
 					keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP &&
 					selectedPosition == 0) {
-					// Consume the up key event when on the first row to prevent escaping to toolbar
-					true
+					// Try to move focus to the toolbar when on the first row
+					try {
+						val decor = requireActivity().window.decorView
+						val toolbarActions = decor.findViewById<View?>(org.jellyfin.androidtv.R.id.toolbar_actions)
+						if (toolbarActions != null && toolbarActions.isFocusable) {
+							toolbarActions.requestFocus()
+							return@setOnKeyListener true
+						}
+					} catch (t: Throwable) {
+						// ignore - fall through to allow default behavior
+					}
+
+					// Let the system handle the focus (do not consume) so it can move to title if possible
+					false
 				} else {
 					false
 				}

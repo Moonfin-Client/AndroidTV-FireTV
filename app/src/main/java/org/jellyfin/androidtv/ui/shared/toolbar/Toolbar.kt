@@ -2,21 +2,28 @@ package org.jellyfin.androidtv.ui.shared.toolbar
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.base.Text
@@ -100,10 +107,23 @@ fun ToolbarButtons(
 	modifier: Modifier = Modifier,
 	content: @Composable RowScope.() -> Unit,
 ) {
+	val scrollState = rememberScrollState()
+	val scope = rememberCoroutineScope()
+	
 	Row(
 		modifier = modifier
+			.horizontalScroll(scrollState)
 			.focusRestorer()
-			.focusGroup(),
+			.focusGroup()
+			.onFocusChanged { focusState ->
+				// Auto-scroll when focus moves to items near edges
+				if (focusState.hasFocus) {
+					scope.launch {
+						// Scroll a bit to reveal more items on either side
+						scrollState.scrollBy(0f)
+					}
+				}
+			},
 		horizontalArrangement = Arrangement.spacedBy(8.dp),
 		verticalAlignment = Alignment.CenterVertically,
 	) {

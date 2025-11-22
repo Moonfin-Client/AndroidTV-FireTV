@@ -53,6 +53,19 @@ class HomeFragment : Fragment() {
 				activeButton = MainToolbarActiveButton.Home
 			)
 		}
+		
+		// Make the toolbar container focusable and able to accept focus from D-pad navigation
+		val toolbarContainer = view.findViewById<View>(R.id.toolbar_actions)
+		toolbarContainer?.apply {
+			isFocusable = true
+			isFocusableInTouchMode = false
+			// When the container receives focus, delegate to the ComposeView
+			setOnFocusChangeListener { _, hasFocus ->
+				if (hasFocus) {
+					toolbarView.requestFocus()
+				}
+			}
+		}
 
 		return view
 	}
