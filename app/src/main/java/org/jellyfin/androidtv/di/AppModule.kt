@@ -22,11 +22,14 @@ import org.jellyfin.androidtv.data.repository.CustomMessageRepository
 import org.jellyfin.androidtv.data.repository.CustomMessageRepositoryImpl
 import org.jellyfin.androidtv.data.repository.ItemMutationRepository
 import org.jellyfin.androidtv.data.repository.ItemMutationRepositoryImpl
+import org.jellyfin.androidtv.data.repository.JellyseerrRepository
+import org.jellyfin.androidtv.data.repository.JellyseerrRepositoryImpl
 import org.jellyfin.androidtv.data.repository.NotificationsRepository
 import org.jellyfin.androidtv.data.repository.NotificationsRepositoryImpl
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepositoryImpl
 import org.jellyfin.androidtv.data.service.BackgroundService
+import org.jellyfin.androidtv.preference.JellyseerrPreferences
 import org.jellyfin.androidtv.integration.dream.DreamViewModel
 import org.jellyfin.androidtv.ui.InteractionTrackerViewModel
 import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowViewModel
@@ -141,14 +144,19 @@ val appModule = module {
 	single<SearchRepository> { SearchRepositoryImpl(get()) }
 	single<MediaSegmentRepository> { MediaSegmentRepositoryImpl(get(), get()) }
 
+	// Jellyseerr
+	single { JellyseerrPreferences(androidContext()) }
+	single<JellyseerrRepository> { JellyseerrRepositoryImpl(androidContext(), get()) }
+
 	viewModel { StartupViewModel(get(), get(), get(), get()) }
 	viewModel { UserLoginViewModel(get(), get(), get(), get(defaultDeviceInfo)) }
 	viewModel { ServerAddViewModel(get()) }
 	viewModel { NextUpViewModel(get(), get(), get()) }
 	viewModel { StillWatchingViewModel(get(), get(), get(), get()) }
 	viewModel { PhotoPlayerViewModel(get()) }
-	viewModel { SearchViewModel(get()) }
+	viewModel { SearchViewModel(get(), get(), get()) }
 	viewModel { DreamViewModel(get(), get(), get(), get(), get()) }
+	viewModel { org.jellyfin.androidtv.ui.jellyseerr.JellyseerrViewModel(get(), get()) }
 	single { MediaBarSlideshowViewModel(get(), get(), get()) } // Singleton so both fragments share the same instance
 
 	single { BackgroundService(get(), get(), get(), get(), get()) }
@@ -159,5 +167,7 @@ val appModule = module {
 	single { ReportingHelper(get(), get()) }
 	single<PlaybackHelper> { SdkPlaybackHelper(get(), get(), get(), get()) }
 
-	factory { (context: Context) -> SearchFragmentDelegate(context, get(), get()) }
+	factory { (context: Context) -> 
+		SearchFragmentDelegate(context, get(), get()) 
+	}
 }

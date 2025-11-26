@@ -31,8 +31,13 @@ class ImageHelper(
 		const val MAX_PRIMARY_IMAGE_HEIGHT: Int = 370
 	}
 
-	fun getImageUrl(image: JellyfinImage, fillWidth: Int, fillHeight: Int): String =
-		image.getUrl(api, null, null, fillWidth, fillHeight)
+	fun getImageUrl(image: JellyfinImage, fillWidth: Int, fillHeight: Int): String {
+		// Check if the tag is already a full URL (for external images like TMDB)
+		if (image.tag.startsWith("http")) {
+			return image.tag
+		}
+		return image.getUrl(api, null, null, fillWidth, fillHeight)
+	}
 
 	fun getImageAspectRatio(item: BaseItemDto, preferParentThumb: Boolean): Double {
 		if (preferParentThumb && (item.parentThumbItemId != null || item.seriesThumbImageTag != null)) {
@@ -70,6 +75,14 @@ class ImageHelper(
 		fillWidth: Int? = null,
 		fillHeight: Int? = null
 	): String? {
+		// Check if this is a Jellyseerr item with a direct TMDB URL
+		// (stored in imageTags as a full URL instead of just a tag)
+		val imageTag = item.imageTags?.get(ImageType.PRIMARY)
+		if (imageTag?.startsWith("http") == true) {
+			// This is an external URL (e.g., from TMDB for Jellyseerr items)
+			return imageTag
+		}
+		
 		val image = when {
 			preferParentThumb && item.type == BaseItemKind.EPISODE -> item.parentImages[ImageType.THUMB] ?: item.seriesThumbImage
 			item.type == BaseItemKind.SEASON -> item.seriesPrimaryImage

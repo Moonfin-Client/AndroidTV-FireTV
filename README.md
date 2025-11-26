@@ -9,6 +9,7 @@
 
 [![License](https://img.shields.io/github/license/Moonfin-Client/AndroidTV-FireTV.svg)](https://github.com/Moonfin-Client/AndroidTV-FireTV)
 [![Release](https://img.shields.io/github/release/Moonfin-Client/AndroidTV-FireTV.svg)](https://github.com/Moonfin-Client/AndroidTV-FireTV/releases)
+<a href="https://www.buymeacoffee.com/moonfin" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 30px !important;width: 108 !important;" ></a>
 
 > **[← Back to main Moonfin project](https://github.com/Moonfin-Client)**
 
@@ -18,36 +19,48 @@ Moonfin for Android TV is an enhanced fork of the official Jellyfin Android TV c
 
 Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted improvements for TV viewing:
 
+### 🎬 Jellyseerr Integration (Beta)
+**The first and only Jellyfin client with native Jellyseerr support!**
+- Browse trending, popular, and recommended movies/TV shows from TMDB
+- Request content in HD or 4K with a single button press
+- Smart season selection for TV shows where you pick exactly which seasons you want
+- Track all your requests (pending, approved, available) in one place
+- Seamless authentication using your Jellyfin credentials
+- Global search integration with Jellyseerr results appearing automatically alongside your Jellyfin media
+- Beautiful backdrop images for the Jellyseer discovery experience
+
+### 🛠️ Customizable Toolbar
+- **Toggle buttons** - Show/hide Shuffle, Genres, and Favorites buttons
+- **Shuffle filter** - Choose Movies only, TV Shows only, or Both
+- **Pill-shaped design** - Subtle rounded background with better contrast
+- Dynamic library buttons that scroll horizontally for 5+ libraries
+
 ### 🎬 Featured Media Bar
 - Rotating showcase of 15 random movies and TV shows right on your home screen
 - See ratings, genres, runtime, and a quick overview without extra clicks
 - Smooth crossfade transitions as items change, with matching backdrop images
 - Height and positioning tuned for viewing from the couch
 
-### 🧭 Dynamic Navigation Toolbar
+### 🧭 Enhanced Navigation
 - Quick access home button (house icon) and search (magnifying glass)
 - Shuffle button for instant random movie/TV show discovery
-- Dynamic library buttons automatically populate based on your Jellyfin libraries and scroll if there is more than 5
+- Genres menu to browse all media by genre in one place
+- Dynamic library buttons automatically populate based on your Jellyfin libraries
 - One-click navigation to any library or collection directly from the toolbar
 - Cleaner icon-based design for frequently used actions
 
-### 📊 Enhanced Details Screen
+### 📊 Improved Details Screen
 - Metadata organized into clear sections: genres, directors, writers, studios, and runtime
 - Taglines displayed above the description where available
 - Cast photos appear as circles for a cleaner look
 - Fits more useful information on screen without feeling cramped
 
-### 🏠 Improved Home Screen
-- Created a Genres menu to see all of your media in their respective genre in one place
-- Item details show up right in the row, no need to open every title to see what it is
-- Content is laid out more clearly so it's easier to find what you want
-- Buttons look better when not focused (transparent instead of distracting)
-
 ### 🎨 UI Polish
-- Tweaked colors, spacing, and text to look more modern
-- Icons and visual elements are consistent throughout
+- Item details show up right in the row, no need to open every title to see what it is
+- Buttons look better when not focused (transparent instead of distracting)
 - Better contrast makes text easier to read
 - Transitions and animations feel responsive
+- Consistent icons and visual elements throughout
 
 ## Screenshots
 <img width="1920" height="1080" alt="Screenshot_20251121_212941" src="https://github.com/user-attachments/assets/9984c400-950e-4954-b32b-bbea59fa7bf6" />
@@ -77,6 +90,17 @@ Download the latest APK from the [Releases page](https://github.com/Moonfin-Clie
 - Nvidia Shield TV
 - Amazon Fire TV / Fire TV Stick
 - Google TV (Chromecast with Google TV)
+
+### Jellyseerr Setup (Optional)
+To enable media discovery and requesting:
+
+1. Install and configure Jellyseerr on your network ([jellyseerr.dev](https://jellyseerr.dev))
+2. In Moonfin, go to **Settings → Jellyseerr**
+3. Enter your Jellyseerr server URL (e.g., `http://192.168.1.100:5055`)
+4. Click **Connect with Jellyfin** and enter your Jellyfin password
+5. Test the connection, then start discovering!
+
+Your session is saved securely and will reconnect automatically.
 
 ### Sideloading Instructions
 1. Enable "Unknown Sources" or "Install Unknown Apps" in your device settings

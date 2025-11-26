@@ -26,6 +26,13 @@ class UserPreferencesScreen : OptionsFragment() {
 			}
 
 			link {
+				setTitle(R.string.jellyseerr_settings)
+				setContent(R.string.jellyseerr_enabled_description)
+				icon = R.drawable.ic_jellyseerr_jellyfish
+				withFragment<JellyseerrPreferencesScreen>()
+			}
+
+			link {
 				setTitle(R.string.pref_playback)
 				setContent(R.string.pref_playback_description)
 				icon = R.drawable.ic_next

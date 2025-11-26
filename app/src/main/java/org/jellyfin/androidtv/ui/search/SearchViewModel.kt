@@ -10,12 +10,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.data.repository.JellyseerrRepository
+import org.jellyfin.androidtv.data.service.jellyseerr.toBaseItemDto
+import org.jellyfin.androidtv.preference.JellyseerrPreferences
 import org.jellyfin.sdk.model.api.BaseItemKind
+import timber.log.Timber
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 class SearchViewModel(
-	private val searchRepository: SearchRepository
+	private val searchRepository: SearchRepository,
+	private val jellyseerrRepository: JellyseerrRepository,
+	private val jellyseerrPreferences: JellyseerrPreferences,
 ) : ViewModel() {
 	companion object {
 		private val debounceDuration = 600.milliseconds
@@ -62,7 +68,7 @@ class SearchViewModel(
 		searchJob = viewModelScope.launch {
 			delay(debounce)
 
-			_searchResultsFlow.value = groups.map { (stringRes, itemKinds) ->
+			val jellyfinResults = groups.map { (stringRes, itemKinds) ->
 				async {
 					val result = searchRepository.search(trimmed, itemKinds)
 					val items = result.getOrNull().orEmpty()
@@ -70,6 +76,26 @@ class SearchViewModel(
 					SearchResultGroup(stringRes, items)
 				}
 			}.awaitAll()
+
+			// Add Jellyseerr results if enabled
+			val allResults = if (jellyseerrPreferences[JellyseerrPreferences.enabled]) {
+				try {
+					val jellyseerrResult = jellyseerrRepository.search(trimmed)
+					val jellyseerrItems = jellyseerrResult.getOrNull()?.results?.map { it.toBaseItemDto() } ?: emptyList()
+					if (jellyseerrItems.isNotEmpty()) {
+						listOf(SearchResultGroup(R.string.jellyseerr_search_results, jellyseerrItems)) + jellyfinResults
+					} else {
+						jellyfinResults
+					}
+				} catch (e: Exception) {
+					Timber.w(e, "Failed to search Jellyseerr")
+					jellyfinResults
+				}
+			} else {
+				jellyfinResults
+			}
+
+			_searchResultsFlow.value = allResults
 		}
 
 		return true

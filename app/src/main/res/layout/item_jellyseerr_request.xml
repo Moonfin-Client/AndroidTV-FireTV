@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:orientation="horizontal"
+	android:padding="16dp"
+	android:background="@color/grey"
+	android:layout_marginBottom="12dp">
+
+	<!-- Poster Image -->
+	<ImageView
+		android:id="@+id/poster_image"
+		android:layout_width="60dp"
+		android:layout_height="90dp"
+		android:scaleType="centerCrop"
+		android:background="@color/black"
+		android:layout_marginEnd="12dp"
+		android:contentDescription="@null" />
+
+	<!-- Content -->
+	<LinearLayout
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_weight="1"
+		android:orientation="vertical">
+
+	<!-- Title and Type -->
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:gravity="center_vertical"
+		android:layout_marginBottom="8dp">
+
+		<TextView
+			android:id="@+id/title_text"
+			android:layout_width="0dp"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:textSize="16sp"
+			android:textStyle="bold"
+			android:textColor="@color/white"
+			android:maxLines="2"
+			android:ellipsize="end"
+			tools:text="The Matrix" />
+
+		<TextView
+			android:id="@+id/type_text"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:textSize="12sp"
+			android:textStyle="bold"
+			android:textColor="@color/white"
+			android:background="@color/red"
+			android:paddingStart="8dp"
+			android:paddingEnd="8dp"
+			android:paddingTop="4dp"
+			android:paddingBottom="4dp"
+			android:layout_marginStart="8dp"
+			tools:text="MOVIE" />
+
+	</LinearLayout>
+
+	<!-- Status -->
+	<TextView
+		android:id="@+id/status_text"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:textSize="14sp"
+		android:textColor="@color/white"
+		android:layout_marginBottom="8dp"
+		tools:text="✓ Approved" />
+
+	<!-- Requested By -->
+	<TextView
+		android:id="@+id/requested_by_text"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:textSize="12sp"
+		android:textColor="@color/grey_light"
+		android:layout_marginBottom="4dp"
+		tools:text="Requested by: User" />
+
+		<!-- Date -->
+		<TextView
+			android:id="@+id/date_text"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:textSize="12sp"
+			android:textColor="@color/grey_light"
+			tools:text="Date: 2025-01-15" />
+
+	</LinearLayout>
+
+</LinearLayout>

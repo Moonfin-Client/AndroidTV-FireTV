@@ -16,6 +16,11 @@ import org.jellyfin.androidtv.ui.home.HomeFragment
 import org.jellyfin.androidtv.ui.itemdetail.FullDetailsFragment
 import org.jellyfin.androidtv.ui.itemdetail.ItemListFragment
 import org.jellyfin.androidtv.ui.itemdetail.MusicFavoritesListFragment
+import org.jellyfin.androidtv.ui.jellyseerr.DiscoverFragment
+import org.jellyfin.androidtv.ui.jellyseerr.MediaDetailsFragment
+import org.jellyfin.androidtv.ui.jellyseerr.PersonDetailsFragment
+import org.jellyfin.androidtv.ui.jellyseerr.RequestsFragment
+import org.jellyfin.androidtv.ui.jellyseerr.SettingsFragment as JellyseerrSettingsFragment
 import org.jellyfin.androidtv.ui.livetv.LiveTvGuideFragment
 import org.jellyfin.androidtv.ui.playback.AudioNowPlayingFragment
 import org.jellyfin.androidtv.ui.playback.CustomPlaybackOverlayFragment
@@ -152,5 +157,18 @@ object Destinations {
 
 	fun stillWatching(item: UUID) = fragmentDestination<StillWatchingFragment>(
 		NextUpFragment.ARGUMENT_ITEM_ID to item.toString()
+	)
+
+	// Jellyseerr
+	val jellyseerrDiscover = fragmentDestination<DiscoverFragment>()
+	val jellyseerrRequests = fragmentDestination<RequestsFragment>()
+	val jellyseerrSettings = fragmentDestination<JellyseerrSettingsFragment>()
+	
+	fun jellyseerrMediaDetails(itemJson: String) = fragmentDestination<MediaDetailsFragment>(
+		"item" to itemJson
+	)
+	
+	fun jellyseerrPersonDetails(personId: Int) = fragmentDestination<PersonDetailsFragment>(
+		"personId" to personId.toString()
 	)
 }

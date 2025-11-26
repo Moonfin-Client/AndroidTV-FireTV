@@ -1,6 +1,7 @@
 package org.jellyfin.androidtv.ui.shared.toolbar
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
@@ -8,15 +9,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.res.painterResource
@@ -109,22 +114,32 @@ fun ToolbarButtons(
 ) {
 	val scrollState = rememberScrollState()
 	val scope = rememberCoroutineScope()
-	
+	val pillShape = RoundedCornerShape(28.dp)
+
 	Row(
 		modifier = modifier
+			.background(
+				brush = Brush.verticalGradient(
+					colors = listOf(
+						Color.Gray.copy(alpha = 0.5f),
+						Color.Gray.copy(alpha = 0.5f)
+					)
+				),
+				shape = pillShape
+			)
+			.clip(pillShape)
+			.padding(horizontal = 8.dp, vertical = 0.dp)
 			.horizontalScroll(scrollState)
 			.focusRestorer()
 			.focusGroup()
 			.onFocusChanged { focusState ->
-				// Auto-scroll when focus moves to items near edges
 				if (focusState.hasFocus) {
 					scope.launch {
-						// Scroll a bit to reveal more items on either side
 						scrollState.scrollBy(0f)
 					}
 				}
 			},
-		horizontalArrangement = Arrangement.spacedBy(8.dp),
+		horizontalArrangement = Arrangement.spacedBy(0.dp),
 		verticalAlignment = Alignment.CenterVertically,
 	) {
 		JellyfinTheme(

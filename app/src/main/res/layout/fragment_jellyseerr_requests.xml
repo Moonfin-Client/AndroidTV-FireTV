@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@color/black">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:orientation="vertical"
+		android:padding="16dp">
+
+		<!-- Header -->
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:text="My Requests"
+			android:textSize="28sp"
+			android:textStyle="bold"
+			android:textColor="@color/white"
+			android:layout_marginBottom="16dp" />
+
+		<!-- Connection Status Warning -->
+		<LinearLayout
+			android:id="@+id/not_connected_warning"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:padding="16dp"
+			android:background="@color/red"
+			android:layout_marginBottom="16dp"
+			android:visibility="gone">
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="Jellyseerr Not Connected"
+				android:textSize="16sp"
+				android:textStyle="bold"
+				android:textColor="@color/white" />
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="Go to Settings to configure your server"
+				android:textSize="14sp"
+				android:textColor="@color/grey_light"
+				android:layout_marginTop="8dp" />
+
+		</LinearLayout>
+
+		<!-- Loading State -->
+		<LinearLayout
+			android:id="@+id/loading_state"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:orientation="vertical"
+			android:gravity="center"
+			android:visibility="gone">
+
+			<ProgressBar
+				android:layout_width="64dp"
+				android:layout_height="64dp"
+				android:layout_marginBottom="16dp" />
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="Loading requests..."
+				android:textSize="16sp"
+				android:textColor="@color/white"
+				android:gravity="center" />
+
+		</LinearLayout>
+
+		<!-- Requests List -->
+		<FrameLayout
+			android:layout_width="match_parent"
+			android:layout_height="0dp"
+			android:layout_weight="1">
+
+			<!-- Empty State -->
+			<LinearLayout
+				android:id="@+id/empty_state"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent"
+				android:orientation="vertical"
+				android:gravity="center"
+				android:visibility="gone">
+
+				<TextView
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:text="No Requests Yet"
+					android:textSize="18sp"
+					android:textStyle="bold"
+					android:textColor="@color/white"
+					android:gravity="center"
+					android:layout_marginBottom="8dp" />
+
+				<TextView
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:text="Submit requests from the Discover tab"
+					android:textSize="14sp"
+					android:textColor="@color/grey_light"
+					android:gravity="center" />
+
+			</LinearLayout>
+
+			<!-- Requests RecyclerView -->
+			<androidx.recyclerview.widget.RecyclerView
+				android:id="@+id/requests_list"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent"
+				android:clipToPadding="false" />
+
+		</FrameLayout>
+
+		<!-- Refresh Button -->
+		<Button
+			android:id="@+id/refresh_button"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="Refresh"
+			android:layout_gravity="center_horizontal"
+			android:layout_marginTop="20dp" />
+
+	</LinearLayout>
+
+</FrameLayout>

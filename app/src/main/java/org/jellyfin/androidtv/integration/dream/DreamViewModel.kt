@@ -83,7 +83,9 @@ class DreamViewModel(
 		.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
 
 	val content = combine(_mediaContent, _libraryContent) { mediaContent, libraryContent ->
-		mediaContent ?: libraryContent ?: DreamContent.Logo
+		val screensaverMode = userPreferences[UserPreferences.screensaverMode]
+		val fallbackContent = if (screensaverMode == "logo") DreamContent.Logo else libraryContent ?: DreamContent.Logo
+		mediaContent ?: fallbackContent
 	}.stateIn(
 		scope = viewModelScope,
 		started = SharingStarted.WhileSubscribed(),

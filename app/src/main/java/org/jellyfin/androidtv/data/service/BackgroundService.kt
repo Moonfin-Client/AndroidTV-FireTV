@@ -96,6 +96,20 @@ class BackgroundService(
 		loadBackgrounds(setOf(splashscreenUrl))
 	}
 
+	/**
+	 * Use a direct image URL as background (e.g., TMDB images for Jellyseerr).
+	 */
+	fun setBackgroundUrl(imageUrl: String, enableBlur: Boolean = true) {
+		// Check if backgrounds are enabled
+		if (!userPreferences[UserPreferences.backdropEnabled])
+			return clearBackgrounds()
+
+		// Set blur preference
+		_blurBackground.value = enableBlur
+
+		loadBackgrounds(setOf(imageUrl))
+	}
+
 	private fun loadBackgrounds(backdropUrls: Set<String>) {
 		if (backdropUrls.isEmpty()) return clearBackgrounds()
 

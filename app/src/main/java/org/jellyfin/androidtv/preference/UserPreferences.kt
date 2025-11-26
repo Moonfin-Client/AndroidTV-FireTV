@@ -56,6 +56,27 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var mediaManagementEnabled = booleanPreference("enable_media_management", false)
 
+		/* Toolbar Customization */
+		/**
+		 * Show shuffle button in toolbar
+		 */
+		var showShuffleButton = booleanPreference("pref_show_shuffle_button", true)
+
+		/**
+		 * Show genres button in toolbar
+		 */
+		var showGenresButton = booleanPreference("pref_show_genres_button", true)
+
+		/**
+		 * Show favorites button in toolbar
+		 */
+		var showFavoritesButton = booleanPreference("pref_show_favorites_button", true)
+
+		/**
+		 * Content type for shuffle button (movies, tv, or both)
+		 */
+		var shuffleContentType = stringPreference("pref_shuffle_content_type", "both")
+
 		/* Playback - General*/
 		/**
 		 * Maximum bitrate in megabit for playback.
@@ -206,6 +227,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 * Show screensaver in app
 		 */
 		var screensaverInAppEnabled = booleanPreference("screensaver_inapp_enabled", true)
+
+		/**
+		 * Screensaver mode (library or logo)
+		 */
+		var screensaverMode = stringPreference("pref_screensaver_mode", "library")
 
 		/**
 		 * Timeout before showing the screensaver in app, depends on [screensaverInAppEnabled].

@@ -76,6 +76,13 @@ public class ItemLauncher {
                     //swallow it
                 }
 
+                // Check if this is a Jellyseerr item and handle it specially
+                if ("jellyseerr".equals(baseItem.getServerId()) && baseItem.getTaglines() != null && !baseItem.getTaglines().isEmpty()) {
+                    String jellyseerrJson = baseItem.getTaglines().get(0);
+                    navigationRepository.getValue().navigate(Destinations.INSTANCE.jellyseerrMediaDetails(jellyseerrJson));
+                    return;
+                }
+
                 //specialized type handling
                 switch (baseItem.getType()) {
                     case USER_VIEW:

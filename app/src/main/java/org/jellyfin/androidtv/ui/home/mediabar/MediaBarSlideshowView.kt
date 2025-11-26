@@ -124,7 +124,7 @@ fun MediaBarSlideshowView(
 							.align(Alignment.TopStart)
 							.padding(start = 16.dp, top = 0.dp)
 							.size(48.dp)
-							.background(Color.Black.copy(alpha = 0.3f), CircleShape),
+							.background(Color.Gray.copy(alpha = 0.5f), CircleShape),
 						contentAlignment = Alignment.Center
 					) {
 						Text(
@@ -140,7 +140,7 @@ fun MediaBarSlideshowView(
 							.align(Alignment.TopEnd)
 							.padding(end = 16.dp, top = 0.dp)
 							.size(48.dp)
-							.background(Color.Black.copy(alpha = 0.3f), CircleShape),
+							.background(Color.Gray.copy(alpha = 0.5f), CircleShape),
 						contentAlignment = Alignment.Center
 					) {
 						Text(
@@ -172,8 +172,8 @@ private fun MediaInfoOverlay(
 			.background(
 				brush = Brush.verticalGradient(
 					colors = listOf(
-						Color.Black.copy(alpha = 0.25f),
-						Color.Black.copy(alpha = 0.15f)
+						Color.Gray.copy(alpha = 0.5f),
+						Color.Gray.copy(alpha = 0.5f)
 					)
 				),
 				shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
@@ -271,7 +271,7 @@ private fun LoadingView() {
 	Box(
 		modifier = Modifier
 			.fillMaxSize()
-			.background(Color.Black),
+			.background(Color.Gray),
 		contentAlignment = Alignment.Center
 	) {
 		Text(
@@ -287,7 +287,7 @@ private fun ErrorView(message: String) {
 	Box(
 		modifier = Modifier
 			.fillMaxSize()
-			.background(Color.Black.copy(alpha = 0.5f)),
+			.background(Color.Gray.copy(alpha = 0.5f)),
 		contentAlignment = Alignment.Center
 	) {
 		Text(

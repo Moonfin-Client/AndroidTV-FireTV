@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.auth.model.ApiClientErrorLoginState
 import org.jellyfin.androidtv.auth.model.AuthenticateMethod
 import org.jellyfin.androidtv.auth.model.AuthenticatedState
@@ -23,6 +24,8 @@ import org.jellyfin.androidtv.auth.model.ServerVersionNotSupported
 import org.jellyfin.androidtv.auth.model.User
 import org.jellyfin.androidtv.auth.store.AuthenticationPreferences
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
+import org.jellyfin.androidtv.data.repository.JellyseerrRepository
+import org.jellyfin.androidtv.preference.JellyseerrPreferences
 import org.jellyfin.androidtv.util.apiclient.JellyfinImage
 import org.jellyfin.androidtv.util.apiclient.JellyfinImageSource
 import org.jellyfin.androidtv.util.apiclient.getUrl
@@ -58,6 +61,8 @@ class AuthenticationRepositoryImpl(
 	private val userApiClient: ApiClient,
 	private val authenticationPreferences: AuthenticationPreferences,
 	private val defaultDeviceInfo: DeviceInfo,
+	private val jellyseerrRepository: JellyseerrRepository,
+	private val jellyseerrPreferences: JellyseerrPreferences,
 ) : AuthenticationRepository {
 	override fun authenticate(server: Server, method: AuthenticateMethod): Flow<LoginState> {
 		return when (method) {
@@ -94,6 +99,9 @@ class AuthenticationRepositoryImpl(
 			emit(ApiClientErrorLoginState(err))
 			return@flow
 		}
+
+		// After successful Jellyfin authentication, attempt Jellyseerr auto-login
+		tryJellyseerrAutoLogin(server, username, password)
 
 		emitAll(authenticateAuthenticationResult(server, result))
 	}.flowOn(Dispatchers.IO)
@@ -201,6 +209,52 @@ class AuthenticationRepositoryImpl(
 
 		return if (authStoreUser != null) authenticationStore.putUser(user.serverId, user.id, authStoreUser)
 		else false
+	}
+
+	/**
+	 * Attempt to automatically login to Jellyseerr using Jellyfin credentials.
+	 * This is called after successful Jellyfin authentication to provide a seamless single sign-on experience.
+	 * 
+	 * Note: The password is only held in memory temporarily and never stored on disk.
+	 * The Jellyseerr session is maintained via HTTP cookies stored by Ktor's PersistentCookiesStorage,
+	 * which persists across app restarts and updates. Users only need to login again after:
+	 * - Fresh install/reinstall (cookies cleared)
+	 * - Manual logout
+	 * - Cookie expiration (controlled by Jellyseerr server settings)
+	 */
+	private fun tryJellyseerrAutoLogin(server: Server, username: String, password: String) {
+		// Check if Jellyseerr is enabled and configured
+		val enabled = jellyseerrPreferences[JellyseerrPreferences.enabled]
+		val jellyseerrUrl = jellyseerrPreferences[JellyseerrPreferences.serverUrl]
+		
+		if (!enabled || jellyseerrUrl.isNullOrBlank()) {
+			Timber.d("Jellyseerr auto-login skipped: not enabled or configured")
+			return
+		}
+
+		// Launch async login attempt (non-blocking)
+		kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+			try {
+				Timber.d("Attempting Jellyseerr auto-login for user: $username")
+				val result = jellyseerrRepository.loginWithJellyfin(
+					username = username,
+					password = password,
+					jellyfinUrl = server.address,
+					jellyseerrUrl = jellyseerrUrl
+				)
+				
+				if (result.isSuccess) {
+					val user = result.getOrNull()
+					Timber.i("Jellyseerr auto-login successful for user: ${user?.username ?: username}")
+					// Cookie is automatically stored by PersistentCookiesStorage in JellyseerrHttpClient
+					// No need to store API key - cookie-based auth persists across app restarts
+				} else {
+					Timber.w("Jellyseerr auto-login failed: ${result.exceptionOrNull()?.message}")
+				}
+			} catch (err: Exception) {
+				Timber.w(err, "Jellyseerr auto-login exception")
+			}
+		}
 	}
 
 	override fun getUserImageUrl(server: Server, user: User): String? = user.imageTag?.let { primaryImageTag ->

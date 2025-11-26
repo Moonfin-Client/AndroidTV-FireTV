@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guide_top"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_begin="120dp" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guide_right_start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_end="220dp" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guide_right_end"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_end="50dp" />
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/fdTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-light"
+            android:maxLines="2"
+            android:textSize="30sp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:layout_marginBottom="8dp"
+            app:layout_constraintBottom_toTopOf="@id/fdMainInfoRow"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start"
+            tools:text="Charon" />
+
+        <!-- Main Info Row (Year, Rating, Type) -->
+        <LinearLayout
+            android:id="@+id/fdMainInfoRow"
+            android:layout_width="0dp"
+            android:layout_height="20sp"
+            android:dividerPadding="4sp"
+            android:orientation="horizontal"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:layout_marginBottom="8dp"
+            app:layout_constraintBottom_toTopOf="@id/guide_top"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start" />
+
+        <!-- Tagline -->
+        <TextView
+            android:id="@+id/fdTagline"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textSize="16sp"
+            android:textStyle="italic"
+            android:fontFamily="sans-serif-light"
+            android:visibility="gone"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start"
+            app:layout_constraintTop_toBottomOf="@id/guide_top"
+            tools:text="tagline"
+            tools:visibility="visible" />
+
+        <!-- Description/Overview -->
+        <TextView
+            android:id="@+id/fdSummaryText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-light"
+            android:maxLines="6"
+            android:textSize="16sp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start"
+            app:layout_constraintTop_toBottomOf="@id/fdTagline"
+            tools:text="Description" />
+
+        <!-- Grouped Metadata Section -->
+        <LinearLayout
+            android:id="@+id/fdMetadataGroup"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start"
+            app:layout_constraintTop_toBottomOf="@id/fdSummaryText">
+
+            <!-- Genres -->
+            <LinearLayout
+                android:id="@+id/fdGenresGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="Genres"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:alpha="0.7" />
+
+                <TextView
+                    android:id="@+id/fdGenresContent"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="14sp"
+                    tools:text="Drama, Fantasy" />
+            </LinearLayout>
+
+            <!-- Director -->
+            <LinearLayout
+                android:id="@+id/fdDirectorGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="Director"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:alpha="0.7" />
+
+                <TextView
+                    android:id="@+id/fdDirectorContent"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="14sp"
+                    tools:text="Christopher Nolan" />
+            </LinearLayout>
+
+            <!-- Studio/Network -->
+            <LinearLayout
+                android:id="@+id/fdStudioGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="Studio"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:alpha="0.7" />
+
+                <TextView
+                    android:id="@+id/fdStudioContent"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="14sp"
+                    tools:text="Warner Bros." />
+            </LinearLayout>
+
+            <!-- Release Date -->
+            <LinearLayout
+                android:id="@+id/fdReleaseDateGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="Release Date"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:alpha="0.7" />
+
+                <TextView
+                    android:id="@+id/fdReleaseDateContent"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="14sp"
+                    tools:text="July 21, 2023" />
+            </LinearLayout>
+
+            <!-- Runtime -->
+            <LinearLayout
+                android:id="@+id/fdRuntimeGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="Runtime"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:alpha="0.7" />
+
+                <TextView
+                    android:id="@+id/fdRuntimeContent"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="14sp"
+                    tools:text="2h 30m" />
+            </LinearLayout>
+
+            <!-- Status (Content Status - Released, Returning Series, etc.) -->
+            <LinearLayout
+                android:id="@+id/fdStatusGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="Status"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:alpha="0.7" />
+
+                <TextView
+                    android:id="@+id/fdStatusContent"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="14sp"
+                    tools:text="Returning Series" />
+            </LinearLayout>
+
+            <!-- Availability (Jellyseerr Request Status) -->
+            <LinearLayout
+                android:id="@+id/fdAvailabilityGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="Availability"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:alpha="0.7" />
+
+                <TextView
+                    android:id="@+id/fdAvailabilityContent"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="14sp"
+                    tools:text="Available" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Button Row -->
+        <LinearLayout
+            android:id="@+id/fdButtonRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:divider="@drawable/blank10x10"
+            android:orientation="horizontal"
+            android:showDividers="middle"
+            android:gravity="center_horizontal"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/fdMetadataGroup" />
+
+		<!-- Poster Image (right side) -->
+		<org.jellyfin.androidtv.ui.AsyncImageView
+			android:id="@+id/mainImage"
+			android:layout_width="0dp"
+			android:layout_height="0dp"
+			android:scaleType="centerCrop"
+			android:contentDescription="@null"
+			android:background="@drawable/shape_card_image_background"
+			android:layout_marginBottom="-60dp"
+			android:focusable="false"
+			android:focusableInTouchMode="false"
+			app:layout_constraintStart_toStartOf="@id/guide_right_start"
+			app:layout_constraintEnd_toEndOf="@id/guide_right_end"
+			app:layout_constraintTop_toTopOf="@id/guide_top"
+			app:layout_constraintBottom_toBottomOf="@id/fdButtonRow"
+			tools:src="@drawable/app_logo" />    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</RelativeLayout>

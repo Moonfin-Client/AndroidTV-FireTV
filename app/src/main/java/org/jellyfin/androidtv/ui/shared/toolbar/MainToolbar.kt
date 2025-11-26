@@ -3,7 +3,9 @@ package org.jellyfin.androidtv.ui.shared.toolbar
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,11 +15,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
@@ -35,6 +39,7 @@ import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.repository.UserRepository
+import org.jellyfin.androidtv.constant.ShuffleContentType
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.ui.NowPlayingComposable
 import org.jellyfin.androidtv.ui.base.Icon
@@ -50,6 +55,9 @@ import org.jellyfin.androidtv.ui.navigation.ActivityDestinations
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.MediaManager
+import org.jellyfin.androidtv.preference.UserSettingPreferences
+import org.jellyfin.androidtv.preference.JellyseerrPreferences
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.primaryImage
 import org.jellyfin.sdk.api.client.ApiClient
@@ -66,6 +74,7 @@ enum class MainToolbarActiveButton {
 	Home,
 	Library,
 	Search,
+	Jellyseerr,
 
 	None,
 }
@@ -79,11 +88,30 @@ fun MainToolbar(
 	val userRepository = koinInject<UserRepository>()
 	val api = koinInject<ApiClient>()
 	val userViewsRepository = koinInject<UserViewsRepository>()
+	val jellyseerrPreferences = koinInject<JellyseerrPreferences>()
+	val userPreferences = koinInject<UserPreferences>()
 	val scope = rememberCoroutineScope()
 
 	// Prevent user image to disappear when signing out by skipping null values
 	val currentUser by remember { userRepository.currentUser.filterNotNull() }.collectAsState(null)
 	val userImage = remember(currentUser) { currentUser?.primaryImage?.getUrl(api) }
+	
+	var jellyseerrEnabled by remember { mutableStateOf(false) }
+	LaunchedEffect(Unit) {
+		jellyseerrEnabled = jellyseerrPreferences[JellyseerrPreferences.enabled]
+	}
+	
+	// Load toolbar customization preferences
+	var showShuffleButton by remember { mutableStateOf(true) }
+	var showGenresButton by remember { mutableStateOf(true) }
+	var showFavoritesButton by remember { mutableStateOf(true) }
+	var shuffleContentType by remember { mutableStateOf("both") }
+	LaunchedEffect(Unit) {
+		showShuffleButton = userPreferences[UserPreferences.showShuffleButton] ?: true
+		showGenresButton = userPreferences[UserPreferences.showGenresButton] ?: true
+		showFavoritesButton = userPreferences[UserPreferences.showFavoritesButton] ?: true
+		shuffleContentType = userPreferences[UserPreferences.shuffleContentType] ?: "both"
+	}
 	
 	// Load user views/libraries
 	var userViews by remember { mutableStateOf<List<BaseItemDto>>(emptyList()) }
@@ -98,6 +126,11 @@ fun MainToolbar(
 		activeButton = activeButton,
 		activeLibraryId = activeLibraryId,
 		userViews = userViews,
+		jellyseerrEnabled = jellyseerrEnabled,
+		showShuffleButton = showShuffleButton,
+		showGenresButton = showGenresButton,
+		showFavoritesButton = showFavoritesButton,
+		shuffleContentType = shuffleContentType,
 	)
 }
 
@@ -107,8 +140,14 @@ private fun MainToolbar(
 	activeButton: MainToolbarActiveButton,
 	activeLibraryId: UUID? = null,
 	userViews: List<BaseItemDto> = emptyList(),
+	jellyseerrEnabled: Boolean = false,
+	showShuffleButton: Boolean = true,
+	showGenresButton: Boolean = true,
+	showFavoritesButton: Boolean = true,
+	shuffleContentType: String = "both",
 ) {
 	val focusRequester = remember { FocusRequester() }
+	val userSettingPreferences = koinInject<UserSettingPreferences>()
 	val navigationRepository = koinInject<NavigationRepository>()
 	val mediaManager = koinInject<MediaManager>()
 	val sessionRepository = koinInject<SessionRepository>()
@@ -122,13 +161,23 @@ private fun MainToolbar(
 		containerColor = JellyfinTheme.colorScheme.buttonActive,
 		contentColor = JellyfinTheme.colorScheme.onButtonActive,
 	)
+	
+	val toolbarButtonColors = ButtonDefaults.colors(
+		containerColor = Color.Transparent,
+		contentColor = JellyfinTheme.colorScheme.onButton,
+		focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
+		focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
+	)
 
 	Toolbar(
 		modifier = Modifier
 			.focusRestorer(focusRequester)
 			.focusGroup(),
 		start = {
-			ToolbarButtons {
+			Row(
+				horizontalArrangement = Arrangement.spacedBy(8.dp),
+				verticalAlignment = Alignment.CenterVertically,
+			) {
 				val userImagePainter = rememberAsyncImagePainter(userImage)
 				val userImageState by userImagePainter.state.collectAsState()
 				val userImageVisible = userImageState is AsyncImagePainter.State.Success
@@ -144,8 +193,17 @@ private fun MainToolbar(
 							activity?.finishAfterTransition()
 						}
 					},
-					colors = if (activeButton == MainToolbarActiveButton.User) activeButtonColors else ButtonDefaults.colors(),
-					contentPadding = if (userImageVisible) PaddingValues(3.dp) else IconButtonDefaults.ContentPadding,
+					colors = if (userImageVisible) {
+						ButtonDefaults.colors(
+							containerColor = Color.Transparent,
+							contentColor = JellyfinTheme.colorScheme.onButton,
+							focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
+							focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
+						)
+					} else {
+						toolbarButtonColors
+					},
+					contentPadding = if (userImageVisible) PaddingValues(0.dp) else IconButtonDefaults.ContentPadding,
 				) {
 					Image(
 						painter = if (userImageVisible) userImagePainter else rememberVectorPainter(ImageVector.vectorResource(R.drawable.ic_user)),
@@ -157,9 +215,11 @@ private fun MainToolbar(
 					)
 				}
 
-				NowPlayingComposable(
-					onFocusableChange = {},
-				)
+				ToolbarButtons {
+					NowPlayingComposable(
+						onFocusableChange = {},
+					)
+				}
 			}
 		},
 		center = {
@@ -167,17 +227,13 @@ private fun MainToolbar(
 				modifier = Modifier
 					.focusRequester(focusRequester)
 			) {
-				// Home button (house icon)
 				IconButton(
 					onClick = {
 						if (activeButton != MainToolbarActiveButton.Home) {
-							navigationRepository.navigate(
-								Destinations.home,
-								replace = true,
-							)
+							navigationRepository.reset(Destinations.home)
 						}
 					},
-					colors = if (activeButton == MainToolbarActiveButton.Home) activeButtonColors else ButtonDefaults.colors(),
+					colors = if (activeButton == MainToolbarActiveButton.Home) activeButtonColors else toolbarButtonColors,
 				) {
 					Icon(
 						imageVector = ImageVector.vectorResource(R.drawable.ic_house),
@@ -185,14 +241,13 @@ private fun MainToolbar(
 					)
 				}
 				
-				// Search button (magnifying glass icon)
 				IconButton(
 					onClick = {
 						if (activeButton != MainToolbarActiveButton.Search) {
 							navigationRepository.navigate(Destinations.search())
 						}
 					},
-					colors = if (activeButton == MainToolbarActiveButton.Search) activeButtonColors else ButtonDefaults.colors(),
+					colors = if (activeButton == MainToolbarActiveButton.Search) activeButtonColors else toolbarButtonColors,
 				) {
 					Icon(
 						imageVector = ImageVector.vectorResource(R.drawable.ic_search),
@@ -200,22 +255,30 @@ private fun MainToolbar(
 					)
 				}
 				
-				// Random/Shuffle button
+			// Shuffle button (conditional)
+			if (showShuffleButton) {
 				IconButton(
 					onClick = {
 						scope.launch {
 							try {
-								// Fetch random movie or TV show
+								// Fetch random movie or TV show based on preference
+								val includeTypes = when (shuffleContentType) {
+									"movies" -> setOf(BaseItemKind.MOVIE)
+									"tv" -> setOf(BaseItemKind.SERIES)
+									else -> setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES)
+								}
+								
 								val randomItem = withContext(Dispatchers.IO) {
-									val result by api.itemsApi.getItems(
-										includeItemTypes = setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+									val response = api.itemsApi.getItems(
+										includeItemTypes = includeTypes,
+										excludeItemTypes = setOf(BaseItemKind.BOX_SET),
 										recursive = true,
 										sortBy = setOf(ItemSortBy.RANDOM),
 										limit = 1,
 									)
-									result.items.firstOrNull()
+									response.content.items?.firstOrNull()
 								}
-								
+
 								if (randomItem != null) {
 									navigationRepository.navigate(Destinations.itemDetails(randomItem.id))
 								} else {
@@ -226,40 +289,96 @@ private fun MainToolbar(
 							}
 						}
 					},
+					colors = toolbarButtonColors,
 				) {
 					Icon(
 						imageVector = ImageVector.vectorResource(R.drawable.ic_shuffle),
 						contentDescription = stringResource(R.string.lbl_shuffle_all),
 					)
 				}
-				
-				// Genres button (masks icon)
+			}
+
+			// Genres button (conditional)
+			if (showGenresButton) {
 				IconButton(
 					onClick = {
 						navigationRepository.navigate(Destinations.allGenres)
 					},
+					colors = toolbarButtonColors,
 				) {
 					Icon(
 						imageVector = ImageVector.vectorResource(R.drawable.ic_masks),
 						contentDescription = stringResource(R.string.lbl_genres),
 					)
 				}
-				
-				// Dynamic library buttons
-				ProvideTextStyle(JellyfinTheme.typography.default.copy(fontWeight = FontWeight.Bold)) {
-					userViews.forEach { library ->
-						val isActiveLibrary = activeButton == MainToolbarActiveButton.Library && 
-							activeLibraryId == library.id
-						
-						Button(
+			}
+			
+			// Favorites button (conditional)
+			if (showFavoritesButton) {
+				IconButton(
+					onClick = {
+						scope.launch {
+							try {
+								// Navigate to favorites - using search with IS_FAVORITE filter for now
+								val favoritesItem = withContext(Dispatchers.IO) {
+									val response = api.itemsApi.getItems(
+										filters = setOf(org.jellyfin.sdk.model.api.ItemFilter.IS_FAVORITE),
+										recursive = true,
+										limit = 1,
+									)
+									response.content.items?.firstOrNull()
+								}
+								
+								if (favoritesItem != null) {
+									// Navigate to search or favorites view
+									navigationRepository.navigate(Destinations.search(""))
+								} else {
+									Timber.w("No favorites found")
+								}
+							} catch (e: Exception) {
+								Timber.e(e, "Failed to fetch favorites")
+							}
+						}
+					},
+					colors = toolbarButtonColors,
+				) {
+					Icon(
+						imageVector = ImageVector.vectorResource(R.drawable.ic_heart),
+						contentDescription = stringResource(R.string.lbl_favorites),
+					)
+				}
+			}
+			
+		if (jellyseerrEnabled) {
+			IconButton(
+				onClick = {
+					if (activeButton != MainToolbarActiveButton.Jellyseerr) {
+						navigationRepository.navigate(Destinations.jellyseerrDiscover)
+					} else {
+						val fragmentActivity = activity as? androidx.fragment.app.FragmentActivity
+						fragmentActivity?.supportFragmentManager?.popBackStack()
+					}
+				},
+				colors = if (activeButton == MainToolbarActiveButton.Jellyseerr) activeButtonColors else toolbarButtonColors,
+			) {
+				Icon(
+					imageVector = ImageVector.vectorResource(R.drawable.ic_jellyseerr_jellyfish),
+					contentDescription = "Jellyseerr Discover",
+				)
+			}
+		}			// Dynamic library buttons
+			ProvideTextStyle(JellyfinTheme.typography.default.copy(fontWeight = FontWeight.Bold)) {
+				userViews.forEach { library ->
+					val isActiveLibrary = activeButton == MainToolbarActiveButton.Library && 
+						activeLibraryId == library.id
+											Button(
 							onClick = {
 								if (!isActiveLibrary) {
-									// Navigate to the library using ItemLauncher logic
 									val destination = itemLauncher.getUserViewDestination(library)
 									navigationRepository.navigate(destination)
 								}
 							},
-							colors = if (isActiveLibrary) activeButtonColors else ButtonDefaults.colors(),
+							colors = if (isActiveLibrary) activeButtonColors else toolbarButtonColors,
 							content = { Text(library.name ?: "") }
 						)
 					}
@@ -267,20 +386,42 @@ private fun MainToolbar(
 			}
 		},
 		end = {
-			ToolbarButtons {
+			Row(
+				horizontalArrangement = Arrangement.spacedBy(8.dp),
+				verticalAlignment = Alignment.CenterVertically,
+			) {
 				IconButton(
-					onClick = {
-						activity?.startActivity(ActivityDestinations.userPreferences(activity))
-					},
-				) {
-					Icon(
-						imageVector = ImageVector.vectorResource(R.drawable.ic_settings),
-						contentDescription = stringResource(R.string.lbl_settings),
-					)
-				}
-
-				ToolbarClock()
+				onClick = {
+					activity?.startActivity(ActivityDestinations.userPreferences(activity))
+				},
+				colors = ButtonDefaults.colors(
+					containerColor = Color.Transparent,
+					focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
+				),
+			) {
+				Icon(
+					imageVector = ImageVector.vectorResource(R.drawable.ic_settings),
+					contentDescription = stringResource(R.string.lbl_settings),
+				)
 			}
+			
+			ToolbarClock()
 		}
+	}
 	)
+}
+
+fun setupMainToolbarComposeView(
+	composeView: androidx.compose.ui.platform.ComposeView,
+	activeButton: MainToolbarActiveButton = MainToolbarActiveButton.None,
+	activeLibraryId: UUID? = null,
+) {
+	composeView.setContent {
+		JellyfinTheme {
+			MainToolbar(
+				activeButton = activeButton,
+				activeLibraryId = activeLibraryId,
+			)
+		}
+	}
 }

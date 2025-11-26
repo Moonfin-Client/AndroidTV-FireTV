@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:background="@color/black">
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		android:padding="20dp">
+
+		<!-- Header -->
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:text="Jellyseerr Settings"
+			android:textSize="24sp"
+			android:textStyle="bold"
+			android:textColor="@color/white"
+			android:layout_marginBottom="10dp" />
+
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:text="Configure your Jellyseerr server connection"
+			android:textSize="14sp"
+			android:textColor="@color/grey_light"
+			android:layout_marginBottom="20dp" />
+
+		<!-- Enable/Disable Toggle -->
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical"
+			android:layout_marginBottom="20dp">
+
+			<TextView
+				android:layout_width="0dp"
+				android:layout_height="wrap_content"
+				android:layout_weight="1"
+				android:text="Enable Jellyseerr Integration"
+				android:textSize="16sp"
+				android:textColor="@color/white" />
+
+			<androidx.appcompat.widget.SwitchCompat
+				android:id="@+id/enabled_switch"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:checked="false" />
+
+		</LinearLayout>
+
+		<!-- Settings Group (can be disabled) -->
+		<LinearLayout
+			android:id="@+id/settings_group"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical">
+
+			<!-- Server URL Input -->
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="Server URL"
+				android:textSize="14sp"
+				android:textStyle="bold"
+				android:textColor="@color/white"
+				android:layout_marginBottom="6dp" />
+
+			<EditText
+				android:id="@+id/server_url_input"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:hint="https://jellyseerr.example.com"
+				android:inputType="textUri"
+				android:textColorHint="@color/grey_light"
+				android:textColor="@color/white"
+				android:backgroundTint="@color/jellyfin_blue"
+				android:padding="12dp"
+				android:layout_marginBottom="20dp" />
+
+			<!-- Connect with Jellyfin Button -->
+			<Button
+				android:id="@+id/connect_jellyfin_button"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="Connect with Current Jellyfin Account"
+				android:textAllCaps="false"
+				android:backgroundTint="@color/jellyfin_blue"
+				android:layout_marginBottom="20dp" />
+
+			<!-- Connection Status -->
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:gravity="center_vertical"
+				android:layout_marginBottom="20dp"
+				android:padding="10dp"
+				android:background="@color/grey">
+
+				<ImageView
+					android:id="@+id/status_icon"
+					android:layout_width="24dp"
+					android:layout_height="24dp"
+					android:layout_marginEnd="12dp"
+					android:contentDescription="Connection status icon" />
+
+				<TextView
+					android:id="@+id/status_text"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:text="Not tested"
+					android:textSize="14sp"
+					android:textColor="@color/white" />
+
+			</LinearLayout>
+
+			<!-- Buttons -->
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:orientation="horizontal"
+				android:layout_marginBottom="12dp">
+
+				<Button
+					android:id="@+id/test_connection_button"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:text="Test Connection"
+					android:textAllCaps="false"
+					android:layout_marginEnd="6dp" />
+
+				<Button
+					android:id="@+id/save_button"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1"
+					android:text="Save Settings"
+					android:textAllCaps="false"
+					android:layout_marginStart="6dp" />
+
+			</LinearLayout>
+
+		</LinearLayout>
+
+		<!-- Fetch Limit Setting -->
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:layout_marginBottom="20dp">
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/jellyseerr_fetch_limit_title"
+				android:textSize="16sp"
+				android:textStyle="bold"
+				android:textColor="@color/white"
+				android:layout_marginBottom="6dp" />
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="@string/jellyseerr_fetch_limit_description"
+				android:textSize="12sp"
+				android:textColor="@color/grey_light"
+				android:layout_marginBottom="8dp" />
+
+			<Spinner
+				android:id="@+id/fetch_limit_spinner"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:padding="12dp"
+				android:backgroundTint="@color/jellyfin_blue" />
+
+		</LinearLayout>
+
+		<!-- Info Section -->
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:layout_marginTop="30dp"
+			android:padding="10dp"
+			android:background="@color/grey">
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="How to Connect:"
+				android:textSize="14sp"
+				android:textStyle="bold"
+				android:textColor="@color/white"
+				android:layout_marginBottom="8dp" />
+
+			<TextView
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:text="1. Enter your Jellyseerr server URL above\n2. Click 'Connect with Current Jellyfin Account'\n3. Connection will be established automatically using your Jellyfin credentials"
+				android:textSize="12sp"
+				android:textColor="@color/grey_light"
+				android:lineSpacingExtra="4dp" />
+
+		</LinearLayout>
+
+	</LinearLayout>
+
+</ScrollView>
