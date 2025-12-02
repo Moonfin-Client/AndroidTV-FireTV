@@ -57,6 +57,7 @@ import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
 import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.primaryImage
 import org.jellyfin.sdk.api.client.ApiClient
@@ -67,6 +68,7 @@ import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinActivityViewModel
 import timber.log.Timber
 import java.util.UUID
 
@@ -159,6 +161,7 @@ private fun MainToolbar(
 	val sessionRepository = koinInject<SessionRepository>()
 	val itemLauncher = koinInject<ItemLauncher>()
 	val api = koinInject<ApiClient>()
+	val settingsViewModel = koinActivityViewModel<SettingsViewModel>()
 	val activity = LocalActivity.current
 	val context = LocalContext.current
 	val scope = rememberCoroutineScope()
@@ -404,13 +407,13 @@ private fun MainToolbar(
 		}
 		},
 		end = {
-			Row(
-				horizontalArrangement = Arrangement.spacedBy(8.dp),
-				verticalAlignment = Alignment.CenterVertically,
-			) {
-				IconButton(
+		Row(
+			horizontalArrangement = Arrangement.spacedBy(8.dp),
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			IconButton(
 				onClick = {
-					activity?.startActivity(ActivityDestinations.userPreferences(activity))
+					settingsViewModel.show()
 				},
 				colors = ButtonDefaults.colors(
 					containerColor = Color.Transparent,
