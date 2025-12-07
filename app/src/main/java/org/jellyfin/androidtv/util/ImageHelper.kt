@@ -12,6 +12,10 @@ import org.jellyfin.androidtv.util.apiclient.parentImages
 import org.jellyfin.androidtv.util.apiclient.primaryImage
 import org.jellyfin.androidtv.util.apiclient.seriesPrimaryImage
 import org.jellyfin.androidtv.util.apiclient.seriesThumbImage
+import org.jellyfin.androidtv.util.apiclient.getBannerImage
+import org.jellyfin.androidtv.util.apiclient.getPrimaryImage
+import org.jellyfin.androidtv.util.apiclient.getThumbImage
+import org.jellyfin.androidtv.util.apiclient.getThumbImageWithFallback
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
