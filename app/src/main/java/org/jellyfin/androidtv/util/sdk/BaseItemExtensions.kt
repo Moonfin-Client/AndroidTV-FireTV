@@ -135,19 +135,19 @@ fun BaseItemDto.getSubName(context: Context): String? = when (type) {
 		else -> {
 			// Show episode name with resolution if available
 			val resolutionStr = when {
-				height != null && height!! >= 2160 -> "4K"
-				height != null && height!! >= 1440 -> "1440p"
-				height != null && height!! >= 1080 -> "1080p"
-				height != null && height!! >= 720 -> "720p"
+				height != null && height!! >= 2000 -> "4K"
+				height != null && height!! >= 1400 -> "1440p"
+				height != null && height!! >= 1000 -> "1080p"
+				height != null && height!! >= 700 -> "720p"
 				else -> {
 					// Try to get from media source
 					val mediaSource = mediaSources?.firstOrNull()
 					val videoStream = mediaSource?.mediaStreams?.firstOrNull { it.type == org.jellyfin.sdk.model.api.MediaStreamType.VIDEO }
 					when {
-						videoStream?.height != null && videoStream.height!! >= 2160 -> "4K"
-						videoStream?.height != null && videoStream.height!! >= 1440 -> "1440p"
-						videoStream?.height != null && videoStream.height!! >= 1080 -> "1080p"
-						videoStream?.height != null && videoStream.height!! >= 720 -> "720p"
+						videoStream?.height != null && videoStream.height!! >= 2000 -> "4K"
+						videoStream?.height != null && videoStream.height!! >= 1400 -> "1440p"
+						videoStream?.height != null && videoStream.height!! >= 1000 -> "1080p"
+						videoStream?.height != null && videoStream.height!! >= 700 -> "720p"
 						else -> null
 					}
 				}
@@ -183,19 +183,19 @@ fun BaseItemDto.getSubName(context: Context): String? = when (type) {
 		
 		// Add resolution if available (from width/height or first media source)
 		val resolutionStr = when {
-			height != null && height!! >= 2160 -> "4K"
-			height != null && height!! >= 1440 -> "1440p"
-			height != null && height!! >= 1080 -> "1080p"
-			height != null && height!! >= 720 -> "720p"
+			height != null && height!! >= 2000 -> "4K"
+			height != null && height!! >= 1400 -> "1440p"
+			height != null && height!! >= 1000 -> "1080p"
+			height != null && height!! >= 700 -> "720p"
 			else -> {
 				// Try to get from media source if direct properties not available
 				val mediaSource = mediaSources?.firstOrNull()
 				val videoStream = mediaSource?.mediaStreams?.firstOrNull { it.type == org.jellyfin.sdk.model.api.MediaStreamType.VIDEO }
 				when {
-					videoStream?.height != null && videoStream.height!! >= 2160 -> "4K"
-					videoStream?.height != null && videoStream.height!! >= 1440 -> "1440p"
-					videoStream?.height != null && videoStream.height!! >= 1080 -> "1080p"
-					videoStream?.height != null && videoStream.height!! >= 720 -> "720p"
+					videoStream?.height != null && videoStream.height!! >= 2000 -> "4K"
+					videoStream?.height != null && videoStream.height!! >= 1400 -> "1440p"
+					videoStream?.height != null && videoStream.height!! >= 1000 -> "1080p"
+					videoStream?.height != null && videoStream.height!! >= 700 -> "720p"
 					else -> null
 				}
 			}

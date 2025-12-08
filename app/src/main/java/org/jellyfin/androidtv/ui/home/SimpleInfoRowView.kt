@@ -101,10 +101,10 @@ class SimpleInfoRowView @JvmOverloads constructor(
 		val height = item.height
 		if (width != null && height != null) {
 			val resolution = when {
-				height >= 2160 -> "4K"
-				height >= 1440 -> "1440p"
-				height >= 1080 -> "1080p"
-				height >= 720 -> "720p"
+				height >= 2000 -> "4K"
+				height >= 1400 -> "1440p"
+				height >= 1000 -> "1080p"
+				height >= 700 -> "720p"
 				else -> "${height}p"
 			}
 			setItemText(index++, resolution)
