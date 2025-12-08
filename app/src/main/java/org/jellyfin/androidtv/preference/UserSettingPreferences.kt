@@ -19,6 +19,7 @@ class UserSettingPreferences(
 		val mediaBarItemCount = stringPreference("mediaBarItemCount", "10")
 		val mediaBarOverlayOpacity = stringPreference("mediaBarOverlayOpacity", "50")
 		val mediaBarOverlayColor = stringPreference("mediaBarOverlayColor", "gray")
+		val backgroundBlurAmount = intPreference("backgroundBlurAmount", 10)
 
 		val homesection0 = enumPreference("homesection0", HomeSectionType.MEDIA_BAR)
 		val homesection1 = enumPreference("homesection1", HomeSectionType.RESUME)

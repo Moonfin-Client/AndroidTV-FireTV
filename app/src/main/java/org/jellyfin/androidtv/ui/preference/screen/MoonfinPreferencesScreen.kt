@@ -141,5 +141,28 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 				depends { userPreferences[UserPreferences.screensaverInAppEnabled] }
 			}
 		}
+
+		// Visual Settings
+		category {
+			setTitle(R.string.pref_visual_settings)
+
+			list {
+				setTitle(R.string.pref_background_blur_amount)
+				
+				entries = mapOf(
+					"0" to getString(R.string.pref_blur_none),
+					"5" to getString(R.string.pref_blur_light),
+					"10" to getString(R.string.pref_blur_medium),
+					"15" to getString(R.string.pref_blur_strong),
+					"20" to getString(R.string.pref_blur_extra_strong)
+				)
+				
+				bind {
+					get { userSettingPreferences[UserSettingPreferences.backgroundBlurAmount].toString() }
+					set { value -> userSettingPreferences[UserSettingPreferences.backgroundBlurAmount] = value.toInt() }
+					default { "10" }
+				}
+			}
+		}
 	}
 }

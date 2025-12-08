@@ -742,6 +742,16 @@
     <string name="enabled">Enabled</string>
     <string name="disabled">Disabled</string>
     
+    <!-- Visual Settings -->
+    <string name="pref_visual_settings">Visual Settings</string>
+    <string name="pref_background_blur_amount">Background Blur Amount</string>
+    <string name="pref_background_blur_amount_description">Control blur intensity for all background images across the app</string>
+    <string name="pref_blur_none">No Blur</string>
+    <string name="pref_blur_light">Light (5dp)</string>
+    <string name="pref_blur_medium">Medium (10dp) - Default</string>
+    <string name="pref_blur_strong">Strong (15dp)</string>
+    <string name="pref_blur_extra_strong">Extra Strong (20dp)</string>
+    
     <!-- Toolbar Customization -->
     <string name="pref_toolbar_customization">Toolbar Customization</string>
     <string name="home_section_settings">Home Screen</string>
