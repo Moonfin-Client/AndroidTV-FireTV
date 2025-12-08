@@ -180,7 +180,7 @@ private fun MainToolbar(
 	)
 	
 	// Get overlay preferences for toolbar styling
-	val overlayOpacity = (userSettingPreferences[UserSettingPreferences.mediaBarOverlayOpacity].toIntOrNull() ?: 50) / 100f
+	val overlayOpacity = userSettingPreferences[UserSettingPreferences.mediaBarOverlayOpacity] / 100f
 	val overlayColor = when (userSettingPreferences[UserSettingPreferences.mediaBarOverlayColor]) {
 		"black" -> Color.Black
 		"dark_blue" -> Color(0xFF1A2332)

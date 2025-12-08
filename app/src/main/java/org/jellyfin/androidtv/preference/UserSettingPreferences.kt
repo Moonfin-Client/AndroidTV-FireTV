@@ -17,7 +17,7 @@ class UserSettingPreferences(
 		val skipBackLength = intPreference("skipBackLength", 10_000)
 		val skipForwardLength = intPreference("skipForwardLength", 30_000)
 		val mediaBarItemCount = stringPreference("mediaBarItemCount", "10")
-		val mediaBarOverlayOpacity = stringPreference("mediaBarOverlayOpacity", "50")
+		val mediaBarOverlayOpacity = intPreference("mediaBarOverlayOpacity", 50)
 		val mediaBarOverlayColor = stringPreference("mediaBarOverlayColor", "gray")
 		val backgroundBlurAmount = intPreference("backgroundBlurAmount", 10)
 

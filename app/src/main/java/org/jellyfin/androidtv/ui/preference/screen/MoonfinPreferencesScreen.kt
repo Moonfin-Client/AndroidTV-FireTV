@@ -93,20 +93,20 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 				bind(userSettingPreferences, UserSettingPreferences.mediaBarItemCount)
 			}
 
-			list {
-				setTitle(R.string.pref_media_bar_overlay_opacity)
-				entries = mapOf(
-					"30" to getString(R.string.pref_media_bar_opacity_30),
-					"40" to getString(R.string.pref_media_bar_opacity_40),
-					"50" to getString(R.string.pref_media_bar_opacity_50),
-					"60" to getString(R.string.pref_media_bar_opacity_60),
-					"70" to getString(R.string.pref_media_bar_opacity_70)
-				)
-				bind(userSettingPreferences, UserSettingPreferences.mediaBarOverlayOpacity)
+		seekbar {
+			setTitle(R.string.pref_media_bar_overlay_opacity)
+			setContent(R.string.pref_media_bar_overlay_opacity_summary)
+			min = 10
+			max = 90
+			increment = 5
+			valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
+				override fun display(value: Int) = "$value%"
 			}
+			bind(userSettingPreferences, UserSettingPreferences.mediaBarOverlayOpacity)
+		}
 
-			list {
-				setTitle(R.string.pref_media_bar_overlay_color)
+		list {
+			setTitle(R.string.pref_media_bar_overlay_color)
 				entries = mapOf(
 					"black" to getString(R.string.pref_media_bar_color_black),
 					"gray" to getString(R.string.pref_media_bar_color_gray),
