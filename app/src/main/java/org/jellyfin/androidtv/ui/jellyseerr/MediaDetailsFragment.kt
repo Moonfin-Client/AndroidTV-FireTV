@@ -600,25 +600,25 @@ class MediaDetailsFragment : Fragment() {
 		val hdDeclined = requests?.any { !it.is4k && it.status == 3 } == true
 		val fourKDeclined = requests?.any { it.is4k && it.status == 3 } == true
 		
-		// HD Button: Disable if pending (2), processing (3), partially available (4), available (5), or declined
-		// Allow re-request if not requested (null/1) - status 1 is "unknown" in media status
-		val isHdActive = (hdStatus != null && hdStatus >= 2) || hdDeclined
+		// HD Button: Disable if pending (2), processing (3), or fully available (5), or declined
+		// Allow re-request if not requested (null/1), or partially available (4) so users can request missing episodes
+		val isHdActive = (hdStatus != null && hdStatus >= 2 && hdStatus != 4) || hdDeclined
 		val hdLabel = when {
 			hdDeclined -> "HD Declined"
 			hdStatus == 2 -> "HD Pending"
 			hdStatus == 3 -> "HD Processing"
-			hdStatus == 4 -> "HD Partial"
+			hdStatus == 4 -> "Request More (HD)"
 			hdStatus == 5 -> "HD Available"
 			else -> "Request HD"
 		}
 		
 		// 4K Button: Same logic for 4K
-		val is4kActive = (status4k != null && status4k >= 2) || fourKDeclined
+		val is4kActive = (status4k != null && status4k >= 2 && status4k != 4) || fourKDeclined
 		val label4k = when {
 			fourKDeclined -> "4K Declined"
 			status4k == 2 -> "4K Pending"
 			status4k == 3 -> "4K Processing"
-			status4k == 4 -> "4K Partial"
+			status4k == 4 -> "Request More (4K)"
 			status4k == 5 -> "4K Available"
 			else -> "Request 4K"
 		}
