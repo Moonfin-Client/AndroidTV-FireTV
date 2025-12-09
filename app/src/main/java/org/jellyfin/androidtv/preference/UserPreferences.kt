@@ -322,6 +322,24 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 				val subtitleStrokeSize = it.getInt("subtitles_stroke_size", 0)
 				putLong("subtitles_text_stroke_color", if (subtitleStrokeSize > 0) 0XFF000000L else 0X00FFFFFFL)
 			}
+
+			// v1.2.0 to v1.3.0
+			migration(toVersion = 9) { prefs ->
+				// Migrate screensaver dimming from boolean to int (0-100)
+				val oldDimmingKey = "pref_screensaver_dimming"
+				val wasEnabled = prefs.getBoolean(oldDimmingKey, false)
+				val dimmingLevel = if (wasEnabled) 50 else 0
+				putInt(screensaverDimmingLevel.key, dimmingLevel)
+				remove(oldDimmingKey)
+				
+				// Migrate mediaBarOverlayOpacity from String to Int
+				val overlayKey = "mediaBarOverlayOpacity"
+				val stringValue = prefs.getString(overlayKey, null)
+				if (stringValue != null) {
+					val intValue = stringValue.toIntOrNull() ?: 50
+					putInt(overlayKey, intValue)
+				}
+			}
 		}
 	}
 }
