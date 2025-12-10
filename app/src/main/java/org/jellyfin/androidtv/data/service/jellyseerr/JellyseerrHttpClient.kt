@@ -25,6 +25,16 @@ import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 /**
+ * Exception thrown when Jellyseerr returns a 403 Forbidden error,
+ * typically indicating session expiration or permission issues.
+ */
+class JellyseerrSessionExpiredException(
+	val statusCode: Int,
+	val errorBody: String,
+	message: String = "Jellyseerr session expired or permission denied"
+) : Exception(message)
+
+/**
  * HTTP client for communicating with Jellyseerr API
  */
 class JellyseerrHttpClient(
@@ -82,6 +92,25 @@ class JellyseerrHttpClient(
 		coerceInputValues = true
 	}
 
+	/**
+	 * Check response for 403 errors and throw JellyseerrSessionExpiredException if found.
+	 * This allows callers to detect session expiration and trigger re-authentication.
+	 */
+	private suspend fun checkResponseAndThrowOn403(
+		response: io.ktor.client.statement.HttpResponse,
+		operation: String
+	) {
+		if (response.status.value == 403) {
+			val errorBody = try {
+				response.body<String>()
+			} catch (e: Exception) {
+				"Unable to parse error body"
+			}
+			Timber.e("Jellyseerr: 403 Forbidden during $operation - Session may have expired. Error: $errorBody")
+			throw JellyseerrSessionExpiredException(403, errorBody, "Jellyseerr session expired: $errorBody")
+		}
+	}
+
 	init {
 		// Initialize persistent cookie storage
 		initializeCookieStorage(context)
@@ -133,15 +162,20 @@ class JellyseerrHttpClient(
 		}
 
 		Timber.d("Jellyseerr: Got requests - Status: ${response.status}, URL: $url")
+
+		// Check for 403 and throw session expired exception
+		checkResponseAndThrowOn403(response, "getRequests")
+
 		if (response.status.value !in 200..299) {
-			try {
-				val errorBody = response.body<String>()
-				Timber.e("Jellyseerr: Error response body: $errorBody")
+			val errorBody = try {
+				response.body<String>()
 			} catch (e: Exception) {
-				Timber.e("Jellyseerr: Could not parse error body: ${e.message}")
+				"Unknown error"
 			}
+			Timber.e("Jellyseerr: Error response body: $errorBody")
+			throw Exception("Jellyseerr API error ${response.status}: $errorBody")
 		}
-		
+
 		val responseBody = response.body<JellyseerrListResponse<JellyseerrRequestDto>>()
 		Timber.d("Jellyseerr: Parsed ${responseBody.results.size} requests")
 		responseBody.results.forEach { request ->
@@ -263,11 +297,14 @@ class JellyseerrHttpClient(
 			parameters.append("page", ((offset / limit) + 1).toString())
 			parameters.append("language", "en")
 		}.build()
-		
+
 		val response = httpClient.get(url) {
 			addAuthHeader()
 		}
-		
+
+		// Check for 403 and throw session expired exception
+		checkResponseAndThrowOn403(response, "getTrending")
+
 		val body = response.body<JellyseerrDiscoverPageDto>()
 		Timber.d("Jellyseerr: Got trending content - Status: ${response.status}, Count: ${body.results?.size ?: 0}")
 		body
@@ -286,11 +323,14 @@ class JellyseerrHttpClient(
 			parameters.append("page", ((offset / limit) + 1).toString())
 			parameters.append("language", "en")
 		}.build()
-		
+
 		val response = httpClient.get(url) {
 			addAuthHeader()
 		}
-		
+
+		// Check for 403 and throw session expired exception
+		checkResponseAndThrowOn403(response, "getTrendingMovies")
+
 		val body = response.body<JellyseerrDiscoverPageDto>()
 		Timber.d("Jellyseerr: Got trending movies - Status: ${response.status}, Count: ${body.results?.size ?: 0}")
 		if (!body.results.isNullOrEmpty()) {
@@ -300,16 +340,7 @@ class JellyseerrHttpClient(
 				Timber.d("Jellyseerr: Movie item - Title: ${item.title ?: item.name}, MediaType: ${item.mediaType}")
 			}
 		}
-		
-		if (response.status.value !in 200..299) {
-			try {
-				val errorBody = response.body<String>()
-				Timber.e("Jellyseerr: Error response body: $errorBody")
-			} catch (e: Exception) {
-				Timber.e("Jellyseerr: Could not parse error body: ${e.message}")
-			}
-		}
-		
+
 		body
 	}.onFailure { error ->
 		Timber.e(error, "Jellyseerr: Failed to get trending movies")
@@ -326,11 +357,14 @@ class JellyseerrHttpClient(
 			parameters.append("page", ((offset / limit) + 1).toString())
 			parameters.append("language", "en")
 		}.build()
-		
+
 		val response = httpClient.get(url) {
 			addAuthHeader()
 		}
-		
+
+		// Check for 403 and throw session expired exception
+		checkResponseAndThrowOn403(response, "getTrendingTv")
+
 		val body = response.body<JellyseerrDiscoverPageDto>()
 		Timber.d("Jellyseerr: Got trending TV - Status: ${response.status}, Count: ${body.results?.size ?: 0}")
 		if (!body.results.isNullOrEmpty()) {
@@ -340,16 +374,7 @@ class JellyseerrHttpClient(
 				Timber.d("Jellyseerr: TV item - Title: ${item.title ?: item.name}, MediaType: ${item.mediaType}")
 			}
 		}
-		
-		if (response.status.value !in 200..299) {
-			try {
-				val errorBody = response.body<String>()
-				Timber.e("Jellyseerr: Error response body: $errorBody")
-			} catch (e: Exception) {
-				Timber.e("Jellyseerr: Could not parse error body: ${e.message}")
-			}
-		}
-		
+
 		body
 	}.onFailure { error ->
 		Timber.e(error, "Jellyseerr: Failed to get trending TV shows")
@@ -366,10 +391,14 @@ class JellyseerrHttpClient(
 			parameters.append("limit", limit.toString())
 			parameters.append("offset", offset.toString())
 		}.build()
-		
+
 		val response = httpClient.get(url) {
 			addAuthHeader()
 		}
+
+		// Check for 403 and throw session expired exception
+		checkResponseAndThrowOn403(response, "getTopMovies")
+
 		Timber.d("Jellyseerr: Got top movies - Status: ${response.status}")
 		response.body<JellyseerrDiscoverPageDto>()
 	}.onFailure { error ->
@@ -387,10 +416,14 @@ class JellyseerrHttpClient(
 			parameters.append("limit", limit.toString())
 			parameters.append("offset", offset.toString())
 		}.build()
-		
+
 		val response = httpClient.get(url) {
 			addAuthHeader()
 		}
+
+		// Check for 403 and throw session expired exception
+		checkResponseAndThrowOn403(response, "getTopTv")
+
 		Timber.d("Jellyseerr: Got top TV shows - Status: ${response.status}")
 		response.body<JellyseerrDiscoverPageDto>()
 	}.onFailure { error ->
@@ -406,10 +439,14 @@ class JellyseerrHttpClient(
 	): Result<JellyseerrDiscoverPageDto> = runCatching {
 		val url = URLBuilder("$baseUrl/api/v1/discover/movies/upcoming").apply {
 		}.build()
-		
+
 		val response = httpClient.get(url) {
 			addAuthHeader()
 		}
+
+		// Check for 403 and throw session expired exception
+		checkResponseAndThrowOn403(response, "getUpcomingMovies")
+
 		Timber.d("Jellyseerr: Got upcoming movies - Status: ${response.status}")
 		response.body<JellyseerrDiscoverPageDto>()
 	}.onFailure { error ->
@@ -425,10 +462,14 @@ class JellyseerrHttpClient(
 	): Result<JellyseerrDiscoverPageDto> = runCatching {
 		val url = URLBuilder("$baseUrl/api/v1/discover/tv/upcoming").apply {
 		}.build()
-		
+
 		val response = httpClient.get(url) {
 			addAuthHeader()
 		}
+
+		// Check for 403 and throw session expired exception
+		checkResponseAndThrowOn403(response, "getUpcomingTv")
+
 		Timber.d("Jellyseerr: Got upcoming TV shows - Status: ${response.status}")
 		response.body<JellyseerrDiscoverPageDto>()
 	}.onFailure { error ->
@@ -447,7 +488,7 @@ class JellyseerrHttpClient(
 		// URLEncoder uses '+' for spaces, but Jellyseerr expects '%20'
 		val encodedQuery = URLEncoder.encode(query, "UTF-8").replace("+", "%20")
 		val page = ((offset / limit) + 1).toString()
-		
+
 		// Build URL with manually encoded query parameter
 		val url = buildString {
 			append("$baseUrl/api/v1/search")
@@ -458,10 +499,13 @@ class JellyseerrHttpClient(
 				append("&type=$encodedType")
 			}
 		}
-		
+
 		val response = httpClient.get(url) {
 			addAuthHeader()
 		}
+
+		// Check for 403 and throw session expired exception
+		checkResponseAndThrowOn403(response, "search")
 
 		Timber.d("Jellyseerr: Searched for '$query' - Status: ${response.status}")
 		response.body<JellyseerrDiscoverPageDto>()

@@ -111,6 +111,11 @@ class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 					binding.statusText.text = "✗ Connection failed: ${state.message}"
 					showError("Connection error: ${state.message}")
 				}
+				is JellyseerrLoadingState.SessionExpired -> {
+					binding.testConnectionButton.isEnabled = true
+					binding.statusText.text = "✗ Session expired - please sign in again"
+					showError("Session expired: ${state.message}")
+				}
 				is JellyseerrLoadingState.Idle -> {
 					binding.testConnectionButton.isEnabled = true
 					binding.statusText.text = "Not tested"

@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.data.repository.JellyseerrRepository
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrRequestDto
+import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrSessionExpiredException
 import org.jellyfin.androidtv.data.service.jellyseerr.Seasons
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
 import org.jellyfin.androidtv.util.ErrorHandler
@@ -23,6 +24,11 @@ sealed class JellyseerrLoadingState {
 	data object Loading : JellyseerrLoadingState()
 	data class Success(val message: String = "") : JellyseerrLoadingState()
 	data class Error(val message: String) : JellyseerrLoadingState()
+	/**
+	 * Session has expired and user needs to re-authenticate.
+	 * This state is triggered when a 403 error is received from Jellyseerr.
+	 */
+	data class SessionExpired(val message: String = "Your Jellyseerr session has expired. Please sign in again.") : JellyseerrLoadingState()
 }
 
 /**
@@ -192,34 +198,43 @@ class JellyseerrViewModel(
 	fun loadTrendingContent() {
 		viewModelScope.launch {
 			_loadingState.emit(JellyseerrLoadingState.Loading)
-		try {
-			// Fetch blacklist first
-			fetchBlacklist()
-			
-			// Get fetch limit from preferences
-			val itemsPerPage = jellyseerrPreferences[JellyseerrPreferences.fetchLimit].limit
-			
-			// Fetch multiple pages to get more content for searching
-			// Filter out already-available content since users can watch those in the main Moonfin app
-			val allTrending = mutableListOf<JellyseerrDiscoverItemDto>()
-			val allTrendingMovies = mutableListOf<JellyseerrDiscoverItemDto>()
-			val allTrendingTv = mutableListOf<JellyseerrDiscoverItemDto>()
-			val allUpcomingMovies = mutableListOf<JellyseerrDiscoverItemDto>()
-			val allUpcomingTv = mutableListOf<JellyseerrDiscoverItemDto>()
-			var hasPermissionError = false
-			
-			// Fetch first 3 pages to get enough content
+			try {
+				// Fetch blacklist first
+				fetchBlacklist()
+
+				// Get fetch limit from preferences
+				val itemsPerPage = jellyseerrPreferences[JellyseerrPreferences.fetchLimit].limit
+
+				// Fetch multiple pages to get more content for searching
+				// Filter out already-available content since users can watch those in the main Moonfin app
+				val allTrending = mutableListOf<JellyseerrDiscoverItemDto>()
+				val allTrendingMovies = mutableListOf<JellyseerrDiscoverItemDto>()
+				val allTrendingTv = mutableListOf<JellyseerrDiscoverItemDto>()
+				val allUpcomingMovies = mutableListOf<JellyseerrDiscoverItemDto>()
+				val allUpcomingTv = mutableListOf<JellyseerrDiscoverItemDto>()
+				var sessionExpired = false
+
+				// Fetch first 3 pages to get enough content
 				for (page in 1..3) {
-				val offset = (page - 1) * itemsPerPage
-				val trendingResult = jellyseerrRepository.getTrending(limit = itemsPerPage, offset = offset)
-				val trendingMoviesResult = jellyseerrRepository.getTrendingMovies(limit = itemsPerPage, offset = offset)
-				val trendingTvResult = jellyseerrRepository.getTrendingTv(limit = itemsPerPage, offset = offset)
-				val upcomingMoviesResult = jellyseerrRepository.getUpcomingMovies(limit = itemsPerPage, offset = offset)
-				val upcomingTvResult = jellyseerrRepository.getUpcomingTv(limit = itemsPerPage, offset = offset)					// Check for 403 permission errors
-					if (trendingResult.isFailure && trendingResult.exceptionOrNull()?.message?.contains("403") == true) {
-						hasPermissionError = true
+					val offset = (page - 1) * itemsPerPage
+					val trendingResult = jellyseerrRepository.getTrending(limit = itemsPerPage, offset = offset)
+					val trendingMoviesResult = jellyseerrRepository.getTrendingMovies(limit = itemsPerPage, offset = offset)
+					val trendingTvResult = jellyseerrRepository.getTrendingTv(limit = itemsPerPage, offset = offset)
+					val upcomingMoviesResult = jellyseerrRepository.getUpcomingMovies(limit = itemsPerPage, offset = offset)
+					val upcomingTvResult = jellyseerrRepository.getUpcomingTv(limit = itemsPerPage, offset = offset)
+
+					// Check for session expiration (403 errors)
+					val results = listOf(trendingResult, trendingMoviesResult, trendingTvResult, upcomingMoviesResult, upcomingTvResult)
+					for (result in results) {
+						if (result.isFailure && result.exceptionOrNull() is JellyseerrSessionExpiredException) {
+							sessionExpired = true
+							Timber.w("JellyseerrViewModel: Session expired detected during content fetch")
+							break
+						}
 					}
-					
+
+					if (sessionExpired) break
+
 					if (trendingResult.isSuccess) {
 						allTrending.addAll(trendingResult.getOrNull()?.results ?: emptyList())
 					}
@@ -237,71 +252,75 @@ class JellyseerrViewModel(
 					}
 				}
 
-			if (allTrending.isNotEmpty() || allTrendingMovies.isNotEmpty() || allTrendingTv.isNotEmpty()) {
-				// Filter out already-available content, blacklisted items, NSFW content, and prepare data
-				val trending = allTrending
-					.filterNot { it.isAvailable() }
-					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
-					.filter { (it.mediaType ?: "").lowercase() in listOf("movie", "tv") }
-					.filterNsfw()
-				val trendingMovies = allTrendingMovies
-					.filterNot { it.isAvailable() }
-					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
-					.filter { (it.mediaType ?: "").lowercase() == "movie" }
-					.filterNsfw()
-				val trendingTv = allTrendingTv
-					.filterNot { it.isAvailable() }
-					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
-					.filter { (it.mediaType ?: "").lowercase() == "tv" }
-					.filterNsfw()
-				val upcomingMovies = allUpcomingMovies
-					.filterNot { it.isAvailable() }
-					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
-					.filter { (it.mediaType ?: "").lowercase() == "movie" }
-					.filterNsfw()
-				val upcomingTv = allUpcomingTv
-					.filterNot { it.isAvailable() }
-					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
-					.filter { (it.mediaType ?: "").lowercase() == "tv" }
-					.filterNsfw()
-				
-				Timber.d("JellyseerrViewModel: Fetched trending: ${allTrending.size} (filtered: ${trending.size})")
-				Timber.d("JellyseerrViewModel: Fetched trending movies: ${allTrendingMovies.size} (filtered: ${trendingMovies.size})")
-				Timber.d("JellyseerrViewModel: Fetched trending TV: ${allTrendingTv.size} (filtered: ${trendingTv.size})")
-				Timber.d("JellyseerrViewModel: Fetched upcoming movies: ${allUpcomingMovies.size} (filtered: ${upcomingMovies.size})")
-				Timber.d("JellyseerrViewModel: Fetched upcoming TV: ${allUpcomingTv.size} (filtered: ${upcomingTv.size})")
-				
-				_trending.emit(trending)
-				_trendingMovies.emit(trendingMovies)
-				_trendingTv.emit(trendingTv)
-				_upcomingMovies.emit(upcomingMovies)
-				_upcomingTv.emit(upcomingTv)
-				_loadingState.emit(JellyseerrLoadingState.Success())
-				} else if (hasPermissionError) {
-					val errorMessage = "Permission Denied: Your Jellyfin account needs Jellyseerr permissions.\n\n" +
-						"To fix this:\n" +
-						"1. Open Jellyseerr web UI (http://your-server:5055)\n" +
-						"2. Go to Settings → Users\n" +
-						"3. Find your Jellyfin account\n" +
-						"4. Enable 'REQUEST' permission\n" +
-						"5. Restart this app"
-					_loadingState.emit(JellyseerrLoadingState.Error(errorMessage))
+				// If session expired, emit SessionExpired state so UI can prompt re-authentication
+				if (sessionExpired) {
+					Timber.i("JellyseerrViewModel: Emitting SessionExpired state - user needs to re-authenticate")
+					_loadingState.emit(JellyseerrLoadingState.SessionExpired())
+					return@launch
+				}
+
+				if (allTrending.isNotEmpty() || allTrendingMovies.isNotEmpty() || allTrendingTv.isNotEmpty()) {
+					// Filter out already-available content, blacklisted items, NSFW content, and prepare data
+					val trending = allTrending
+						.filterNot { it.isAvailable() }
+						.filterNot { it.isBlacklisted() }
+						.filterBlacklist()
+						.filter { (it.mediaType ?: "").lowercase() in listOf("movie", "tv") }
+						.filterNsfw()
+					val trendingMovies = allTrendingMovies
+						.filterNot { it.isAvailable() }
+						.filterNot { it.isBlacklisted() }
+						.filterBlacklist()
+						.filter { (it.mediaType ?: "").lowercase() == "movie" }
+						.filterNsfw()
+					val trendingTv = allTrendingTv
+						.filterNot { it.isAvailable() }
+						.filterNot { it.isBlacklisted() }
+						.filterBlacklist()
+						.filter { (it.mediaType ?: "").lowercase() == "tv" }
+						.filterNsfw()
+					val upcomingMovies = allUpcomingMovies
+						.filterNot { it.isAvailable() }
+						.filterNot { it.isBlacklisted() }
+						.filterBlacklist()
+						.filter { (it.mediaType ?: "").lowercase() == "movie" }
+						.filterNsfw()
+					val upcomingTv = allUpcomingTv
+						.filterNot { it.isAvailable() }
+						.filterNot { it.isBlacklisted() }
+						.filterBlacklist()
+						.filter { (it.mediaType ?: "").lowercase() == "tv" }
+						.filterNsfw()
+
+					Timber.d("JellyseerrViewModel: Fetched trending: ${allTrending.size} (filtered: ${trending.size})")
+					Timber.d("JellyseerrViewModel: Fetched trending movies: ${allTrendingMovies.size} (filtered: ${trendingMovies.size})")
+					Timber.d("JellyseerrViewModel: Fetched trending TV: ${allTrendingTv.size} (filtered: ${trendingTv.size})")
+					Timber.d("JellyseerrViewModel: Fetched upcoming movies: ${allUpcomingMovies.size} (filtered: ${upcomingMovies.size})")
+					Timber.d("JellyseerrViewModel: Fetched upcoming TV: ${allUpcomingTv.size} (filtered: ${upcomingTv.size})")
+
+					_trending.emit(trending)
+					_trendingMovies.emit(trendingMovies)
+					_trendingTv.emit(trendingTv)
+					_upcomingMovies.emit(upcomingMovies)
+					_upcomingTv.emit(upcomingTv)
+					_loadingState.emit(JellyseerrLoadingState.Success())
 				} else {
 					_loadingState.emit(
 						JellyseerrLoadingState.Error("Failed to load trending content")
 					)
 				}
-		} catch (error: Exception) {
-			val errorMessage = ErrorHandler.handle(error, "load trending content")
-			_loadingState.emit(JellyseerrLoadingState.Error(errorMessage))
+			} catch (error: JellyseerrSessionExpiredException) {
+				// Catch session expired exception and emit SessionExpired state
+				Timber.w(error, "JellyseerrViewModel: Session expired exception caught")
+				_loadingState.emit(JellyseerrLoadingState.SessionExpired())
+			} catch (error: Exception) {
+				val errorMessage = ErrorHandler.handle(error, "load trending content")
+				_loadingState.emit(JellyseerrLoadingState.Error(errorMessage))
+			}
 		}
 	}
-}	fun loadRequests() {
+
+	fun loadRequests() {
 		viewModelScope.launch {
 			loadRequestsSuspend()
 		}

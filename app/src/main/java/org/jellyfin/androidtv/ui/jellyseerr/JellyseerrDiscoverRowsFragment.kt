@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.ui.jellyseerr
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
@@ -218,10 +219,14 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 	}
 
 	private fun setupObservers() {
-		// Observe loading state for errors
+		// Observe loading state for errors and session expiration
 		lifecycleScope.launch {
 			viewModel.loadingState.collect { state ->
 				when (state) {
+					is JellyseerrLoadingState.SessionExpired -> {
+						Timber.w("Jellyseerr session expired - prompting user to re-authenticate")
+						showSessionExpiredDialog()
+					}
 					is JellyseerrLoadingState.Error -> {
 						Timber.e("Jellyseerr connection error: ${state.message}")
 						Toast.makeText(
@@ -313,5 +318,27 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 		// Use navigation system for proper focus restoration and back button handling
 		val itemJson = Json.encodeToString(JellyseerrDiscoverItemDto.serializer(), item)
 		navigationRepository.navigate(Destinations.jellyseerrMediaDetails(itemJson))
+	}
+
+	/**
+	 * Show a dialog when the Jellyseerr session has expired,
+	 * prompting the user to navigate to settings to re-authenticate.
+	 */
+	private fun showSessionExpiredDialog() {
+		if (!isAdded || context == null) return
+
+		AlertDialog.Builder(requireContext())
+			.setTitle("Session Expired")
+			.setMessage("Your Jellyseerr session has expired. Please sign in again to continue using Jellyseerr features.")
+			.setPositiveButton("Go to Settings") { dialog, _ ->
+				dialog.dismiss()
+				// Navigate to Jellyseerr settings screen
+				navigationRepository.navigate(Destinations.jellyseerrSettings)
+			}
+			.setNegativeButton("Later") { dialog, _ ->
+				dialog.dismiss()
+			}
+			.setCancelable(true)
+			.show()
 	}
 }
