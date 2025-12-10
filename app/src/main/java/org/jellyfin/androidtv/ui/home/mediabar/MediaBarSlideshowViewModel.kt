@@ -65,18 +65,15 @@ class MediaBarSlideshowViewModel(
 	}
 
 	fun setFocused(focused: Boolean) {
-		val wasNotFocused = !_isFocused.value
 		_isFocused.value = focused
-		
+
 		// When losing focus, stop auto-advance
 		if (!focused) {
 			autoAdvanceJob?.cancel()
 		} else {
-			// When gaining focus from unfocused state, reload with fresh random items
-			if (wasNotFocused) {
-				reloadContent()
-			} else if (!_playbackState.value.isPaused) {
-				// Just restart auto-advance if already had focus
+			// When gaining focus, just restart auto-advance if not paused
+			// Don't reload content - keep the current carousel items
+			if (!_playbackState.value.isPaused) {
 				resetAutoAdvanceTimer()
 			}
 		}
@@ -105,7 +102,7 @@ class MediaBarSlideshowViewModel(
 	 * Uses double-randomization strategy:
 	 * 1. Server-side: sortBy RANDOM returns random set from server
 	 * 2. Client-side: shuffle() randomizes the combined results again
-	 * 
+	 *
 	 * Optimized to fetch movies and shows in parallel for faster loading.
 	 */
 	private fun loadSlideshowItems() {
@@ -118,7 +115,7 @@ class MediaBarSlideshowViewModel(
 			val allItems: List<org.jellyfin.sdk.model.api.BaseItemDto> = withContext(Dispatchers.IO) {
 				val movies = async { fetchItems(BaseItemKind.MOVIE, config.maxItems) }
 				val shows = async { fetchItems(BaseItemKind.SERIES, config.maxItems) }
-				
+
 				(movies.await().items.orEmpty() + shows.await().items.orEmpty())
 					.filter { it.backdropImageTags?.isNotEmpty() == true }
 					.shuffled()
@@ -174,10 +171,10 @@ class MediaBarSlideshowViewModel(
 	 */
 	private fun startAutoPlay() {
 		autoAdvanceJob?.cancel()
-		
+
 		// Only start auto-play if the media bar is focused
 		if (!_isFocused.value) return
-		
+
 		val config = getConfig()
 		autoAdvanceJob = viewModelScope.launch {
 			delay(config.shuffleIntervalMs)
@@ -186,7 +183,7 @@ class MediaBarSlideshowViewModel(
 			}
 		}
 	}
-	
+
 	/**
 	 * Reset the auto-advance timer
 	 */
