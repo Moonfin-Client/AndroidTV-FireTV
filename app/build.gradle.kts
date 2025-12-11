@@ -69,20 +69,24 @@ android {
 			buildConfigField("boolean", "DEVELOPMENT", "false")
 		}
 
-		debug {
-			// Use different application id to run release and debug at the same time
-			applicationIdSuffix = ".debug"
+	debug {
+		// Use different application id to run release and debug at the same time
+		applicationIdSuffix = ".debug"
 
-			// Set package names used in various XML files
-			resValue("string", "app_id", namespace + applicationIdSuffix)
-			resValue("string", "app_search_suggest_authority", "${namespace + applicationIdSuffix}.content")
-			resValue("string", "app_search_suggest_intent_data", "content://${namespace + applicationIdSuffix}.content/intent")
+		// Always use default debug signing for debug builds
+		// This ensures consistent signatures across different build environments
+		signingConfig = signingConfigs.getByName("debug")
 
-			// Set flavored application name
-			resValue("string", "app_name", "Moonfin Debug")
+		// Set package names used in various XML files
+		resValue("string", "app_id", namespace + applicationIdSuffix)
+		resValue("string", "app_search_suggest_authority", "${namespace + applicationIdSuffix}.content")
+		resValue("string", "app_search_suggest_intent_data", "content://${namespace + applicationIdSuffix}.content/intent")
 
-			buildConfigField("boolean", "DEVELOPMENT", (defaultConfig.versionCode!! < 100).toString())
-		}
+		// Set flavored application name
+		resValue("string", "app_name", "Moonfin Debug")
+
+		buildConfigField("boolean", "DEVELOPMENT", (defaultConfig.versionCode!! < 100).toString())
+	}
 	}
 
 	lint {

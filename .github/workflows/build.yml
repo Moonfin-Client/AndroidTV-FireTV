@@ -41,7 +41,19 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
 
-    - name: Decode and setup keystore (Release only)
+    - name: Setup debug keystore
+      env:
+        DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+      run: |
+        mkdir -p ~/.android
+        if [ ! -z "$DEBUG_KEYSTORE_BASE64" ]; then
+          echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+          echo "Debug keystore configured from secrets"
+        else
+          echo "Debug keystore not configured, Android will generate one"
+        fi
+
+    - name: Decode and setup release keystore
       if: github.event.inputs.release_build == 'true' || github.ref == 'refs/heads/master'
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
