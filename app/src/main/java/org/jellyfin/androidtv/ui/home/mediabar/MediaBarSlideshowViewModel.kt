@@ -218,6 +218,7 @@ class MediaBarSlideshowViewModel(
 	 */
 	fun nextSlide() {
 		if (_playbackState.value.isTransitioning) return
+		if (items.isEmpty()) return
 
 		val currentIndex = _playbackState.value.currentIndex
 		val nextIndex = (currentIndex + 1) % items.size
@@ -241,6 +242,7 @@ class MediaBarSlideshowViewModel(
 	 */
 	fun previousSlide() {
 		if (_playbackState.value.isTransitioning) return
+		if (items.isEmpty()) return
 
 		val currentIndex = _playbackState.value.currentIndex
 		val previousIndex = if (currentIndex == 0) items.size - 1 else currentIndex - 1

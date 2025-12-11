@@ -11,11 +11,28 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -79,12 +96,40 @@ class HomeFragment : Fragment() {
 					label = "logo_transition"
 				) { url ->
 					if (url != null) {
-						AsyncImage(
-							model = url,
-							contentDescription = null,
-							modifier = Modifier.fillMaxSize(),
-							contentScale = ContentScale.Fit
-						)
+						Box(
+							modifier = Modifier.fillMaxSize()
+						) {
+							// Draw black shadow behind with offset and blur
+							AsyncImage(
+								model = url,
+								contentDescription = null,
+								colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
+								modifier = Modifier
+									.padding(top = 16.dp, bottom = 16.dp, end = 16.dp)
+									.offset(x = 4.dp, y = 4.dp)
+									.then(
+										if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+											Modifier.graphicsLayer {
+												renderEffect = RenderEffect
+													.createBlurEffect(8f, 8f, Shader.TileMode.DECAL)
+													.asComposeRenderEffect()
+											}
+										} else {
+											Modifier
+										}
+									),
+								contentScale = ContentScale.Fit,
+								alpha = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 1f else 0.7f
+							)
+							// Draw the actual logo on top
+							AsyncImage(
+								model = url,
+								contentDescription = null,
+								modifier = Modifier
+									.padding(top = 16.dp, bottom = 16.dp, end = 16.dp),
+								contentScale = ContentScale.Fit
+							)
+						}
 					}
 				}
 			}
