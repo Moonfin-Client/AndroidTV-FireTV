@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -91,7 +92,7 @@ class HomeFragment : Fragment() {
 				AnimatedContent(
 					targetState = logoUrl,
 					transitionSpec = {
-						fadeIn() togetherWith fadeOut()
+						fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
 					},
 					label = "logo_transition"
 				) { url ->
@@ -153,7 +154,7 @@ class HomeFragment : Fragment() {
 				AnimatedContent(
 					targetState = backdropUrl,
 					transitionSpec = {
-						fadeIn() togetherWith fadeOut()
+						fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
 					},
 					label = "backdrop_transition"
 				) { url ->
@@ -203,6 +204,7 @@ class HomeFragment : Fragment() {
 			?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
 			?.onEach { position ->
 				updateLogoVisibility()
+				updateDetailsVisibility(position)
 			}
 			?.launchIn(lifecycleScope)
 
@@ -244,6 +246,35 @@ class HomeFragment : Fragment() {
 			logoView?.isVisible = false
 			titleView?.isVisible = true
 		}
+	}
+
+	private fun updateDetailsVisibility(position: Int) {
+		val isMediaBarEnabled = userSettingPreferences.activeHomesections.contains(org.jellyfin.androidtv.constant.HomeSectionType.MEDIA_BAR)
+		val shouldShowDetails = position <= 0 || (position == 1 && !isMediaBarEnabled)
+		
+		// Animate details widgets (title/logo, infoRow, summary)
+		val targetAlpha = if (shouldShowDetails) 1f else 0f
+		val duration = 200L
+		
+		titleView?.animate()
+			?.alpha(targetAlpha)
+			?.setDuration(duration)
+			?.start()
+		
+		logoView?.animate()
+			?.alpha(targetAlpha)
+			?.setDuration(duration)
+			?.start()
+		
+		infoRowView?.animate()
+			?.alpha(targetAlpha)
+			?.setDuration(duration)
+			?.start()
+		
+		summaryView?.animate()
+			?.alpha(targetAlpha)
+			?.setDuration(duration)
+			?.start()
 	}
 
 	override fun onDestroyView() {

@@ -39,7 +39,7 @@
 
     <androidx.leanback.widget.HorizontalGridView
         android:id="@+id/users"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="153dp"
         android:clipChildren="false"
         android:clipToPadding="false"
@@ -62,6 +62,19 @@
         app:layout_constraintStart_toStartOf="@id/actions_container"
         app:layout_constraintTop_toTopOf="@+id/users"
         tools:visibility="invisible" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/edit_button"
+        style="@style/Button.Default"
+        android:layout_width="wrap_content"
+        android:layout_height="51dp"
+        android:layout_margin="8dp"
+        android:drawableStart="@drawable/ic_pencil"
+        android:text="@string/lbl_edit"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/users" />
 
     <LinearLayout
         android:id="@+id/actions_container"

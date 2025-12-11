@@ -104,11 +104,37 @@ class ServerFragment : Fragment() {
 			.flowWithLifecycle(viewLifecycleOwner.lifecycle, Lifecycle.State.STARTED)
 			.onEach { users ->
 				userAdapter.items = users
+				
+				// Calculate centering padding once layout is complete
+				binding.users.post {
+					val parentWidth = (binding.users.parent as? View)?.width ?: 0
+					
+					if (parentWidth > 0 && users.isNotEmpty()) {
+						val density = resources.displayMetrics.density
+						val cardWidthPx = (130 * density).toInt()
+						val itemSpacingPx = (16 * density).toInt()
+						val totalContentWidth = (cardWidthPx * users.size) + (itemSpacingPx * (users.size - 1))
+						val padding = maxOf(0, (parentWidth - totalContentWidth) / 2)
+						binding.users.setPadding(padding, 0, padding, 0)
+					}
+				}
 
 				binding.users.isFocusable = users.any()
 				binding.noUsersWarning.isVisible = users.isEmpty()
+				
+				// Show edit button if there are users, hide the action buttons
+				val hasUsers = users.isNotEmpty()
+				binding.editButton.isVisible = hasUsers
+				binding.actionsContainer.isVisible = !hasUsers
+				
 				binding.root.requestFocus()
 			}.launchIn(viewLifecycleOwner.lifecycleScope)
+
+		// Setup edit button to toggle actions visibility
+		binding.editButton.setOnClickListener {
+			binding.actionsContainer.isVisible = true
+			binding.editButton.isVisible = false
+		}
 
 		startupViewModel.loadUsers(server)
 

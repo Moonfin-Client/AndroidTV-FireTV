@@ -370,6 +370,7 @@
     <string name="no_user_warning">We couldn\'t find any accounts!\nAdd a new account by pressing the \"Add account\" button.</string>
     <string name="who_is_watching">Who\'s watching?</string>
     <string name="add_user">Add account</string>
+    <string name="lbl_edit">Edit</string>
     <string name="help">Help</string>
     <string name="lbl_special">Special</string>
     <string name="lbl_season_number">S%1$d</string>
