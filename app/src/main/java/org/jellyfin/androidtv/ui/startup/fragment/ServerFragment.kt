@@ -272,4 +272,3 @@ class ServerFragment : Fragment() {
 		) : RecyclerView.ViewHolder(cardView)
 	}
 }
-
