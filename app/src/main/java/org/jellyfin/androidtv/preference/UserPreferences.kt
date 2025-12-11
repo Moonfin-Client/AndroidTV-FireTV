@@ -334,10 +334,18 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 				
 				// Migrate mediaBarOverlayOpacity from String to Int
 				val overlayKey = "mediaBarOverlayOpacity"
-				val stringValue = prefs.getString(overlayKey, null)
-				if (stringValue != null) {
-					val intValue = stringValue.toIntOrNull() ?: 50
-					putInt(overlayKey, intValue)
+				if (prefs.contains(overlayKey)) {
+					try {
+						// Try reading as String first (old format)
+						val stringValue = prefs.getString(overlayKey, null)
+						if (stringValue != null) {
+							val intValue = stringValue.toIntOrNull() ?: 50
+							putInt(overlayKey, intValue)
+						}
+					} catch (e: ClassCastException) {
+						// Already stored as Int, no migration needed
+						// Keep the existing integer value
+					}
 				}
 			}
 		}
