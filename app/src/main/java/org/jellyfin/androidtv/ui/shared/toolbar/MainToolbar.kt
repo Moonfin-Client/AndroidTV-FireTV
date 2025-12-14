@@ -1,6 +1,7 @@
 package org.jellyfin.androidtv.ui.shared.toolbar
 
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
@@ -216,6 +217,7 @@ private fun MainToolbar(
 
 				val interactionSource = remember { MutableInteractionSource() }
 				val isFocused by interactionSource.collectIsFocusedAsState()
+				val scale by animateFloatAsState(if (isFocused) 1.1f else 1f, label = "UserAvatarFocusScale")
 
 				IconButton(
 					onClick = {
@@ -240,6 +242,7 @@ private fun MainToolbar(
 					},
 					contentPadding = if (userImageVisible) PaddingValues(0.dp) else IconButtonDefaults.ContentPadding,
 					interactionSource = interactionSource,
+					modifier = Modifier.scale(scale),
 				) {
 					if (!userImageVisible) {
 						Icon(
@@ -253,12 +256,10 @@ private fun MainToolbar(
 							contentScale = ContentScale.Crop,
 							modifier = Modifier
 								.aspectRatio(1f)
-								.then(
-									if (isFocused) Modifier.border(
-										width = 3.dp,
-										color = JellyfinTheme.colorScheme.buttonFocused,
-										shape = IconButtonDefaults.Shape
-									) else Modifier
+								.border(
+									width = if (isFocused) 2.dp else 0.dp,
+									color = if (isFocused) JellyfinTheme.colorScheme.buttonFocused else Color.Transparent,
+									shape = IconButtonDefaults.Shape
 								)
 								.clip(IconButtonDefaults.Shape)
 						)
