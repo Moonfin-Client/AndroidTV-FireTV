@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.ui.browsing
 
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -17,11 +18,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.SessionRepository
+import org.jellyfin.androidtv.auth.repository.SessionRepositoryState
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.service.UpdateCheckerService
 import org.jellyfin.androidtv.databinding.ActivityMainBinding
@@ -68,8 +72,20 @@ class MainActivity : FragmentActivity() {
 
 		super.onCreate(savedInstanceState)
 
-		if (!validateAuthentication()) return
+		// Wait for session restoration before validating authentication
+		// This prevents race condition where activity recreates before session is restored
+		lifecycleScope.launch {
+			sessionRepository.state
+				.filter { it == SessionRepositoryState.READY }
+				.first()
+			
+			if (!validateAuthentication()) return@launch
+			
+			setupActivity(savedInstanceState)
+		}
+	}
 
+	private fun setupActivity(savedInstanceState: Bundle?) {
 		interactionTrackerViewModel.keepScreenOn.flowWithLifecycle(lifecycle, Lifecycle.State.RESUMED)
 			.onEach { keepScreenOn ->
 				if (keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -157,9 +173,14 @@ class MainActivity : FragmentActivity() {
 
 		workManager.enqueue(OneTimeWorkRequestBuilder<LeanbackChannelWorker>().build())
 
-		lifecycleScope.launch(Dispatchers.IO) {
-			Timber.i("MainActivity stopped")
-			sessionRepository.restoreSession(destroyOnly = true)
+		// Only destroy session if app is finishing, not just temporarily stopping
+		if (isFinishing) {
+			lifecycleScope.launch(Dispatchers.IO) {
+				Timber.i("MainActivity finishing - destroying session")
+				sessionRepository.restoreSession(destroyOnly = true)
+			}
+		} else {
+			Timber.d("MainActivity stopped (not finishing) - preserving session")
 		}
 	}
 
@@ -268,5 +289,11 @@ class MainActivity : FragmentActivity() {
 		exitConfirmationDialog?.dismiss()
 		exitConfirmationDialog = null
 		super.onDestroy()
+	}
+
+	override fun onConfigurationChanged(newConfig: Configuration) {
+		super.onConfigurationChanged(newConfig)
+		Timber.d("Configuration changed - preserving activity and playback state")
+		applyTheme()
 	}
 }

@@ -1,13 +1,18 @@
 package org.jellyfin.androidtv.ui.shared.toolbar
 
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -18,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
@@ -52,10 +58,11 @@ import org.jellyfin.androidtv.ui.base.button.IconButtonDefaults
 import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
 import org.jellyfin.androidtv.ui.navigation.ActivityDestinations
 import org.jellyfin.androidtv.ui.navigation.Destinations
+import org.jellyfin.androidtv.preference.JellyseerrPreferences
+import org.jellyfin.preference.store.PreferenceStore
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.preference.UserSettingPreferences
-import org.jellyfin.androidtv.preference.JellyseerrPreferences
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
 import org.jellyfin.androidtv.util.apiclient.getUrl
@@ -89,22 +96,47 @@ fun MainToolbar(
 	activeButton: MainToolbarActiveButton = MainToolbarActiveButton.None,
 	activeLibraryId: UUID? = null,
 ) {
+	val context = LocalContext.current
 	val userRepository = koinInject<UserRepository>()
 	val api = koinInject<ApiClient>()
 	val userViewsRepository = koinInject<UserViewsRepository>()
 	val jellyseerrPreferences = koinInject<JellyseerrPreferences>(named("global"))
 	val userPreferences = koinInject<UserPreferences>()
+	val imageLoader = koinInject<coil3.ImageLoader>()
 	val scope = rememberCoroutineScope()
 
 	// Prevent user image to disappear when signing out by skipping null values
 	val currentUser by remember { userRepository.currentUser.filterNotNull() }.collectAsState(null)
 	val userImage = remember(currentUser) { currentUser?.primaryImage?.getUrl(api) }
-	
-	var jellyseerrEnabled by remember { mutableStateOf(false) }
-	LaunchedEffect(Unit) {
-		jellyseerrEnabled = jellyseerrPreferences[JellyseerrPreferences.enabled]
+
+	// Preload user image into cache as soon as we have the URL
+	LaunchedEffect(userImage) {
+		if (userImage != null) {
+			withContext(Dispatchers.IO) {
+				val request = coil3.request.ImageRequest.Builder(context)
+					.data(userImage)
+					.memoryCachePolicy(coil3.request.CachePolicy.ENABLED)
+					.diskCachePolicy(coil3.request.CachePolicy.ENABLED)
+					.build()
+				imageLoader.execute(request)
+			}
+		}
 	}
-	
+
+	var jellyseerrEnabled by remember { mutableStateOf(false) }
+	LaunchedEffect(currentUser) {
+		// Check if Jellyseerr is globally enabled
+		val globalEnabled = jellyseerrPreferences[JellyseerrPreferences.enabled]
+		if (globalEnabled && currentUser != null) {
+			// Check if current user has an API key
+			val userJellyseerrPrefs = JellyseerrPreferences(context = context, userId = currentUser!!.id.toString())
+			val hasApiKey = userJellyseerrPrefs[JellyseerrPreferences.apiKey].isNotEmpty()
+			jellyseerrEnabled = hasApiKey
+		} else {
+			jellyseerrEnabled = false
+		}
+	}
+
 	// Load toolbar customization preferences
 	var showShuffleButton by remember { mutableStateOf(true) }
 	var showGenresButton by remember { mutableStateOf(true) }
@@ -118,7 +150,7 @@ fun MainToolbar(
 		showLibrariesInToolbar = userPreferences[UserPreferences.showLibrariesInToolbar] ?: true
 		shuffleContentType = userPreferences[UserPreferences.shuffleContentType] ?: "both"
 	}
-	
+
 	// Load user views/libraries
 	var userViews by remember { mutableStateOf<List<BaseItemDto>>(emptyList()) }
 	LaunchedEffect(Unit) {
@@ -166,19 +198,19 @@ private fun MainToolbar(
 	val activity = LocalActivity.current
 	val context = LocalContext.current
 	val scope = rememberCoroutineScope()
-	
+
 	val activeButtonColors = ButtonDefaults.colors(
 		containerColor = JellyfinTheme.colorScheme.buttonActive,
 		contentColor = JellyfinTheme.colorScheme.onButtonActive,
 	)
-	
+
 	val toolbarButtonColors = ButtonDefaults.colors(
 		containerColor = Color.Transparent,
 		contentColor = JellyfinTheme.colorScheme.onButton,
 		focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
 		focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
 	)
-	
+
 	// Get overlay preferences for toolbar styling
 	val overlayOpacity = userSettingPreferences[UserSettingPreferences.mediaBarOverlayOpacity] / 100f
 	val overlayColor = when (userSettingPreferences[UserSettingPreferences.mediaBarOverlayColor]) {
@@ -209,6 +241,10 @@ private fun MainToolbar(
 				val userImageState by userImagePainter.state.collectAsState()
 				val userImageVisible = userImageState is AsyncImagePainter.State.Success
 
+				val interactionSource = remember { MutableInteractionSource() }
+				val isFocused by interactionSource.collectIsFocusedAsState()
+				val scale by animateFloatAsState(if (isFocused) 1.1f else 1f, label = "UserAvatarFocusScale")
+
 				IconButton(
 					onClick = {
 						if (activeButton != MainToolbarActiveButton.User) {
@@ -231,6 +267,8 @@ private fun MainToolbar(
 						toolbarButtonColors
 					},
 					contentPadding = if (userImageVisible) PaddingValues(0.dp) else IconButtonDefaults.ContentPadding,
+					interactionSource = interactionSource,
+					modifier = Modifier.scale(scale),
 				) {
 					if (!userImageVisible) {
 						Icon(
@@ -244,6 +282,11 @@ private fun MainToolbar(
 							contentScale = ContentScale.Crop,
 							modifier = Modifier
 								.aspectRatio(1f)
+								.border(
+									width = if (isFocused) 2.dp else 0.dp,
+									color = if (isFocused) JellyfinTheme.colorScheme.buttonFocused else Color.Transparent,
+									shape = IconButtonDefaults.Shape
+								)
 								.clip(IconButtonDefaults.Shape)
 						)
 					}
@@ -279,7 +322,7 @@ private fun MainToolbar(
 						contentDescription = stringResource(R.string.lbl_home),
 					)
 				}
-				
+
 				IconButton(
 					onClick = {
 						if (activeButton != MainToolbarActiveButton.Search) {
@@ -293,7 +336,7 @@ private fun MainToolbar(
 						contentDescription = stringResource(R.string.lbl_search),
 					)
 				}
-				
+
 			// Shuffle button (conditional)
 			if (showShuffleButton) {
 				IconButton(
@@ -307,7 +350,7 @@ private fun MainToolbar(
 									"tv" -> setOf(BaseItemKind.SERIES)
 									else -> setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES)
 								}
-								
+
 								val randomItem = withContext(Dispatchers.IO) {
 									val response = api.itemsApi.getItems(
 										includeItemTypes = includeTypes,
@@ -352,7 +395,7 @@ private fun MainToolbar(
 					)
 				}
 			}
-			
+
 			// Favorites button (conditional)
 			if (showFavoritesButton) {
 				IconButton(
@@ -367,7 +410,7 @@ private fun MainToolbar(
 					)
 				}
 			}
-			
+
 		if (jellyseerrEnabled) {
 			IconButton(
 				onClick = {
@@ -404,7 +447,7 @@ private fun MainToolbar(
 			if (showLibrariesInToolbar) {
 				ProvideTextStyle(JellyfinTheme.typography.default.copy(fontWeight = FontWeight.Bold)) {
 					userViews.forEach { library ->
-					val isActiveLibrary = activeButton == MainToolbarActiveButton.Library && 
+					val isActiveLibrary = activeButton == MainToolbarActiveButton.Library &&
 						activeLibraryId == library.id
 											Button(
 							onClick = {
@@ -426,6 +469,21 @@ private fun MainToolbar(
 			horizontalArrangement = Arrangement.spacedBy(8.dp),
 			verticalAlignment = Alignment.CenterVertically,
 		) {
+			IconButton(
+				onClick = {
+					settingsViewModel.show()
+				},
+				colors = ButtonDefaults.colors(
+					containerColor = Color.Transparent,
+					focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
+				),
+			) {
+				Icon(
+					imageVector = ImageVector.vectorResource(R.drawable.ic_settings),
+					contentDescription = stringResource(R.string.lbl_settings),
+				)
+			}
+
 			ToolbarClock()
 		}
 	}

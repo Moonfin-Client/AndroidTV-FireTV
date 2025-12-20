@@ -12,6 +12,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.serviceLoaderEnabled
 import coil3.svg.SvgDecoder
 import coil3.util.Logger
+import okio.Path.Companion.toOkioPath
 import org.jellyfin.androidtv.BuildConfig
 import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.auth.repository.UserRepository
@@ -118,9 +119,26 @@ val appModule = module {
 	}
 
 	single {
-		ImageLoader.Builder(androidContext()).apply {
+		val context = androidContext()
+		ImageLoader.Builder(context).apply {
 			serviceLoaderEnabled(false)
 			logger(CoilTimberLogger(if (BuildConfig.DEBUG) Logger.Level.Warn else Logger.Level.Error))
+
+			// Configure memory cache - use 25% of available memory for images
+			memoryCache {
+				coil3.memory.MemoryCache.Builder()
+					.maxSizePercent(context, percent = 0.25)
+					.strongReferencesEnabled(true)
+					.build()
+			}
+
+			// Configure disk cache - 250MB for image caching
+			diskCache {
+				coil3.disk.DiskCache.Builder()
+					.directory(context.cacheDir.resolve("image_cache").toOkioPath())
+					.maxSizeBytes(250L * 1024 * 1024) // 250 MB
+					.build()
+			}
 
 			components {
 				add(get<NetworkFetcher.Factory>())

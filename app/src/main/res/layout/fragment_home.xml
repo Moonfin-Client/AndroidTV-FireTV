@@ -5,13 +5,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Background image container -->
-    <ImageView
+    <!-- Background image container using Compose for smooth transitions -->
+    <androidx.compose.ui.platform.ComposeView
         android:id="@+id/backgroundImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -32,31 +30,31 @@
             android:layout_height="wrap_content" />
     </FrameLayout>
 
-    <!-- Logo at 80dp from top (shown when available) -->
-    <ImageView
+    <!-- Logo in bottom right corner (shown when available) using Compose for smooth transitions -->
+    <androidx.compose.ui.platform.ComposeView
         android:id="@+id/logo"
         android:layout_width="wrap_content"
-        android:layout_height="60dp"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="80dp"
-        android:adjustViewBounds="true"
-        android:scaleType="fitStart"
+        android:layout_height="120dp"
+        android:layout_marginStart="690dp"
+        android:layout_marginTop="360dp"
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Title at 80dp from top (fallback when no logo) -->
+    <!-- Title (fallback when no logo) - positioned same as logo -->
     <TextView
         android:id="@+id/title"
-        android:layout_width="917dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="80dp"
+        android:layout_width="wrap_content"
+        android:layout_height="200dp"
+        android:layout_marginStart="690dp"
+        android:layout_marginTop="280dp"
         android:ellipsize="end"
         android:fontFamily="sans-serif-medium"
+        android:gravity="center_vertical"
         android:letterSpacing="0.02"
         android:lineSpacingExtra="2dp"
-        android:maxLines="1"
+        android:maxLines="3"
+        android:maxWidth="400dp"
         android:text=""
         android:textAllCaps="false"
         android:textColor="@android:color/white"

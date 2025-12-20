@@ -22,6 +22,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import coil3.ImageLoader
 import coil3.asDrawable
+import coil3.load
 import coil3.request.ImageRequest
 import coil3.toBitmap
 import kotlinx.coroutines.launch
@@ -1092,17 +1093,7 @@ class MediaDetailsFragment : Fragment() {
 		
 		if (!profilePath.isNullOrEmpty()) {
 			val imageUrl = "https://image.tmdb.org/t/p/w185$profilePath"
-			lifecycleScope.launch {
-				try {
-					val request = ImageRequest.Builder(requireContext())
-						.data(imageUrl)
-						.build()
-					val result = imageLoader.execute(request).image?.asDrawable(resources)
-					profileImage.setImageDrawable(result)
-				} catch (e: Exception) {
-					Timber.e(e, "Failed to load cast profile image")
-				}
-			}
+			profileImage.load(imageUrl)
 		}
 		
 		imageContainer.addView(profileImage)
@@ -1268,16 +1259,7 @@ class MediaDetailsFragment : Fragment() {
 
 			item.posterPath?.let { path ->
 				val imageUrl = "https://image.tmdb.org/t/p/w500$path"
-				lifecycleScope.launch {
-					try {
-						val request = ImageRequest.Builder(requireContext()).data(imageUrl).build()
-						val result = imageLoader.execute(request)
-						val bitmap = result.image?.toBitmap()
-						bitmap?.let { setImageBitmap(it) }
-					} catch (e: Exception) {
-						Timber.e(e, "Failed to load poster image")
-					}
-				}
+				load(imageUrl)
 			}
 		}
 		imageContainer.addView(posterImage)
@@ -1342,6 +1324,10 @@ class MediaDetailsFragment : Fragment() {
 		lifecycleScope.launch {
 			try {
 				val result = viewModel.requestMedia(item, seasons, is4k)
+				
+				// Check if fragment is still attached before accessing context
+				if (!isAdded) return@launch
+				
 				result.onSuccess {
 					val quality = if (is4k) "4K" else "HD"
 					val seasonInfo = if (seasons != null) {
@@ -1364,11 +1350,14 @@ class MediaDetailsFragment : Fragment() {
 				}
 			} catch (e: Exception) {
 				Timber.e(e, "Request failed")
-				Toast.makeText(
-					requireContext(),
-					"Request failed: ${e.message}",
-					Toast.LENGTH_LONG
-				).show()
+				// Check if fragment is still attached before showing toast
+				if (isAdded) {
+					Toast.makeText(
+						requireContext(),
+						"Request failed: ${e.message}",
+						Toast.LENGTH_LONG
+					).show()
+				}
 			}
 		}
 	}

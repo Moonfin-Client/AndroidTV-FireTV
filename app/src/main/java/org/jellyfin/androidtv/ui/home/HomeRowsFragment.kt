@@ -135,20 +135,6 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 
 			// Start out with default sections
 			val homesections = userSettingPreferences.activeHomesections
-			var includeLiveTvRows = false
-
-			// Check for live TV support
-			if (homesections.contains(HomeSectionType.LIVE_TV) && currentUser.policy?.enableLiveTvAccess == true) {
-				// This is kind of ugly, but it mirrors how web handles the live TV rows on the home screen
-				// If we can retrieve one live TV recommendation, then we should display the rows
-				val recommendedPrograms by api.liveTvApi.getRecommendedPrograms(
-					enableTotalRecordCount = false,
-					imageTypeLimit = 1,
-					isAiring = true,
-					limit = 1,
-				)
-				includeLiveTvRows = recommendedPrograms.items.isNotEmpty()
-			}
 
 			// Make sure the rows are empty
 			val rows = mutableListOf<HomeFragmentRow>()
@@ -193,10 +179,7 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 					}
 					rows.add(playlistRow)
 				}
-				HomeSectionType.LIVE_TV -> if (includeLiveTvRows) {
-					rows.add(liveTVRow)
-					rows.add(helper.loadOnNow())
-				}
+				HomeSectionType.LIVE_TV -> Unit // Live TV has its own dedicated page, no rows on home screen
 
 				HomeSectionType.NONE -> Unit
 			}

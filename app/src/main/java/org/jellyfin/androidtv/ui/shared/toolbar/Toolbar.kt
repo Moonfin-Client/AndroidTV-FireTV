@@ -38,7 +38,7 @@ import org.jellyfin.androidtv.ui.composable.rememberCurrentTime
 @Composable
 fun Logo(modifier: Modifier = Modifier) {
 	Image(
-		painter = painterResource(R.drawable.app_logo),
+		painter = painterResource(R.drawable.ic_moonfin),
 		contentDescription = stringResource(R.string.app_name),
 		modifier = modifier,
 	)
