@@ -40,19 +40,19 @@ data class HomeSectionConfig(
 	companion object {
 		/**
 		 * Default home sections configuration
+		 * Note: MEDIA_BAR is now controlled by a separate toggle in Moonfin settings
 		 */
 		fun defaults(): List<HomeSectionConfig> = listOf(
-			HomeSectionConfig(HomeSectionType.MEDIA_BAR, enabled = true, order = 0),
-			HomeSectionConfig(HomeSectionType.RESUME, enabled = true, order = 1),
-			HomeSectionConfig(HomeSectionType.NEXT_UP, enabled = true, order = 2),
-			HomeSectionConfig(HomeSectionType.LIVE_TV, enabled = true, order = 3),
-			HomeSectionConfig(HomeSectionType.LATEST_MEDIA, enabled = true, order = 4),
-			HomeSectionConfig(HomeSectionType.LIBRARY_TILES_SMALL, enabled = false, order = 5),
-			HomeSectionConfig(HomeSectionType.LIBRARY_BUTTONS, enabled = false, order = 6),
-			HomeSectionConfig(HomeSectionType.RESUME_AUDIO, enabled = false, order = 7),
-			HomeSectionConfig(HomeSectionType.RESUME_BOOK, enabled = false, order = 8),
-			HomeSectionConfig(HomeSectionType.ACTIVE_RECORDINGS, enabled = false, order = 9),
-			HomeSectionConfig(HomeSectionType.PLAYLIST, enabled = false, order = 10),
+			HomeSectionConfig(HomeSectionType.RESUME, enabled = true, order = 0),
+			HomeSectionConfig(HomeSectionType.NEXT_UP, enabled = true, order = 1),
+			HomeSectionConfig(HomeSectionType.LIVE_TV, enabled = true, order = 2),
+			HomeSectionConfig(HomeSectionType.LATEST_MEDIA, enabled = true, order = 3),
+			HomeSectionConfig(HomeSectionType.LIBRARY_TILES_SMALL, enabled = false, order = 4),
+			HomeSectionConfig(HomeSectionType.LIBRARY_BUTTONS, enabled = false, order = 5),
+			HomeSectionConfig(HomeSectionType.RESUME_AUDIO, enabled = false, order = 6),
+			HomeSectionConfig(HomeSectionType.RESUME_BOOK, enabled = false, order = 7),
+			HomeSectionConfig(HomeSectionType.ACTIVE_RECORDINGS, enabled = false, order = 8),
+			HomeSectionConfig(HomeSectionType.PLAYLIST, enabled = false, order = 9),
 		)
 	}
 }

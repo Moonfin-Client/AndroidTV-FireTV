@@ -68,13 +68,18 @@ fun HomeSectionsConfigScreen() {
 		}
 		
 		// Display each section with checkbox and reorder buttons
-		sections.sortedBy { it.order }.forEachIndexed { index, section ->
+		// Filter out MEDIA_BAR since it's controlled by a separate toggle in Moonfin settings
+		val configurableSections = sections
+			.filter { it.type != HomeSectionType.MEDIA_BAR }
+			.sortedBy { it.order }
+		
+		configurableSections.forEachIndexed { index, section ->
 			if (section.type != HomeSectionType.NONE) {
 				item(key = section.type) {
 					HomeSectionRow(
 						section = section,
 						canMoveUp = index > 0,
-						canMoveDown = index < sections.size - 1,
+						canMoveDown = index < configurableSections.size - 1,
 						shouldRequestFocus = section.type == focusedSectionType,
 						onFocusChanged = { focused ->
 							if (focused) focusedSectionType = section.type

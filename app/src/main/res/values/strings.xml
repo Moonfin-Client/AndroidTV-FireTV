@@ -654,6 +654,7 @@
     <string name="pref_media_bar_title">Media Bar</string>
     <string name="pref_media_bar_enable">Enable Media Bar slideshow on home screen</string>
     <string name="pref_media_bar_enable_summary">Display a featured content slideshow at the top of the home screen</string>
+    <string name="pref_media_bar_content_type">Featured content type</string>
     <string name="pref_media_bar_item_count">Number of carousel items</string>
     <string name="pref_media_bar_item_count_summary">How many featured items to display in the carousel</string>
     <string name="pref_media_bar_5_items">5 items</string>

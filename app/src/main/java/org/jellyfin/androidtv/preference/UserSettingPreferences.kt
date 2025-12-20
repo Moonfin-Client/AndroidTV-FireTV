@@ -19,6 +19,10 @@ class UserSettingPreferences(
 	companion object {
 		val skipBackLength = intPreference("skipBackLength", 10_000)
 		val skipForwardLength = intPreference("skipForwardLength", 30_000)
+		
+		// Media Bar settings
+		val mediaBarEnabled = booleanPreference("mediaBarEnabled", true)
+		val mediaBarContentType = stringPreference("mediaBarContentType", "both")
 		val mediaBarItemCount = stringPreference("mediaBarItemCount", "10")
 		val mediaBarOverlayOpacity = intPreference("mediaBarOverlayOpacity", 50)
 		val mediaBarOverlayColor = stringPreference("mediaBarOverlayColor", "gray")
@@ -155,17 +159,22 @@ class UserSettingPreferences(
 					} else null
 				}
 				
-				// Get default configs for all available section types
+				// Check if user had MEDIA_BAR enabled and set the new toggle accordingly
+				val hadMediaBar = enabledOldSections.any { it.type == HomeSectionType.MEDIA_BAR }
+				putBoolean(mediaBarEnabled.key, hadMediaBar)
+				
+				// Get default configs for all available section types (excluding MEDIA_BAR)
 				val defaultConfigs = HomeSectionConfig.defaults()
 				
-				// Build final config: start with enabled old sections
-				val enabledTypes = enabledOldSections.map { it.type }.toSet()
+				// Build final config: start with enabled old sections, but exclude MEDIA_BAR
+				val enabledOldSectionsWithoutMediaBar = enabledOldSections.filter { it.type != HomeSectionType.MEDIA_BAR }
+				val enabledTypes = enabledOldSectionsWithoutMediaBar.map { it.type }.toSet()
 				val newConfigs = buildList {
-					// Add all old enabled sections with their original order
-					addAll(enabledOldSections)
+					// Add all old enabled sections with their original order (excluding MEDIA_BAR)
+					addAll(enabledOldSectionsWithoutMediaBar)
 					
 					// Add any section types from defaults that weren't in the old config (as disabled)
-					val maxOrder = enabledOldSections.maxOfOrNull { it.order } ?: -1
+					val maxOrder = enabledOldSectionsWithoutMediaBar.maxOfOrNull { it.order } ?: -1
 					defaultConfigs.forEach { defaultConfig ->
 						if (defaultConfig.type !in enabledTypes) {
 							add(defaultConfig.copy(

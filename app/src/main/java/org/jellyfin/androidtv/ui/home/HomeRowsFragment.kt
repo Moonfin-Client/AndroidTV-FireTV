@@ -156,12 +156,17 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 			// Check for coroutine cancellation
 			if (!isActive) return@launch
 
+			// Add media bar row if enabled in Moonfin settings (not part of configurable sections)
+			if (userSettingPreferences[UserSettingPreferences.mediaBarEnabled]) {
+				rows.add(mediaBarRow)
+			}
+			
 			// Actually add the sections
 			val mergeContinueWatching = userPreferences[UserPreferences.mergeContinueWatchingNextUp]
 			var mergedRowAdded = false
 			
 			for (section in homesections) when (section) {
-				HomeSectionType.MEDIA_BAR -> rows.add(mediaBarRow) // Add Media Bar as a native row
+				HomeSectionType.MEDIA_BAR -> { /* Now handled by separate toggle above */ }
 				HomeSectionType.LATEST_MEDIA -> rows.add(helper.loadRecentlyAdded(userViewsRepository.views.first()))
 				HomeSectionType.LIBRARY_TILES_SMALL -> rows.add(HomeFragmentViewsRow(small = false))
 				HomeSectionType.LIBRARY_BUTTONS -> rows.add(HomeFragmentViewsRow(small = true))
