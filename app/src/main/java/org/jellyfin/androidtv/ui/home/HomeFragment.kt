@@ -235,7 +235,8 @@ class HomeFragment : Fragment() {
 		
 		// Determine if we should show media bar content
 		// Show if: media bar is focused OR (we're at position 0 AND media bar is enabled) OR position is -1 (toolbar/no selection)
-		val shouldShowMediaBar = isFocused || (selectedPosition == 0 && isMediaBarEnabled) || selectedPosition == -1
+		// Important: If media bar is disabled, we should NEVER show its backdrop (even if isFocused somehow becomes true)
+		val shouldShowMediaBar = isMediaBarEnabled && (isFocused || (selectedPosition == 0) || selectedPosition == -1)
 		
 		if (state is MediaBarState.Ready && shouldShowMediaBar) {
 			val playbackState = mediaBarViewModel.playbackState.value
@@ -246,7 +247,8 @@ class HomeFragment : Fragment() {
 			logoView?.isVisible = hasLogo
 			titleView?.isVisible = !hasLogo
 		} else {
-			// Hide logo when on other rows
+			// Hide background and logo when media bar is disabled or on other rows
+			backgroundImage?.isVisible = false
 			logoView?.isVisible = false
 			titleView?.isVisible = true
 		}
