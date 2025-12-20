@@ -1,6 +1,5 @@
 package org.jellyfin.androidtv.ui.settings.screen
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -10,16 +9,8 @@ import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -27,12 +18,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.jellyfin.androidtv.BuildConfig
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.UpdateCheckerService
 import org.jellyfin.androidtv.ui.base.Icon
@@ -46,6 +34,7 @@ import org.jellyfin.androidtv.ui.preference.category.showDonateDialog
 import org.jellyfin.androidtv.ui.preference.screen.JellyseerrPreferencesScreen
 import org.jellyfin.androidtv.ui.preference.screen.MoonfinPreferencesScreen
 import org.jellyfin.androidtv.ui.settings.Routes
+import org.jellyfin.androidtv.ui.settings.composable.SettingsColumn
 import org.koin.java.KoinJavaComponent.inject
 import timber.log.Timber
 
@@ -55,211 +44,146 @@ fun SettingsMainScreen() {
 	val router = LocalRouter.current
 	val updateChecker by inject<UpdateCheckerService>(UpdateCheckerService::class.java)
 
-	Column(
-		modifier = Modifier
-			.verticalScroll(rememberScrollState())
-			.padding(6.dp),
-		verticalArrangement = Arrangement.spacedBy(4.dp),
-	) {
-		ListSection(
-			modifier = Modifier,
-			overlineContent = { Text(stringResource(R.string.app_name).uppercase()) },
-			headingContent = { Text(stringResource(R.string.settings)) },
-			captionContent = { Text(stringResource(R.string.settings_description)) },
-		)
-
-		ListButton(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_users),
-					contentDescription = null
-				)
-			},
-			headingContent = { Text(stringResource(R.string.pref_login)) },
-			captionContent = { Text(stringResource(R.string.pref_login_description)) },
-			onClick = { router.push(Routes.AUTHENTICATION) }
-		)
-
-		ListButton(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_adjust),
-					contentDescription = null
-				)
-			},
-			headingContent = { Text(stringResource(R.string.pref_customization)) },
-			captionContent = { Text(stringResource(R.string.pref_customization_description)) },
-			onClick = {
-				context.startActivity(ActivityDestinations.customizationPreferences(context))
-			}
-		)
-
-		ListButton(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_moonfin_white),
-					contentDescription = null
-				)
-			},
-			headingContent = { Text(stringResource(R.string.moonfin_settings)) },
-			captionContent = { Text("Moonfin-specific customization") },
-			onClick = {
-				val intent = Intent(context, PreferencesActivity::class.java).apply {
-					putExtras(
-						bundleOf(
-							PreferencesActivity.EXTRA_SCREEN to MoonfinPreferencesScreen::class.qualifiedName,
-							PreferencesActivity.EXTRA_SCREEN_ARGS to bundleOf(),
-						)
-					)
-				}
-				context.startActivity(intent)
-			}
-		)
-
-		ListButton(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_jellyseerr_jellyfish),
-					contentDescription = null,
-					modifier = Modifier.size(24.dp)
-				)
-			},
-			headingContent = { Text(stringResource(R.string.jellyseerr)) },
-			captionContent = { Text("Jellyseerr integration settings") },
-			onClick = {
-				val intent = Intent(context, PreferencesActivity::class.java).apply {
-					putExtras(
-						bundleOf(
-							PreferencesActivity.EXTRA_SCREEN to JellyseerrPreferencesScreen::class.qualifiedName,
-							PreferencesActivity.EXTRA_SCREEN_ARGS to bundleOf(),
-						)
-					)
-				}
-				context.startActivity(intent)
-			}
-		)
-
-		ListButton(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_next),
-					contentDescription = null
-				)
-			},
-			headingContent = { Text(stringResource(R.string.pref_playback)) },
-			captionContent = { Text(stringResource(R.string.pref_playback_description)) },
-			onClick = {
-				context.startActivity(ActivityDestinations.playbackPreferences(context))
-			}
-		)
-
-		ListButton(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_error),
-					contentDescription = null
-				)
-			},
-			headingContent = { Text(stringResource(R.string.pref_telemetry_category)) },
-			captionContent = { Text(stringResource(R.string.pref_telemetry_description)) },
-			onClick = { router.push(Routes.TELEMETRY) }
-		)
-
-		ListButton(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_flask),
-					contentDescription = null
-				)
-			},
-			headingContent = { Text(stringResource(R.string.pref_developer_link)) },
-			captionContent = { Text(stringResource(R.string.pref_developer_link_description)) },
-			onClick = { router.push(Routes.DEVELOPER) }
-		)
-
-		ListSection(
-			modifier = Modifier,
-			headingContent = { Text("Support & Updates") },
-		)
-
-	ListButton(
-		leadingContent = {
-			Icon(
-				painterResource(R.drawable.ic_get_app),
-				contentDescription = null
+	SettingsColumn {
+		item {
+			ListSection(
+				overlineContent = { Text(stringResource(R.string.app_name).uppercase()) },
+				headingContent = { Text(stringResource(R.string.settings)) },
+				captionContent = { Text(stringResource(R.string.settings_description)) },
 			)
-		},
-		headingContent = { Text("Check for Updates") },
-		captionContent = { Text("Download latest Moonfin version") },
-		onClick = {
-			checkForUpdates(context, updateChecker)
 		}
-	)
 
-	ListButton(
-		leadingContent = {
-			Icon(
-				painterResource(R.drawable.ic_heart),
-				contentDescription = null,
-				tint = Color.Red
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_users), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_login)) },
+				onClick = { router.push(Routes.AUTHENTICATION) }
 			)
-		},
-		headingContent = { Text("Support Moonfin") },
-		captionContent = { Text("Help us continue development") },
-		onClick = {
-			showDonateDialog(context)
 		}
-	)
 
-	ListSection(
-		modifier = Modifier,
-		headingContent = { Text(stringResource(R.string.pref_about_title)) },
-	)
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_adjust), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_customization)) },
+				onClick = { context.startActivity(ActivityDestinations.customizationPreferences(context)) }
+			)
+		}
 
-		ListSection(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_jellyfin),
-					contentDescription = null
-				)
-			},
-			headingContent = { Text("Base Jellyfin App Version") },
-			captionContent = { Text("v0.19.4") },
-		)
+		item {
+			ListButton(
+				leadingContent = {
+					Icon(
+						painterResource(R.drawable.ic_moonfin_white),
+						contentDescription = null
+					)
+				},
+				headingContent = { Text(stringResource(R.string.moonfin_settings)) },
+				captionContent = { Text("Moonfin-specific customization") },
+				onClick = {
+					val intent = Intent(context, PreferencesActivity::class.java).apply {
+						putExtras(
+							bundleOf(
+								PreferencesActivity.EXTRA_SCREEN to MoonfinPreferencesScreen::class.qualifiedName,
+								PreferencesActivity.EXTRA_SCREEN_ARGS to bundleOf(),
+							)
+						)
+					}
+					context.startActivity(intent)
+				}
+			)
+		}
 
-		ListSection(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_moonfin),
-					contentDescription = null,
-					tint = Color.Unspecified
-				)
-			},
-			headingContent = { Text("Moonfin Version") },
-			captionContent = { Text("Moonfin ${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD_TYPE})") },
-		)
+		item {
+			ListButton(
+				leadingContent = {
+					Icon(
+						painterResource(R.drawable.ic_jellyseerr_jellyfish),
+						contentDescription = null,
+						modifier = Modifier.size(24.dp)
+					)
+				},
+				headingContent = { Text(stringResource(R.string.jellyseerr)) },
+				captionContent = { Text("Jellyseerr integration settings") },
+				onClick = {
+					val intent = Intent(context, PreferencesActivity::class.java).apply {
+						putExtras(
+							bundleOf(
+								PreferencesActivity.EXTRA_SCREEN to JellyseerrPreferencesScreen::class.qualifiedName,
+								PreferencesActivity.EXTRA_SCREEN_ARGS to bundleOf(),
+							)
+						)
+					}
+					context.startActivity(intent)
+				}
+			)
+		}
 
-		ListSection(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_tv),
-					contentDescription = null
-				)
-			},
-			headingContent = { Text(stringResource(R.string.pref_device_model)) },
-			captionContent = { Text("${Build.MANUFACTURER} ${Build.MODEL}") },
-		)
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_next), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_playback)) },
+				onClick = { router.push(Routes.PLAYBACK) }
+			)
+		}
 
-		ListButton(
-			leadingContent = {
-				Icon(
-					painterResource(R.drawable.ic_guide),
-					contentDescription = null
-				)
-			},
-			headingContent = { Text(stringResource(R.string.licenses_link)) },
-			captionContent = { Text(stringResource(R.string.licenses_link_description)) },
-			onClick = { router.push(Routes.LICENSES) }
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_error), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_telemetry_category)) },
+				onClick = { router.push(Routes.TELEMETRY) }
+			)
+
+		}
+
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_flask), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_developer_link)) },
+				onClick = { router.push(Routes.DEVELOPER) }
+			)
+		}
+
+		item {
+			ListSection(
+				headingContent = { Text("Support & Updates") },
+			)
+		}
+
+		item {
+			ListButton(
+				leadingContent = {
+					Icon(
+						painterResource(R.drawable.ic_get_app),
+						contentDescription = null
+					)
+				},
+				headingContent = { Text("Check for Updates") },
+				captionContent = { Text("Download latest Moonfin version") },
+				onClick = {
+					checkForUpdates(context, updateChecker)
+				}
+			)
+		}
+
+		item {
+			ListButton(
+				leadingContent = {
+					Icon(
+						painterResource(R.drawable.ic_heart),
+						contentDescription = null,
+						tint = Color.Red
+					)
+				},
+				headingContent = { Text("Support Moonfin") },
+				captionContent = { Text("Help us continue development") },
+				onClick = {
+					showDonateDialog(context)
+				}
+			)
+		}
+
+		settingsAboutItems(
+			openLicenses = { router.push(Routes.LICENSES) }
 		)
 	}
 }
