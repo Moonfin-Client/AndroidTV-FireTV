@@ -33,20 +33,24 @@
     <!-- Logo in bottom right corner (shown when available) using Compose for smooth transitions -->
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/logo"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="120dp"
-        android:layout_marginStart="690dp"
+        android:layout_marginStart="48dp"
+        android:layout_marginEnd="48dp"
         android:layout_marginTop="360dp"
         android:visibility="gone"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintStart_toEndOf="@id/summary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintHorizontal_bias="1.0" />
 
     <!-- Title (fallback when no logo) - positioned same as logo -->
     <TextView
         android:id="@+id/title"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="200dp"
-        android:layout_marginStart="690dp"
+        android:layout_marginStart="48dp"
+        android:layout_marginEnd="48dp"
         android:layout_marginTop="280dp"
         android:ellipsize="end"
         android:fontFamily="sans-serif-medium"
@@ -54,7 +58,6 @@
         android:letterSpacing="0.02"
         android:lineSpacingExtra="2dp"
         android:maxLines="3"
-        android:maxWidth="400dp"
         android:text=""
         android:textAllCaps="false"
         android:textColor="@android:color/white"
@@ -64,8 +67,10 @@
         android:shadowDx="0"
         android:shadowDy="2"
         android:shadowRadius="4"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintStart_toEndOf="@id/summary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintHorizontal_bias="1.0" />
 
     <!-- Info Row at 112dp from top - lightweight native View version -->
     <org.jellyfin.androidtv.ui.home.SimpleInfoRowView

@@ -82,7 +82,9 @@ class HomeFragment : Fragment() {
 				val isFocused by mediaBarViewModel.isFocused.collectAsState()
 				
 				val selectedPosition = rowsFragment?.selectedPositionFlow?.collectAsState(initial = -1)?.value ?: -1
+				// Check if the media bar is enabled in Moonfin settings
 				val isMediaBarEnabled = userSettingPreferences[UserSettingPreferences.mediaBarEnabled]
+				// Show media bar when: focused OR (at position 0 AND enabled) OR at position -1 (toolbar)
 				val shouldShowMediaBar = isFocused || (selectedPosition == 0 && isMediaBarEnabled) || selectedPosition == -1
 				
 				val logoUrl = if (state is MediaBarState.Ready && shouldShowMediaBar) {
@@ -98,7 +100,9 @@ class HomeFragment : Fragment() {
 				) { url ->
 					if (url != null) {
 						Box(
-							modifier = Modifier.fillMaxSize()
+							modifier = Modifier
+								.fillMaxWidth()
+								.fillMaxSize()
 						) {
 							// Draw black shadow behind with offset and blur
 							AsyncImage(
@@ -106,7 +110,8 @@ class HomeFragment : Fragment() {
 								contentDescription = null,
 								colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
 								modifier = Modifier
-									.padding(top = 16.dp, bottom = 16.dp, end = 16.dp)
+									.fillMaxWidth()
+									.padding(top = 16.dp, bottom = 16.dp, end = 16.dp, start = 16.dp)
 									.offset(x = 4.dp, y = 4.dp)
 									.then(
 										if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -127,7 +132,8 @@ class HomeFragment : Fragment() {
 								model = url,
 								contentDescription = null,
 								modifier = Modifier
-									.padding(top = 16.dp, bottom = 16.dp, end = 16.dp),
+									.fillMaxWidth()
+									.padding(top = 16.dp, bottom = 16.dp, end = 16.dp, start = 16.dp),
 								contentScale = ContentScale.Fit
 							)
 						}
@@ -144,7 +150,9 @@ class HomeFragment : Fragment() {
 				val isFocused by mediaBarViewModel.isFocused.collectAsState()
 				
 				val selectedPosition = rowsFragment?.selectedPositionFlow?.collectAsState(initial = -1)?.value ?: -1
-				val isMediaBarEnabled = userSettingPreferences.activeHomesections.contains(org.jellyfin.androidtv.constant.HomeSectionType.MEDIA_BAR)
+				// Check if the media bar is enabled in Moonfin settings
+				val isMediaBarEnabled = userSettingPreferences[UserSettingPreferences.mediaBarEnabled]
+				// Show media bar when: focused OR (at position 0 AND enabled) OR at position -1 (toolbar)
 				val shouldShowMediaBar = isFocused || (selectedPosition == 0 && isMediaBarEnabled) || selectedPosition == -1
 				
 				val backdropUrl = if (state is MediaBarState.Ready && shouldShowMediaBar) {
