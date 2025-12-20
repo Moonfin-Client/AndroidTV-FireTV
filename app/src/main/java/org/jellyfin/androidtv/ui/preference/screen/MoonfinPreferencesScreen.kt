@@ -83,6 +83,24 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 		category {
 			setTitle(R.string.pref_media_bar_title)
 
+			checkbox {
+				setTitle(R.string.pref_media_bar_enable)
+				setContent(R.string.pref_media_bar_enable_summary)
+				bind(userSettingPreferences, UserSettingPreferences.mediaBarEnabled)
+			}
+
+			list {
+				setTitle(R.string.pref_media_bar_content_type)
+				entries = mapOf(
+					"movies" to getString(R.string.pref_shuffle_movies),
+					"tv" to getString(R.string.pref_shuffle_tv),
+					"both" to getString(R.string.pref_shuffle_both)
+				)
+				bind(userSettingPreferences, UserSettingPreferences.mediaBarContentType)
+				
+				depends { userSettingPreferences[UserSettingPreferences.mediaBarEnabled] }
+			}
+
 			list {
 				setTitle(R.string.pref_media_bar_item_count)
 				entries = mapOf(
@@ -91,6 +109,8 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 					"15" to getString(R.string.pref_media_bar_15_items)
 				)
 				bind(userSettingPreferences, UserSettingPreferences.mediaBarItemCount)
+				
+				depends { userSettingPreferences[UserSettingPreferences.mediaBarEnabled] }
 			}
 
 		seekbar {
@@ -103,6 +123,8 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 				override fun display(value: Int) = "$value%"
 			}
 			bind(userSettingPreferences, UserSettingPreferences.mediaBarOverlayOpacity)
+			
+			depends { userSettingPreferences[UserSettingPreferences.mediaBarEnabled] }
 		}
 
 		list {
@@ -122,6 +144,8 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 					"indigo" to getString(R.string.pref_media_bar_color_indigo)
 				)
 				bind(userSettingPreferences, UserSettingPreferences.mediaBarOverlayColor)
+				
+				depends { userSettingPreferences[UserSettingPreferences.mediaBarEnabled] }
 			}
 		}
 

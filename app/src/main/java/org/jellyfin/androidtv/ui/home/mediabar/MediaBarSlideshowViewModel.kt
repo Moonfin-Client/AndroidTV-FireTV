@@ -82,14 +82,24 @@ class MediaBarSlideshowViewModel(
 	/**
 	 * Fetch items of a specific type from the server.
 	 * Helper function to avoid code duplication.
+	 * 
+	 * Note: TV series are folders (they contain episodes), so we exclude the
+	 * IS_NOT_FOLDER filter for SERIES to properly fetch shows.
 	 */
 	private suspend fun fetchItems(itemType: BaseItemKind, maxItems: Int): org.jellyfin.sdk.model.api.BaseItemDtoQueryResult {
+		// Only apply IS_NOT_FOLDER filter for movies since Series are folders
+		val filters = if (itemType == BaseItemKind.SERIES) {
+			emptySet()
+		} else {
+			setOf(ItemFilter.IS_NOT_FOLDER)
+		}
+		
 		val response by api.itemsApi.getItems(
 			includeItemTypes = setOf(itemType),
 			recursive = true,
 			sortBy = setOf(org.jellyfin.sdk.model.api.ItemSortBy.RANDOM),
 			limit = (maxItems * 1.5).toInt(), // Fetch 1.5x for filtering
-			filters = setOf(ItemFilter.IS_NOT_FOLDER),
+			filters = filters,
 			fields = setOf(ItemFields.OVERVIEW, ItemFields.GENRES),
 			imageTypeLimit = 1,
 			enableImageTypes = setOf(ImageType.BACKDROP, ImageType.LOGO),
@@ -104,19 +114,30 @@ class MediaBarSlideshowViewModel(
 	 * 2. Client-side: shuffle() randomizes the combined results again
 	 *
 	 * Optimized to fetch movies and shows in parallel for faster loading.
+	 * Respects user's content type preference (movies/tv/both).
 	 */
 	private fun loadSlideshowItems() {
 		viewModelScope.launch {
 		try {
 			_state.value = MediaBarState.Loading
 			val config = getConfig()
+			val contentType = userSettingPreferences[UserSettingPreferences.mediaBarContentType]
 
-			// Fetch movies and shows in parallel for better performance
+			// Fetch items based on user preference
 			val allItems: List<org.jellyfin.sdk.model.api.BaseItemDto> = withContext(Dispatchers.IO) {
-				val movies = async { fetchItems(BaseItemKind.MOVIE, config.maxItems) }
-				val shows = async { fetchItems(BaseItemKind.SERIES, config.maxItems) }
-
-				(movies.await().items.orEmpty() + shows.await().items.orEmpty())
+				when (contentType) {
+					"movies" -> {
+						fetchItems(BaseItemKind.MOVIE, config.maxItems).items.orEmpty()
+					}
+					"tv" -> {
+						fetchItems(BaseItemKind.SERIES, config.maxItems).items.orEmpty()
+					}
+					else -> { // "both"
+						val movies = async { fetchItems(BaseItemKind.MOVIE, config.maxItems) }
+						val shows = async { fetchItems(BaseItemKind.SERIES, config.maxItems) }
+						(movies.await().items.orEmpty() + shows.await().items.orEmpty())
+					}
+				}
 					.filter { it.backdropImageTags?.isNotEmpty() == true }
 					.shuffled()
 					.take(config.maxItems)

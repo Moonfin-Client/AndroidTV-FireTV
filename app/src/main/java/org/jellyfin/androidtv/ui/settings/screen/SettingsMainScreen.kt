@@ -83,7 +83,7 @@ fun SettingsMainScreen() {
 			ListButton(
 				leadingContent = { Icon(painterResource(R.drawable.ic_adjust), contentDescription = null) },
 				headingContent = { Text(stringResource(R.string.pref_customization)) },
-				onClick = { context.startActivity(ActivityDestinations.customizationPreferences(context)) }
+				onClick = { router.push(Routes.CUSTOMIZATION) }
 			)
 		}
 

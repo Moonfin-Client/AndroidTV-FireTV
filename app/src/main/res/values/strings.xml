@@ -432,6 +432,10 @@
     <string name="license_license">License</string>
     <string name="home_prefs">Home</string>
     <string name="home_sections">Home sections</string>
+    <string name="home_sections_description">Select which rows appear on your home screen and their order using the left and right dpad buttons</string>
+    <string name="home_sections_move_up">Move up</string>
+    <string name="home_sections_move_down">Move down</string>
+    <string name="home_sections_reset">Reset to defaults</string>
     <string name="home_section_media_bar">Featured media</string>
     <string name="home_section_latest_media">Recently added media</string>
     <string name="home_section_library">My media</string>
@@ -673,6 +677,7 @@
     <string name="pref_media_bar_title">Media Bar</string>
     <string name="pref_media_bar_enable">Enable Media Bar slideshow on home screen</string>
     <string name="pref_media_bar_enable_summary">Display a featured content slideshow at the top of the home screen</string>
+    <string name="pref_media_bar_content_type">Featured content type</string>
     <string name="pref_media_bar_item_count">Number of carousel items</string>
     <string name="pref_media_bar_item_count_summary">How many featured items to display in the carousel</string>
     <string name="pref_media_bar_5_items">5 items</string>

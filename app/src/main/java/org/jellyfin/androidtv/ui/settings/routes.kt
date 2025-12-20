@@ -1,6 +1,8 @@
 package org.jellyfin.androidtv.ui.settings
 
 import org.jellyfin.androidtv.ui.navigation.RouteComposable
+import org.jellyfin.androidtv.ui.preference.screen.CustomizationPreferencesScreen
+import org.jellyfin.androidtv.ui.preference.screen.HomeSectionsConfigScreen
 import org.jellyfin.androidtv.ui.settings.screen.SettingsDeveloperScreen
 import org.jellyfin.androidtv.ui.settings.screen.SettingsMainScreen
 import org.jellyfin.androidtv.ui.settings.screen.SettingsTelemetryScreen
@@ -29,6 +31,7 @@ object Routes {
 	const val AUTHENTICATION_SERVER_USER = "/authentication/server/{serverId}/user/{userId}"
 	const val AUTHENTICATION_SORT_BY = "/authentication/sort-by"
 	const val AUTHENTICATION_AUTO_SIGN_IN = "/authentication/auto-sign-in"
+	const val CUSTOMIZATION = "/customization"
 	const val PLAYBACK = "/playback"
 	const val PLAYBACK_NEXT_UP = "/playback/next-up"
 	const val PLAYBACK_NEXT_UP_BEHAVIOR = "/playback/next-up/behavior"
@@ -36,6 +39,7 @@ object Routes {
 	const val PLAYBACK_PREROLLS = "/playback/prerolls"
 	const val PLAYBACK_MEDIA_SEGMENTS = "/playback/media-segments"
 	const val PLAYBACK_MEDIA_SEGMENT = "/playback/media-segments/{segmentType}"
+	const val HOME_SECTIONS = "/home-sections"
 	const val TELEMETRY = "/telemetry"
 	const val DEVELOPER = "/developer"
 	const val LICENSES = "/licenses"
@@ -69,6 +73,9 @@ val routes = mapOf<String, RouteComposable>(
 	Routes.AUTHENTICATION_AUTO_SIGN_IN to {
 		SettingsAuthenticationAutoSignInScreen()
 	},
+	Routes.CUSTOMIZATION to {
+		CustomizationPreferencesScreen()
+	},
 	Routes.PLAYBACK to {
 		SettingsPlaybackScreen()
 	},
@@ -91,6 +98,9 @@ val routes = mapOf<String, RouteComposable>(
 		SettingsPlaybackMediaSegmentScreen(
 			segmentType = context.parameters["segmentType"]?.let(MediaSegmentType::fromNameOrNull)!!,
 		)
+	},
+	Routes.HOME_SECTIONS to {
+		HomeSectionsConfigScreen()
 	},
 	Routes.TELEMETRY to {
 		SettingsTelemetryScreen()

@@ -18,9 +18,17 @@ fun LazyListScope.settingsAboutItems(
 
 	item {
 		ListSection(
+			leadingContent = { Icon(painterResource(R.drawable.ic_moonfin), contentDescription = null) },
+			headingContent = { Text("Moonfin app version") },
+			captionContent = { Text("moonfin-androidtv ${BuildConfig.VERSION_NAME} ${BuildConfig.BUILD_TYPE}") },
+		)
+	}
+
+	item {
+		ListSection(
 			leadingContent = { Icon(painterResource(R.drawable.ic_jellyfin), contentDescription = null) },
-			headingContent = { Text("Jellyfin app version") },
-			captionContent = { Text("jellyfin-androidtv ${BuildConfig.VERSION_NAME} ${BuildConfig.BUILD_TYPE}") },
+			headingContent = { Text("Base Jellyfin app version") },
+			captionContent = { Text("jellyfin-androidtv 0.19.4") },
 		)
 	}
 
