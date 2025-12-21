@@ -41,6 +41,10 @@ class UserSettingPreferences(
 		val mediaBarOverlayOpacity = intPreference("mediaBarOverlayOpacity", 50)
 		val mediaBarOverlayColor = stringPreference("mediaBarOverlayColor", "gray")
 		
+		// Home rows image type settings
+		val homeRowsUniversalOverride = booleanPreference("homeRowsUniversalOverride", false)
+		val homeRowsUniversalImageType = enumPreference("homeRowsUniversalImageType", org.jellyfin.androidtv.constant.ImageType.POSTER)
+		
 		// Background blur settings
 		@Deprecated("Use detailsBackgroundBlurAmount or browsingBackgroundBlurAmount instead", ReplaceWith("detailsBackgroundBlurAmount"))
 		val backgroundBlurAmount = intPreference("backgroundBlurAmount", 10)
@@ -134,6 +138,25 @@ class UserSettingPreferences(
 			.filter { it.enabled }
 			.sortedBy { it.order }
 			.map { it.type }
+	
+	/**
+	 * Get the image type for a specific home row, respecting universal override.
+	 */
+	fun getHomeRowImageType(sectionType: HomeSectionType): org.jellyfin.androidtv.constant.ImageType {
+		// Check if universal override is enabled
+		if (get(homeRowsUniversalOverride)) {
+			return get(homeRowsUniversalImageType)
+		}
+		
+		// Get per-row preference
+		val key = "homeRowImageType_${sectionType.serializedName}"
+		val value = sharedPreferences.getString(key, org.jellyfin.androidtv.constant.ImageType.POSTER.name)
+		return try {
+			org.jellyfin.androidtv.constant.ImageType.valueOf(value ?: org.jellyfin.androidtv.constant.ImageType.POSTER.name)
+		} catch (e: IllegalArgumentException) {
+			org.jellyfin.androidtv.constant.ImageType.POSTER
+		}
+	}
 	
 	init {
 		runMigrations {

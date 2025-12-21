@@ -84,11 +84,8 @@ fun ItemRowAdapter.retrieveResumeItems(api: ApiClient, query: GetResumeItemsRequ
 				transform = { item, _ ->
 					BaseItemDtoBaseRowItem(
 						item = item,
-						// When seriesThumbnailsEnabled is true, use wide thumbnails; otherwise use series poster
-						// Movies use thumb/backdrop via preferThumbForMovies
 						preferParentThumb = preferParentThumb,
-						staticHeight = isStaticHeight,
-						preferThumbForMovies = true
+						staticHeight = isStaticHeight
 					)
 				}
 			)
@@ -132,10 +129,8 @@ fun ItemRowAdapter.retrieveNextUpItems(api: ApiClient, query: GetNextUpRequest) 
 					transform = { item, _ ->
 						BaseItemDtoBaseRowItem(
 							item = item,
-							// When seriesThumbnailsEnabled is true, use wide thumbnails; otherwise use series poster
 							preferParentThumb = preferParentThumb,
-							staticHeight = false,
-							preferSeriesPoster = !preferParentThumb
+							staticHeight = false
 						)
 					}
 				)
@@ -147,10 +142,8 @@ fun ItemRowAdapter.retrieveNextUpItems(api: ApiClient, query: GetNextUpRequest) 
 					transform = { item, _ ->
 						BaseItemDtoBaseRowItem(
 							item = item,
-							// When seriesThumbnailsEnabled is true, use wide thumbnails; otherwise use series poster
 							preferParentThumb = preferParentThumb,
-							staticHeight = isStaticHeight,
-							preferSeriesPoster = !preferParentThumb
+							staticHeight = isStaticHeight
 						)
 					}
 				)
@@ -199,8 +192,7 @@ fun ItemRowAdapter.retrieveMergedContinueWatchingItems(
 					BaseItemDtoBaseRowItem(
 						item = item,
 						preferParentThumb = preferParentThumb,
-						staticHeight = isStaticHeight,
-						preferThumbForMovies = true
+						staticHeight = isStaticHeight
 					)
 				}
 			)
@@ -227,9 +219,7 @@ fun ItemRowAdapter.retrieveLatestMedia(api: ApiClient, query: GetLatestMediaRequ
 						item = item,
 						preferParentThumb = preferParentThumb,
 						staticHeight = isStaticHeight,
-						selectAction = BaseRowItemSelectAction.ShowDetails,
-						preferSeriesPoster = false,
-						preferThumbForMovies = false,
+						selectAction = BaseRowItemSelectAction.ShowDetails
 					)
 				}
 			)
@@ -252,7 +242,11 @@ fun ItemRowAdapter.retrieveSpecialFeatures(api: ApiClient, query: GetSpecialsReq
 			setItems(
 				items = response,
 				transform = { item, _ ->
-					BaseItemDtoBaseRowItem(item, preferParentThumb, false)
+					BaseItemDtoBaseRowItem(
+						item = item,
+						preferParentThumb = preferParentThumb,
+						staticHeight = false
+					)
 				}
 			)
 
@@ -379,11 +373,10 @@ fun ItemRowAdapter.retrieveTrailers(api: ApiClient, query: GetTrailersRequest) {
 				items = response,
 				transform = { item, _ ->
 					BaseItemDtoBaseRowItem(
-						item,
-						preferParentThumb,
-						false,
-						BaseRowItemSelectAction.Play,
-						false
+						item = item,
+						preferParentThumb = preferParentThumb,
+						staticHeight = false,
+						selectAction = BaseRowItemSelectAction.Play
 					)
 				}
 			)
@@ -778,9 +771,7 @@ fun ItemRowAdapter.refreshItem(
 						item = refreshedBaseItem,
 						preferParentThumb = currentBaseRowItem.preferParentThumb,
 						staticHeight = currentBaseRowItem.staticHeight,
-						selectAction = currentBaseRowItem.selectAction,
-						preferSeriesPoster = currentBaseRowItem.preferSeriesPoster,
-						preferThumbForMovies = currentBaseRowItem.preferThumbForMovies
+						selectAction = currentBaseRowItem.selectAction
 					)
 				)
 			},

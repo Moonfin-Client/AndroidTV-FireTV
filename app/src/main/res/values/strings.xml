@@ -495,6 +495,14 @@
     <string name="pref_home_description">Configure shown sections</string>
     <string name="pref_libraries">Libraries</string>
     <string name="pref_libraries_description">Change how libraries are displayed</string>
+    
+    <!-- Home rows image type preferences -->
+    <string name="pref_home_rows_image_type">Home Rows Image Type</string>
+    <string name="pref_universal_override">Universal Override</string>
+    <string name="pref_home_rows_universal_override">Enable universal override</string>
+    <string name="pref_home_rows_universal_override_description">Override all rows with the same image type</string>
+    <string name="pref_home_rows_universal_image_type">Universal image type</string>
+    <string name="pref_home_rows_per_row">Per-Row Settings</string>
     <string name="pref_login">Login</string>
     <string name="pref_login_description">Servers, accounts, automatic sign in</string>
     <string name="pref_customization_description">Theme, home, remapping</string>

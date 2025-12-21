@@ -6,6 +6,7 @@ import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.preference.custom.DurationSeekBarPreference
 import org.jellyfin.androidtv.ui.preference.dsl.OptionsFragment
 import org.jellyfin.androidtv.ui.preference.dsl.checkbox
+import org.jellyfin.androidtv.ui.preference.dsl.link
 import org.jellyfin.androidtv.ui.preference.dsl.list
 import org.jellyfin.androidtv.ui.preference.dsl.optionsScreen
 import org.jellyfin.androidtv.ui.preference.dsl.seekbar
@@ -208,6 +209,12 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 		// Visual Settings
 		category {
 			setTitle(R.string.pref_visual_settings)
+			
+			link {
+				setTitle(R.string.pref_home_rows_image_type)
+				icon = R.drawable.ic_grid
+				withFragment<HomeRowsImagePreferencesScreen>()
+			}
 
 			seekbar {
 				setTitle(R.string.pref_details_background_blur_amount)

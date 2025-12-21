@@ -1,9 +1,11 @@
 package org.jellyfin.androidtv.ui.preference.screen
 
+import android.content.Intent
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import org.jellyfin.androidtv.R
@@ -19,6 +21,7 @@ import org.jellyfin.androidtv.ui.base.form.RadioButton
 import org.jellyfin.androidtv.ui.base.list.ListButton
 import org.jellyfin.androidtv.ui.base.list.ListSection
 import org.jellyfin.androidtv.ui.navigation.LocalRouter
+import org.jellyfin.androidtv.ui.preference.PreferencesActivity
 import org.jellyfin.androidtv.ui.settings.Routes
 import org.jellyfin.androidtv.ui.settings.composable.SettingsColumn
 import org.jellyfin.androidtv.ui.settings.compat.rememberPreference
@@ -28,6 +31,7 @@ import org.koin.compose.koinInject
 fun CustomizationPreferencesScreen() {
 	val router = LocalRouter.current
 	val userPreferences = koinInject<UserPreferences>()
+	val context = LocalContext.current
 
 	SettingsColumn {
 		// Theme section
@@ -136,7 +140,13 @@ fun CustomizationPreferencesScreen() {
 				leadingContent = { Icon(painterResource(R.drawable.ic_grid), contentDescription = null) },
 				headingContent = { Text(stringResource(R.string.pref_libraries)) },
 				captionContent = { Text(stringResource(R.string.pref_libraries_description)) },
-				onClick = { /* Open libraries preferences */ }
+				onClick = {
+					val intent = Intent(context, PreferencesActivity::class.java).apply {
+						putExtra(PreferencesActivity.EXTRA_SCREEN, LibrariesPreferencesScreen::class.qualifiedName)
+						putExtra(PreferencesActivity.EXTRA_SCREEN_ARGS, android.os.Bundle())
+					}
+					context.startActivity(intent)
+				}
 			)
 		}
 

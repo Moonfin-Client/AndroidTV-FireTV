@@ -16,8 +16,6 @@ open class BaseItemDtoBaseRowItem @JvmOverloads constructor(
 	preferParentThumb: Boolean = false,
 	staticHeight: Boolean = false,
 	selectAction: BaseRowItemSelectAction = BaseRowItemSelectAction.ShowDetails,
-	val preferSeriesPoster: Boolean = false,
-	val preferThumbForMovies: Boolean = false,
 ) : BaseRowItem(
 	baseRowType = when (item.type) {
 		BaseItemKind.TV_CHANNEL,
@@ -100,22 +98,28 @@ open class BaseItemDtoBaseRowItem @JvmOverloads constructor(
 		fillWidth: Int,
 		fillHeight: Int
 	): String? {
-		val seriesPrimaryImage = baseItem?.seriesPrimaryImage
-
 		return when {
-			preferSeriesPoster && seriesPrimaryImage != null -> imageHelper.getImageUrl(seriesPrimaryImage, fillWidth, fillHeight)
-
 			imageType == ImageType.BANNER -> imageHelper.getBannerImageUrl(
-				requireNotNull(
-					baseItem
-				), fillWidth, fillHeight
+				requireNotNull(baseItem), fillWidth, fillHeight
 			)
 
 			imageType == ImageType.THUMB -> imageHelper.getThumbImageUrl(
-				requireNotNull(
-					baseItem
-				), fillWidth, fillHeight
+				requireNotNull(baseItem), fillWidth, fillHeight
 			)
+
+			imageType == ImageType.POSTER && baseItem?.type == BaseItemKind.EPISODE -> {
+				val seriesPoster = baseItem?.seriesPrimaryImage
+				if (seriesPoster != null) {
+					imageHelper.getImageUrl(seriesPoster, fillWidth, fillHeight)
+				} else {
+					imageHelper.getPrimaryImageUrl(
+						baseItem!!,
+						preferParentThumb,
+						null,
+						fillHeight
+					)
+				}
+			}
 
 			else -> imageHelper.getPrimaryImageUrl(
 				baseItem!!,

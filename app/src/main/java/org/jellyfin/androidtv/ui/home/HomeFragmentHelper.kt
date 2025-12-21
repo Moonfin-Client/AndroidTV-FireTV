@@ -5,6 +5,7 @@ import kotlinx.coroutines.runBlocking
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.constant.ChangeTriggerType
+import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.constant.QueryType
 import org.jellyfin.androidtv.data.repository.ItemRepository
 import org.jellyfin.androidtv.preference.UserPreferences
@@ -66,16 +67,16 @@ class HomeFragmentHelper(
 			fields = ItemRepository.itemFields
 		)
 
-		return HomeFragmentBrowseRowDefRow(
-			BrowseRowDef(
-				context.getString(R.string.lbl_continue_watching),
-				resumeQuery,
-				nextUpQuery,
-				userPreferences[UserPreferences.seriesThumbnailsEnabled],
-				true,
-				arrayOf(ChangeTriggerType.TvPlayback, ChangeTriggerType.MoviePlayback)
-			)
+		val browseRowDef = BrowseRowDef(
+			context.getString(R.string.lbl_continue_watching),
+			resumeQuery,
+			nextUpQuery,
+			userPreferences[UserPreferences.seriesThumbnailsEnabled],
+			true,
+			arrayOf(ChangeTriggerType.TvPlayback, ChangeTriggerType.MoviePlayback)
 		)
+		browseRowDef.setSectionType(HomeSectionType.RESUME)
+		return HomeFragmentBrowseRowDefRow(browseRowDef)
 	}
 
 	fun loadResumeAudio(): HomeFragmentRow {
@@ -100,7 +101,9 @@ class HomeFragmentHelper(
 			fields = ItemRepository.itemFields
 		)
 
-		return HomeFragmentBrowseRowDefRow(BrowseRowDef(context.getString(R.string.lbl_next_up), query, arrayOf(ChangeTriggerType.TvPlayback)))
+		val browseRowDef = BrowseRowDef(context.getString(R.string.lbl_next_up), query, arrayOf(ChangeTriggerType.TvPlayback))
+		browseRowDef.setSectionType(HomeSectionType.NEXT_UP)
+		return HomeFragmentBrowseRowDefRow(browseRowDef)
 	}
 
 	fun loadOnNow(): HomeFragmentRow {

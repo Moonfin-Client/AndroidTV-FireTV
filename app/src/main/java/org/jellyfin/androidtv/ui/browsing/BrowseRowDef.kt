@@ -1,6 +1,7 @@
 package org.jellyfin.androidtv.ui.browsing
 
 import org.jellyfin.androidtv.constant.ChangeTriggerType
+import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.constant.QueryType
 import org.jellyfin.androidtv.data.querying.GetSeriesTimersRequest
 import org.jellyfin.androidtv.data.querying.GetSpecialsRequest
@@ -53,6 +54,8 @@ class BrowseRowDef {
 	var preferParentThumb: Boolean = false
 		private set
 	var changeTriggers: Array<ChangeTriggerType>? = null
+		private set
+	var sectionType: HomeSectionType? = null
 		private set
 
 	@JvmOverloads
@@ -249,5 +252,9 @@ class BrowseRowDef {
 		this.headerText = header ?: ""
 		this.specialsQuery = query
 		this.queryType = QueryType.Specials
+	}
+
+	fun setSectionType(type: HomeSectionType) {
+		this.sectionType = type
 	}
 }
