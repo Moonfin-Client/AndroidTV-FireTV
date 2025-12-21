@@ -2,7 +2,7 @@ package org.jellyfin.androidtv.util
 
 import android.content.Context
 import org.jellyfin.androidtv.preference.UserSettingPreferences
-import org.jellyfin.androidtv.ui.preference.custom.PinCodeDialog
+import org.jellyfin.androidtv.ui.startup.PinEntryDialog
 import java.security.MessageDigest
 import java.util.UUID
 
@@ -33,15 +33,19 @@ object PinCodeUtil {
 			return
 		}
 
-		PinCodeDialog.show(context, PinCodeDialog.Mode.VERIFY) { pin ->
-			if (pin != null) {
-				val enteredHash = hashPin(pin)
-				onResult(enteredHash == storedHash)
-			} else {
-				// User cancelled
-				onResult(false)
+		PinEntryDialog.show(
+			context = context,
+			mode = PinEntryDialog.Mode.VERIFY,
+			onComplete = { pin ->
+				if (pin != null) {
+					val enteredHash = hashPin(pin)
+					onResult(enteredHash == storedHash)
+				} else {
+					// User cancelled
+					onResult(false)
+				}
 			}
-		}
+		)
 	}
 
 	/**

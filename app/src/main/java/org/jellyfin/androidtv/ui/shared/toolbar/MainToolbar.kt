@@ -128,12 +128,11 @@ fun MainToolbar(
 		// Check if Jellyseerr is globally enabled
 		val globalEnabled = jellyseerrPreferences[JellyseerrPreferences.enabled]
 		if (globalEnabled && currentUser != null) {
-			// Check if current user has enabled Jellyseerr and has authentication
+			// Check if current user has enabled Jellyseerr in toolbar
 			val userJellyseerrPrefs = JellyseerrPreferences(context = context, userId = currentUser!!.id.toString())
-			val hasApiKey = userJellyseerrPrefs[JellyseerrPreferences.apiKey].isNotEmpty()
 			val showInToolbar = userJellyseerrPrefs[JellyseerrPreferences.showInToolbar]
-			// Show icon only if user has both enabled the setting AND has authentication
-			jellyseerrEnabled = hasApiKey && showInToolbar
+			// Show icon based purely on user preference
+			jellyseerrEnabled = showInToolbar
 		} else {
 			jellyseerrEnabled = false
 		}

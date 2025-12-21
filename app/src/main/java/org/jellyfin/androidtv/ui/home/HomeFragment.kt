@@ -101,8 +101,8 @@ class HomeFragment : Fragment() {
 					if (url != null) {
 						Box(
 							modifier = Modifier
-								.fillMaxWidth()
-								.fillMaxSize()
+								.fillMaxSize(),
+							contentAlignment = Alignment.CenterEnd // Align logo to right side
 						) {
 							// Draw black shadow behind with offset and blur
 							AsyncImage(
@@ -110,7 +110,7 @@ class HomeFragment : Fragment() {
 								contentDescription = null,
 								colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
 								modifier = Modifier
-									.fillMaxWidth()
+									.fillMaxSize()
 									.padding(top = 16.dp, bottom = 16.dp, end = 16.dp, start = 16.dp)
 									.offset(x = 4.dp, y = 4.dp)
 									.then(
@@ -132,7 +132,7 @@ class HomeFragment : Fragment() {
 								model = url,
 								contentDescription = null,
 								modifier = Modifier
-									.fillMaxWidth()
+									.fillMaxSize()
 									.padding(top = 16.dp, bottom = 16.dp, end = 16.dp, start = 16.dp),
 								contentScale = ContentScale.Fit
 							)
@@ -251,7 +251,8 @@ class HomeFragment : Fragment() {
 			val currentItem = state.items.getOrNull(playbackState.currentIndex)
 			val hasLogo = currentItem?.logoUrl != null
 			
-			// Show logo view when we have a logo, otherwise show title
+			// Show/hide the ComposeView container based on logo availability
+			// The Compose AnimatedContent inside handles rendering the logo
 			logoView?.isVisible = hasLogo
 			titleView?.isVisible = !hasLogo
 		} else {

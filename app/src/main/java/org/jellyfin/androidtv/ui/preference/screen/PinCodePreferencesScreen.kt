@@ -8,7 +8,7 @@ import org.jellyfin.androidtv.ui.preference.dsl.OptionsFragment
 import org.jellyfin.androidtv.ui.preference.dsl.checkbox
 import org.jellyfin.androidtv.ui.preference.dsl.action
 import org.jellyfin.androidtv.ui.preference.dsl.optionsScreen
-import org.jellyfin.androidtv.ui.preference.custom.PinCodeDialog
+import org.jellyfin.androidtv.ui.startup.PinEntryDialog
 import org.jellyfin.androidtv.util.PinCodeUtil
 import org.koin.android.ext.android.inject
 
@@ -74,50 +74,66 @@ class PinCodePreferencesScreen : OptionsFragment() {
 	}
 
 	private fun showSetPinDialog() {
-		PinCodeDialog.show(requireContext(), PinCodeDialog.Mode.SET) { pin ->
-			if (pin != null) {
-				val hash = PinCodeUtil.hashPin(pin)
-				userSettingPreferences[UserSettingPreferences.userPinHash] = hash
-				userSettingPreferences[UserSettingPreferences.userPinEnabled] = true
-				Toast.makeText(requireContext(), R.string.lbl_pin_code_set, Toast.LENGTH_SHORT).show()
-				rebuild()
+		PinEntryDialog.show(
+			context = requireContext(),
+			mode = PinEntryDialog.Mode.SET,
+			onComplete = { pin ->
+				if (pin != null) {
+					val hash = PinCodeUtil.hashPin(pin)
+					userSettingPreferences[UserSettingPreferences.userPinHash] = hash
+					userSettingPreferences[UserSettingPreferences.userPinEnabled] = true
+					Toast.makeText(requireContext(), R.string.lbl_pin_code_set, Toast.LENGTH_SHORT).show()
+					rebuild()
+				}
 			}
-		}
+		)
 	}
 
 	private fun showChangePinDialog() {
-		PinCodeDialog.show(requireContext(), PinCodeDialog.Mode.VERIFY) { oldPin ->
-			if (oldPin != null) {
-				val currentHash = userSettingPreferences[UserSettingPreferences.userPinHash]
-				if (PinCodeUtil.hashPin(oldPin) == currentHash) {
-					PinCodeDialog.show(requireContext(), PinCodeDialog.Mode.SET) { newPin ->
-						if (newPin != null) {
-							val hash = PinCodeUtil.hashPin(newPin)
-							userSettingPreferences[UserSettingPreferences.userPinHash] = hash
-							Toast.makeText(requireContext(), R.string.lbl_pin_code_changed, Toast.LENGTH_SHORT).show()
-							rebuild()
-						}
+		PinEntryDialog.show(
+			context = requireContext(),
+			mode = PinEntryDialog.Mode.VERIFY,
+			onComplete = { oldPin ->
+				if (oldPin != null) {
+					val currentHash = userSettingPreferences[UserSettingPreferences.userPinHash]
+					if (PinCodeUtil.hashPin(oldPin) == currentHash) {
+						PinEntryDialog.show(
+							context = requireContext(),
+							mode = PinEntryDialog.Mode.SET,
+							onComplete = { newPin ->
+								if (newPin != null) {
+									val hash = PinCodeUtil.hashPin(newPin)
+									userSettingPreferences[UserSettingPreferences.userPinHash] = hash
+									Toast.makeText(requireContext(), R.string.lbl_pin_code_changed, Toast.LENGTH_SHORT).show()
+									rebuild()
+								}
+							}
+						)
+					} else {
+						Toast.makeText(requireContext(), R.string.lbl_pin_code_incorrect, Toast.LENGTH_SHORT).show()
 					}
-				} else {
-					Toast.makeText(requireContext(), R.string.lbl_pin_code_incorrect, Toast.LENGTH_SHORT).show()
 				}
 			}
-		}
+		)
 	}
 
 	private fun showRemovePinDialog() {
-		PinCodeDialog.show(requireContext(), PinCodeDialog.Mode.VERIFY) { pin ->
-			if (pin != null) {
-				val currentHash = userSettingPreferences[UserSettingPreferences.userPinHash]
-				if (PinCodeUtil.hashPin(pin) == currentHash) {
-					userSettingPreferences[UserSettingPreferences.userPinHash] = ""
-					userSettingPreferences[UserSettingPreferences.userPinEnabled] = false
-					Toast.makeText(requireContext(), R.string.lbl_pin_code_removed, Toast.LENGTH_SHORT).show()
-					rebuild()
-				} else {
-					Toast.makeText(requireContext(), R.string.lbl_pin_code_incorrect, Toast.LENGTH_SHORT).show()
+		PinEntryDialog.show(
+			context = requireContext(),
+			mode = PinEntryDialog.Mode.VERIFY,
+			onComplete = { pin ->
+				if (pin != null) {
+					val currentHash = userSettingPreferences[UserSettingPreferences.userPinHash]
+					if (PinCodeUtil.hashPin(pin) == currentHash) {
+						userSettingPreferences[UserSettingPreferences.userPinHash] = ""
+						userSettingPreferences[UserSettingPreferences.userPinEnabled] = false
+						Toast.makeText(requireContext(), R.string.lbl_pin_code_removed, Toast.LENGTH_SHORT).show()
+						rebuild()
+					} else {
+						Toast.makeText(requireContext(), R.string.lbl_pin_code_incorrect, Toast.LENGTH_SHORT).show()
+					}
 				}
 			}
-		}
+		)
 	}
 }

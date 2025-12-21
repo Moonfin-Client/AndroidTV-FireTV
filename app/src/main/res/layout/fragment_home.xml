@@ -30,6 +30,39 @@
             android:layout_height="wrap_content" />
     </FrameLayout>
 
+    <!-- Info Row at 112dp from top - lightweight native View version -->
+    <org.jellyfin.androidtv.ui.home.SimpleInfoRowView
+        android:id="@+id/infoRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="112dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Summary at 136dp from top - max 58% width to leave space for logo -->
+    <TextView
+        android:id="@+id/summary"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="136dp"
+        android:layout_marginEnd="24dp"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:text=""
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:shadowColor="#000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="3"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintWidth_percent="0.58" />
+
     <!-- Logo in bottom right corner (shown when available) using Compose for smooth transitions -->
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/logo"
@@ -71,35 +104,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintHorizontal_bias="1.0" />
-
-    <!-- Info Row at 112dp from top - lightweight native View version -->
-    <org.jellyfin.androidtv.ui.home.SimpleInfoRowView
-        android:id="@+id/infoRow"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="112dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- Summary at 136dp from top -->
-    <TextView
-        android:id="@+id/summary"
-        android:layout_width="917dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="136dp"
-        android:ellipsize="end"
-        android:maxLines="3"
-        android:text=""
-        android:textColor="@android:color/white"
-        android:textSize="14sp"
-        android:shadowColor="#000000"
-        android:shadowDx="0"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Rows Fragment at 223dp from top, fills remaining space -->
     <androidx.fragment.app.FragmentContainerView

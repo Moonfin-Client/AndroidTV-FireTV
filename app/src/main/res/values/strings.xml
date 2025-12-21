@@ -420,6 +420,7 @@
     <string name="lbl_pin_code_empty">PIN cannot be empty</string>
     <string name="lbl_pin_code_too_short">PIN must be at least 4 digits</string>
     <string name="lbl_pin_code_mismatch">PINs do not match</string>
+    <string name="lbl_forgot_pin">Forgot PIN?</string>
     <string name="select_version">Version</string>
     <string name="licenses_link">Licenses</string>
     <string name="licenses_link_description">View the licenses of the libraries used by the Jellyfin app</string>
