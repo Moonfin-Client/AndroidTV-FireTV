@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,13 +19,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.jellyfin.androidtv.R
@@ -119,6 +123,7 @@ class HomeFragment : Fragment() {
 				val state by mediaBarViewModel.state.collectAsState()
 				val playbackState by mediaBarViewModel.playbackState.collectAsState()
 				val isFocused by mediaBarViewModel.isFocused.collectAsState()
+				val context = LocalContext.current
 
 				// Use rowsFragmentState to trigger recomposition when fragment becomes available
 				val fragment by rowsFragmentState
@@ -138,12 +143,38 @@ class HomeFragment : Fragment() {
 					label = "backdrop_transition"
 				) { url ->
 					if (url != null) {
-						AsyncImage(
-							model = url,
-							contentDescription = null,
-							modifier = Modifier.fillMaxSize(),
-							contentScale = ContentScale.Crop
+						// Use rememberAsyncImagePainter for state observation and logging
+						// The singleton ImageLoader (configured in JellyfinApplication) is used automatically
+						val painter = rememberAsyncImagePainter(
+							model = ImageRequest.Builder(context)
+								.data(url)
+								.build()
 						)
+						val painterState = painter.state.collectAsState().value
+
+						// Log state changes for debugging
+						when (painterState) {
+							is AsyncImagePainter.State.Loading -> {
+								Timber.d("HomeFragment Backdrop: Loading %s", url.take(80))
+							}
+							is AsyncImagePainter.State.Success -> {
+								Timber.d("HomeFragment Backdrop: Loaded successfully %s", url.take(80))
+							}
+							is AsyncImagePainter.State.Error -> {
+								Timber.e(painterState.result.throwable, "HomeFragment Backdrop: Failed to load %s", url.take(80))
+							}
+							else -> {}
+						}
+
+						// Only show image when loaded successfully
+						if (painterState is AsyncImagePainter.State.Success) {
+							Image(
+								painter = painter,
+								contentDescription = null,
+								modifier = Modifier.fillMaxSize(),
+								contentScale = ContentScale.Crop
+							)
+						}
 					}
 				}
 			}

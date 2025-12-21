@@ -37,6 +37,9 @@ import org.jellyfin.androidtv.util.isImagePrimarilyDark
  * 
  * The logo is shown immediately with a default black shadow (works for most logos),
  * and the shadow color updates once the image brightness is analyzed.
+ * 
+ * Uses the singleton ImageLoader configured in JellyfinApplication for proper
+ * authentication and caching.
  */
 @Composable
 fun LogoView(
@@ -44,6 +47,7 @@ fun LogoView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    // The singleton ImageLoader (configured in JellyfinApplication) is used automatically
     val painter = rememberAsyncImagePainter(
         model = ImageRequest.Builder(context)
             .data(url)
