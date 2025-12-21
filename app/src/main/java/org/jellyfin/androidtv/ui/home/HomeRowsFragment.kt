@@ -56,10 +56,8 @@ import org.jellyfin.androidtv.util.KeyProcessor
 import org.jellyfin.androidtv.util.Debouncer
 import org.jellyfin.playback.core.PlaybackManager
 import org.jellyfin.sdk.api.client.ApiClient
-import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.liveTvApi
 import org.jellyfin.sdk.api.sockets.subscribe
-import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.LibraryChangedMessage
 import org.jellyfin.sdk.model.api.UserDataChangedMessage
 import org.koin.android.ext.android.inject
@@ -137,6 +135,20 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 
 			// Start out with default sections
 			val homesections = userSettingPreferences.activeHomesections
+			var includeLiveTvRows = false
+
+			// Check for live TV support
+			if (homesections.contains(HomeSectionType.LIVE_TV) && currentUser.policy?.enableLiveTvAccess == true) {
+				// This is kind of ugly, but it mirrors how web handles the live TV rows on the home screen
+				// If we can retrieve one live TV recommendation, then we should display the rows
+				val recommendedPrograms by api.liveTvApi.getRecommendedPrograms(
+					enableTotalRecordCount = false,
+					imageTypeLimit = 1,
+					isAiring = true,
+					limit = 1,
+				)
+				includeLiveTvRows = recommendedPrograms.items.isNotEmpty()
+			}
 
 			// Make sure the rows are empty
 			val rows = mutableListOf<HomeFragmentRow>()
@@ -148,11 +160,11 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 			if (userSettingPreferences[UserSettingPreferences.mediaBarEnabled]) {
 				rows.add(mediaBarRow)
 			}
-
+			
 			// Actually add the sections
 			val mergeContinueWatching = userPreferences[UserPreferences.mergeContinueWatchingNextUp]
 			var mergedRowAdded = false
-
+			
 			for (section in homesections) when (section) {
 				HomeSectionType.MEDIA_BAR -> { /* Now handled by separate toggle above */ }
 				HomeSectionType.LATEST_MEDIA -> rows.add(helper.loadRecentlyAdded(userViewsRepository.views.first()))
@@ -186,7 +198,10 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 					}
 					rows.add(playlistRow)
 				}
-				HomeSectionType.LIVE_TV -> Unit // Live TV has its own dedicated page, no rows on home screen
+				HomeSectionType.LIVE_TV -> if (includeLiveTvRows) {
+					rows.add(liveTVRow)
+					rows.add(helper.loadOnNow())
+				}
 
 				HomeSectionType.NONE -> Unit
 			}
@@ -264,18 +279,18 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
-
+		
 		// Enable hardware acceleration for smoother scrolling
 		view.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-
+		
 		// Configure the vertical grid view to not release focus upward
 		verticalGridView?.apply {
 			// Enable hardware acceleration on the grid view
 			setLayerType(View.LAYER_TYPE_HARDWARE, null)
-
+			
 			// Reduce item prefetch distance for faster initial load
 			setItemViewCacheSize(20)
-
+			
 			setOnKeyListener { v, keyCode, event ->
 				// Handle upward navigation from first row to toolbar
 				if (event.action == android.view.KeyEvent.ACTION_DOWN &&
@@ -320,7 +335,7 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 		if (!justLoaded) {
 			// Always refresh all rows and data when returning to home to get latest from server
 			refreshRows(force = true, delayed = true) // Force refresh to get latest data
-
+			
 			// Reload media bar with fresh random items when returning to home
 			mediaBarViewModel.loadInitialContent()
 		} else {
@@ -332,7 +347,7 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 		// Update audio queue
 		Timber.i("Updating audio queue in HomeFragment (onResume)")
 		nowPlaying.update(requireContext(), adapter as MutableObjectAdapter<Row>)
-
+		
 		// Ensure focus is restored to the grid when returning from other screens (like search)
 		// This prevents the issue where users can't control the media bar after backing out
 		view?.postDelayed({
@@ -401,13 +416,13 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 		) {
 			// Update selected position flow immediately (for focus tracking)
 			_selectedPositionFlow.value = selectedPosition
-
+			
 			if (item !is BaseRowItem) {
 				currentItem = null
 				// Clear selected item state immediately
 				selectionDebouncer.cancel()
 				_selectedItemStateFlow.value = SelectedItemState.EMPTY
-
+				
 				// Don't clear background if we're on the media bar row - it has its own backdrop
 				if (row !is MediaBarRow) {
 					backgroundService.clearBackgrounds()
@@ -421,49 +436,10 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 
 				// Debounce UI updates - only update after user stops navigating for 150ms
 				selectionDebouncer.debounce {
-					val baseItem = item.baseItem
-
-					// Generate logo URL - check item first, then parent (for episodes -> series)
-					val logoUrl = baseItem?.let {
-						// First try to get logo from the item itself
-						val itemLogoUrl = it.imageTags?.get(ImageType.LOGO)?.let { tag ->
-							api.imageApi.getItemImageUrl(
-								itemId = it.id,
-								imageType = ImageType.LOGO,
-								tag = tag,
-								maxWidth = 800,
-							)
-						}
-
-						// If no logo on item, try parent logo (works for episodes -> series)
-						if (itemLogoUrl == null && it.parentLogoItemId != null && it.parentLogoImageTag != null) {
-							api.imageApi.getItemImageUrl(
-								itemId = it.parentLogoItemId!!,
-								imageType = ImageType.LOGO,
-								tag = it.parentLogoImageTag!!,
-								maxWidth = 800,
-							)
-						} else {
-							itemLogoUrl
-						}
-					}
-
-					// Determine name and title based on item type
-					// For episodes: name = series name, title = episode title
-					// For movies/series: name = item name, title = empty or tagline
-					val itemTitle = item.getName(requireContext()) ?: ""
-					val itemName = baseItem?.seriesName ?: itemTitle
-					val displayTitle = if (baseItem?.seriesName != null) itemTitle else ""
-
-					Timber.d("HomeRowsFragment: Setting selectedItemState - name=%s, title=%s, logoUrl=%s",
-						itemName, displayTitle, logoUrl?.take(80))
-
 					_selectedItemStateFlow.value = SelectedItemState(
-						title = displayTitle,
-						name = itemName,
+						title = item.getName(requireContext()) ?: "",
 						summary = item.getSummary(requireContext()) ?: "",
-						logoUrl = logoUrl,
-						baseItem = baseItem
+						baseItem = item.baseItem
 					)
 				}
 

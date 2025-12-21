@@ -2,24 +2,22 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Background image container using Compose for smooth transitions -->
-
-    <!-- Toolbar at top using Compose -->
-    <androidx.compose.ui.platform.ComposeView
+    <!-- Background image container -->
+    <ImageView
         android:id="@+id/backgroundImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toStartOf="parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.0" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Toolbar at top using Compose -->
     <FrameLayout
         android:id="@+id/toolbar_actions"
         android:layout_width="match_parent"
@@ -27,12 +25,49 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
-
+        
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
     </FrameLayout>
+
+    <!-- Logo at 80dp from top (shown when available) -->
+    <ImageView
+        android:id="@+id/logo"
+        android:layout_width="wrap_content"
+        android:layout_height="60dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="80dp"
+        android:adjustViewBounds="true"
+        android:scaleType="fitStart"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Title at 80dp from top (fallback when no logo) -->
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="917dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="80dp"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.02"
+        android:lineSpacingExtra="2dp"
+        android:maxLines="1"
+        android:text=""
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:shadowColor="#000000"
+        android:shadowDx="0"
+        android:shadowDy="2"
+        android:shadowRadius="4"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Info Row at 112dp from top - lightweight native View version -->
     <org.jellyfin.androidtv.ui.home.SimpleInfoRowView
@@ -44,14 +79,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Summary at 136dp from top - max 58% width to leave space for logo -->
+    <!-- Summary at 136dp from top -->
     <TextView
         android:id="@+id/summary"
-        android:layout_width="0dp"
+        android:layout_width="917dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:layout_marginTop="136dp"
-        android:layout_marginEnd="24dp"
         android:ellipsize="end"
         android:maxLines="3"
         android:text=""
@@ -62,81 +96,6 @@
         android:shadowDy="1"
         android:shadowRadius="3"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintWidth_percent="0.58" />
-
-    <!-- Logo (shown when available) using Compose for smooth transitions -->
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/logo"
-        android:layout_width="0dp"
-        android:layout_height="120dp"
-        android:layout_marginStart="48dp"
-        android:layout_marginTop="112dp"
-        android:layout_marginEnd="48dp"
-        android:foregroundGravity="center_vertical|center|center_horizontal"
-        android:visibility="invisible"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toEndOf="@id/summary"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- Name (fallback when no logo) - positioned same as logo -->
-    <TextView
-        android:id="@+id/name"
-        android:layout_width="0dp"
-        android:layout_height="120dp"
-        android:layout_marginStart="48dp"
-        android:layout_marginTop="112dp"
-        android:layout_marginEnd="48dp"
-        android:ellipsize="end"
-        android:fontFamily="sans-serif-medium"
-        android:gravity="center"
-        android:letterSpacing="0.02"
-        android:lineSpacingExtra="2dp"
-        android:maxLines="3"
-        android:shadowColor="#000000"
-        android:shadowDx="0"
-        android:shadowDy="2"
-        android:shadowRadius="4"
-        android:text=""
-        android:textAllCaps="false"
-        android:textColor="@android:color/white"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:visibility="invisible"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toEndOf="@id/summary"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- Title (episode title, etc.) - positioned above the logo/name area -->
-    <TextView
-        android:id="@+id/title"
-        android:layout_width="0dp"
-        android:layout_height="80dp"
-        android:layout_marginStart="48dp"
-        android:layout_marginTop="210dp"
-        android:layout_marginEnd="48dp"
-        android:ellipsize="end"
-        android:fontFamily="sans-serif-medium"
-        android:gravity="center_horizontal|top"
-        android:letterSpacing="0.02"
-        android:lineSpacingExtra="2dp"
-        android:maxLines="3"
-        android:shadowColor="#000000"
-        android:shadowDx="0"
-        android:shadowDy="2"
-        android:shadowRadius="4"
-        android:text=""
-        android:textAllCaps="false"
-        android:textColor="@android:color/white"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toEndOf="@id/summary"
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Rows Fragment at 223dp from top, fills remaining space -->
@@ -149,7 +108,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        tools:layout="@layout/activity_main" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
