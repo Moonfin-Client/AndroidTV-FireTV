@@ -2,20 +2,24 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
     <!-- Background image container using Compose for smooth transitions -->
+
+    <!-- Toolbar at top using Compose -->
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/backgroundImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0" />
 
-    <!-- Toolbar at top using Compose -->
     <FrameLayout
         android:id="@+id/toolbar_actions"
         android:layout_width="match_parent"
@@ -23,7 +27,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
-        
+
         <androidx.compose.ui.platform.ComposeView
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
@@ -63,47 +67,77 @@
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintWidth_percent="0.58" />
 
-    <!-- Logo in bottom right corner (shown when available) using Compose for smooth transitions -->
+    <!-- Logo (shown when available) using Compose for smooth transitions -->
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/logo"
         android:layout_width="0dp"
         android:layout_height="120dp"
         android:layout_marginStart="48dp"
+        android:layout_marginTop="112dp"
         android:layout_marginEnd="48dp"
-        android:layout_marginTop="360dp"
-        android:visibility="gone"
-        app:layout_constraintStart_toEndOf="@id/summary"
+        android:foregroundGravity="center_vertical|center|center_horizontal"
+        android:visibility="invisible"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintHorizontal_bias="1.0" />
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toEndOf="@id/summary"
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Title (fallback when no logo) - positioned same as logo -->
+    <!-- Name (fallback when no logo) - positioned same as logo -->
     <TextView
-        android:id="@+id/title"
+        android:id="@+id/name"
         android:layout_width="0dp"
-        android:layout_height="200dp"
+        android:layout_height="120dp"
         android:layout_marginStart="48dp"
+        android:layout_marginTop="112dp"
         android:layout_marginEnd="48dp"
-        android:layout_marginTop="280dp"
         android:ellipsize="end"
         android:fontFamily="sans-serif-medium"
-        android:gravity="center_vertical"
+        android:gravity="center"
         android:letterSpacing="0.02"
         android:lineSpacingExtra="2dp"
         android:maxLines="3"
+        android:shadowColor="#000000"
+        android:shadowDx="0"
+        android:shadowDy="2"
+        android:shadowRadius="4"
+        android:text=""
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:visibility="invisible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toEndOf="@id/summary"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Title (episode title, etc.) - positioned above the logo/name area -->
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="48dp"
+        android:layout_marginTop="200dp"
+        android:layout_marginEnd="48dp"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="bottom|center_horizontal"
+        android:letterSpacing="0.02"
+        android:lineSpacingExtra="2dp"
+        android:maxLines="3"
+        android:shadowColor="#000000"
+        android:shadowDx="0"
+        android:shadowDy="2"
+        android:shadowRadius="4"
         android:text=""
         android:textAllCaps="false"
         android:textColor="@android:color/white"
         android:textSize="22sp"
         android:textStyle="bold"
-        android:shadowColor="#000000"
-        android:shadowDx="0"
-        android:shadowDy="2"
-        android:shadowRadius="4"
-        app:layout_constraintStart_toEndOf="@id/summary"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintHorizontal_bias="1.0" />
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toEndOf="@id/summary"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Rows Fragment at 223dp from top, fills remaining space -->
     <androidx.fragment.app.FragmentContainerView
@@ -115,6 +149,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:layout="@layout/activity_main" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

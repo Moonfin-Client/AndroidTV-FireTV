@@ -19,6 +19,7 @@ import org.jellyfin.androidtv.integration.dream.model.DreamContent
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.composable.ZoomBox
 import org.jellyfin.androidtv.ui.composable.modifier.overscan
+import org.jellyfin.androidtv.ui.shared.LogoView
 
 @Composable
 fun DreamContentLibraryShowcase(
@@ -52,9 +53,8 @@ fun DreamContentLibraryShowcase(
 	) {
 		if (content.logo != null) {
 			BoxWithConstraints {
-				Image(
-					bitmap = content.logo.asImageBitmap(),
-					contentDescription = content.item.name,
+				LogoView(
+					bitmap = content.logo,
 					modifier = Modifier
 						.sizeIn(
 							maxWidth = maxWidth * 0.35f,

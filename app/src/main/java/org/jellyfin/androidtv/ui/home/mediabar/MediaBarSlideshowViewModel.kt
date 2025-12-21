@@ -311,6 +311,9 @@ class MediaBarSlideshowViewModel(
 		viewModelScope.launch(Dispatchers.IO) {
 			val indicesToPreload = mutableSetOf<Int>()
 			
+			// Preload current slide first (highest priority)
+			indicesToPreload.add(currentIndex)
+			
 			// Preload next slide
 			val nextIndex = (currentIndex + 1) % items.size
 			indicesToPreload.add(nextIndex)
