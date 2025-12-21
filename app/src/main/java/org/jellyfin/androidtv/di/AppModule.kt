@@ -181,7 +181,7 @@ val appModule = module {
 	viewModel { DreamViewModel(get(), get(), get(), get(), get()) }
 	viewModel { SettingsViewModel() }
 	viewModel { org.jellyfin.androidtv.ui.jellyseerr.JellyseerrViewModel(get(), get(named("global"))) }
-	single { MediaBarSlideshowViewModel(get(), get(), get(), get()) } // Singleton so both fragments share the same instance
+	single { MediaBarSlideshowViewModel(get(), get(), get(), get(), androidContext(), get()) } // Singleton so both fragments share the same instance
 
 	single { BackgroundService(get(), get(), get(), get(), get()) }
 	single { UpdateCheckerService(get()) }

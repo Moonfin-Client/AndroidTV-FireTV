@@ -18,6 +18,9 @@ import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.repository.ItemMutationRepository
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.sdk.api.client.ApiClient
+import android.content.Context
+import coil3.ImageLoader
+import coil3.request.ImageRequest
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -32,6 +35,8 @@ class MediaBarSlideshowViewModel(
 	private val userSettingPreferences: UserSettingPreferences,
 	private val itemMutationRepository: ItemMutationRepository,
 	private val userRepository: UserRepository,
+	private val context: Context,
+	private val imageLoader: ImageLoader,
 ) : ViewModel() {
 	private fun getConfig() = MediaBarConfig(
 		maxItems = userSettingPreferences[UserSettingPreferences.mediaBarItemCount].toIntOrNull() ?: 10
@@ -71,8 +76,13 @@ class MediaBarSlideshowViewModel(
 		if (!focused) {
 			autoAdvanceJob?.cancel()
 		} else {
-			// When gaining focus, just restart auto-advance if not paused
-			// Don't reload content - keep the current carousel items
+			// When gaining focus, refresh non-visible items for variety
+			// but keep the current and adjacent items to prevent flickering
+			if (items.isNotEmpty()) {
+				refreshBackgroundItems()
+			}
+			
+			// Restart auto-advance if not paused
 			if (!_playbackState.value.isPaused) {
 				resetAutoAdvanceTimer()
 			}
@@ -176,6 +186,8 @@ class MediaBarSlideshowViewModel(
 
 			if (items.isNotEmpty()) {
 					_state.value = MediaBarState.Ready(items)
+					// Preload images for initial slide and adjacent ones
+					preloadAdjacentImages(0)
 					startAutoPlay()
 				} else {
 					_state.value = MediaBarState.Error("No items found")
@@ -253,6 +265,8 @@ class MediaBarSlideshowViewModel(
 		viewModelScope.launch {
 			delay(config.fadeTransitionDurationMs)
 			_playbackState.value = _playbackState.value.copy(isTransitioning = false)
+			// Preload adjacent images after transition completes
+			preloadAdjacentImages(nextIndex)
 			// Reset the auto-advance timer after manual or automatic navigation
 			resetAutoAdvanceTimer()
 		}
@@ -277,8 +291,195 @@ class MediaBarSlideshowViewModel(
 		viewModelScope.launch {
 			delay(config.fadeTransitionDurationMs)
 			_playbackState.value = _playbackState.value.copy(isTransitioning = false)
+			// Preload adjacent images after transition completes
+			preloadAdjacentImages(previousIndex)
 			// Reset the auto-advance timer after manual navigation
 			resetAutoAdvanceTimer()
+		}
+	}
+
+	/**
+	 * Preload images for slides adjacent to the current one.
+	 * This prevents flickering when navigating between slides by ensuring
+	 * images are already cached before they're displayed.
+	 * 
+	 * @param currentIndex The index of the currently displayed slide
+	 */
+	private fun preloadAdjacentImages(currentIndex: Int) {
+		if (items.isEmpty()) return
+		
+		viewModelScope.launch(Dispatchers.IO) {
+			val indicesToPreload = mutableSetOf<Int>()
+			
+			// Preload next slide
+			val nextIndex = (currentIndex + 1) % items.size
+			indicesToPreload.add(nextIndex)
+			
+			// Preload previous slide
+			val previousIndex = if (currentIndex == 0) items.size - 1 else currentIndex - 1
+			indicesToPreload.add(previousIndex)
+			
+			// Optionally preload one more slide ahead for smoother auto-advance
+			val nextNextIndex = (nextIndex + 1) % items.size
+			indicesToPreload.add(nextNextIndex)
+			
+			// Preload all the images in parallel
+			indicesToPreload.forEach { index ->
+				val item = items.getOrNull(index) ?: return@forEach
+				
+				// Preload backdrop
+				item.backdropUrl?.let { url ->
+					try {
+						val request = ImageRequest.Builder(context)
+							.data(url)
+							.build()
+						imageLoader.enqueue(request)
+					} catch (e: Exception) {
+						Timber.d("Failed to preload backdrop for item ${item.title}: ${e.message}")
+					}
+				}
+				
+				// Preload logo
+				item.logoUrl?.let { url ->
+					try {
+						val request = ImageRequest.Builder(context)
+							.data(url)
+							.build()
+						imageLoader.enqueue(request)
+					} catch (e: Exception) {
+						Timber.d("Failed to preload logo for item ${item.title}: ${e.message}")
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Refresh background items (not currently visible or adjacent) with new random selections.
+	 * This provides variety when regaining focus without causing flickering on the current slide.
+	 * Keeps the current item and its adjacent items (previous and next) unchanged.
+	 */
+	private fun refreshBackgroundItems() {
+		if (items.isEmpty()) return
+		
+		viewModelScope.launch(Dispatchers.IO) {
+			try {
+				val currentIndex = _playbackState.value.currentIndex
+				val config = getConfig()
+				val contentType = userSettingPreferences[UserSettingPreferences.mediaBarContentType]
+				
+				// Calculate which indices to keep (current, previous, next)
+				val indicesToKeep = mutableSetOf<Int>()
+				indicesToKeep.add(currentIndex)
+				indicesToKeep.add((currentIndex + 1) % items.size)
+				indicesToKeep.add(if (currentIndex == 0) items.size - 1 else currentIndex - 1)
+				
+				// Only refresh if we have more than 3 items (otherwise all are adjacent)
+				if (items.size <= 3) return@launch
+				
+				// Calculate how many new items we need to fetch
+				val itemsToReplace = items.size - indicesToKeep.size
+				
+				// Fetch new random items
+				val newItems: List<org.jellyfin.sdk.model.api.BaseItemDto> = when (contentType) {
+					"movies" -> {
+						fetchItems(BaseItemKind.MOVIE, itemsToReplace).items.orEmpty()
+					}
+					"tv" -> {
+						fetchItems(BaseItemKind.SERIES, itemsToReplace).items.orEmpty()
+					}
+					else -> { // "both"
+						val movies = async { fetchItems(BaseItemKind.MOVIE, itemsToReplace / 2 + 1) }
+						val shows = async { fetchItems(BaseItemKind.SERIES, itemsToReplace / 2 + 1) }
+						(movies.await().items.orEmpty() + shows.await().items.orEmpty())
+					}
+				}
+					.filter { it.backdropImageTags?.isNotEmpty() == true }
+					.shuffled()
+					.take(itemsToReplace)
+				
+				// Convert to MediaBarSlideItem
+				val newSlideItems = newItems.map { item ->
+					MediaBarSlideItem(
+						itemId = item.id,
+						title = item.name.orEmpty(),
+						overview = item.overview,
+						backdropUrl = item.backdropImageTags?.firstOrNull()?.let { tag ->
+							api.imageApi.getItemImageUrl(
+								itemId = item.id,
+								imageType = ImageType.BACKDROP,
+								tag = tag,
+								maxWidth = 1920,
+								quality = 90
+							)
+						},
+						logoUrl = item.imageTags?.get(ImageType.LOGO)?.let { tag ->
+							api.imageApi.getItemImageUrl(
+								itemId = item.id,
+								imageType = ImageType.LOGO,
+								tag = tag,
+								maxWidth = 800,
+							)
+						},
+						rating = item.officialRating,
+						year = item.productionYear,
+						genres = item.genres.orEmpty().take(3),
+						runtime = item.runTimeTicks?.let { ticks -> (ticks / 10000) },
+						criticRating = item.criticRating?.toInt(),
+						communityRating = item.communityRating,
+					)
+				}
+				
+				// Build new items list: keep existing items at protected indices, replace others
+				val updatedItems = items.toMutableList()
+				var newItemIndex = 0
+				
+				for (i in items.indices) {
+					if (!indicesToKeep.contains(i) && newItemIndex < newSlideItems.size) {
+						updatedItems[i] = newSlideItems[newItemIndex]
+						newItemIndex++
+					}
+				}
+				
+				// Update items list
+				items = updatedItems
+				_state.value = MediaBarState.Ready(items)
+				
+				// Preload the newly added items in the background
+				withContext(Dispatchers.IO) {
+					updatedItems.forEachIndexed { index, item ->
+						if (!indicesToKeep.contains(index)) {
+							// Preload backdrop
+							item.backdropUrl?.let { url ->
+								try {
+									val request = ImageRequest.Builder(context)
+										.data(url)
+										.build()
+									imageLoader.enqueue(request)
+								} catch (e: Exception) {
+									Timber.d("Failed to preload backdrop for refreshed item ${item.title}: ${e.message}")
+								}
+							}
+							
+							// Preload logo
+							item.logoUrl?.let { url ->
+								try {
+									val request = ImageRequest.Builder(context)
+										.data(url)
+										.build()
+									imageLoader.enqueue(request)
+								} catch (e: Exception) {
+									Timber.d("Failed to preload logo for refreshed item ${item.title}: ${e.message}")
+								}
+							}
+						}
+					}
+				}
+				
+				Timber.d("Refreshed ${newItemIndex} background items while keeping ${indicesToKeep.size} adjacent items")
+			} catch (e: Exception) {
+				Timber.e(e, "Failed to refresh background items: ${e.message}")
+			}
 		}
 	}
 
