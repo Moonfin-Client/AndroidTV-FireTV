@@ -16,6 +16,7 @@ import org.jellyfin.androidtv.util.apiclient.getBannerImage
 import org.jellyfin.androidtv.util.apiclient.getPrimaryImage
 import org.jellyfin.androidtv.util.apiclient.getThumbImage
 import org.jellyfin.androidtv.util.apiclient.getThumbImageWithFallback
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -25,7 +26,23 @@ import org.jellyfin.sdk.model.api.UserDto
 
 class ImageHelper(
 	private val api: ApiClient,
+	private val apiClientFactory: ApiClientFactory,
 ) {
+	/**
+	 * Get the appropriate API client for an item, considering its serverId.
+	 * Falls back to the default API client if serverId is null or not found.
+	 */
+	private fun getApiClient(item: BaseItemDto): ApiClient {
+		val uuid = UUIDUtils.parseUUID(item.serverId)
+		if (uuid == null) {
+			timber.log.Timber.d("ImageHelper.getApiClient: Item ${item.id} has no valid serverId, using default api")
+			return api
+		}
+		
+		val serverApi = apiClientFactory.getApiClientForServer(uuid) ?: api
+		timber.log.Timber.d("ImageHelper.getApiClient: Using apiClient with baseUrl=${serverApi.baseUrl} for serverId=$uuid")
+		return serverApi
+	}
 	companion object {
 		const val ASPECT_RATIO_2_3 = 2.0 / 3.0
 		const val ASPECT_RATIO_16_9 = 16.0 / 9.0
@@ -35,12 +52,12 @@ class ImageHelper(
 		const val MAX_PRIMARY_IMAGE_HEIGHT: Int = 370
 	}
 
-	fun getImageUrl(image: JellyfinImage, fillWidth: Int, fillHeight: Int): String {
+	fun getImageUrl(image: JellyfinImage, item: BaseItemDto, fillWidth: Int, fillHeight: Int): String {
 		// Check if the tag is already a full URL (for external images like TMDB)
 		if (image.tag.startsWith("http")) {
 			return image.tag
 		}
-		return image.getUrl(api, null, null, fillWidth, fillHeight)
+		return image.getUrl(getApiClient(item), null, null, fillWidth, fillHeight)
 	}
 
 	fun getImageAspectRatio(item: BaseItemDto, preferParentThumb: Boolean): Double {
@@ -76,6 +93,15 @@ class ImageHelper(
 	): String? = item.primaryImage?.getUrl(api, maxHeight = maxHeight)
 
 	fun getPrimaryImageUrl(
+		item: BaseItemPerson,
+		serverId: java.util.UUID?,
+		maxHeight: Int? = null,
+	): String? {
+		val serverApi = if (serverId != null) apiClientFactory.getApiClientForServer(serverId) ?: api else api
+		return item.primaryImage?.getUrl(serverApi, maxHeight = maxHeight)
+	}
+
+	fun getPrimaryImageUrl(
 		item: UserDto,
 	): String? = item.primaryImage?.getUrl(api)
 
@@ -83,7 +109,7 @@ class ImageHelper(
 		item: BaseItemDto,
 		width: Int? = null,
 		height: Int? = null,
-	): String? = item.itemImages[ImageType.PRIMARY]?.getUrl(api, maxWidth = width, maxHeight = height)
+	): String? = item.itemImages[ImageType.PRIMARY]?.getUrl(getApiClient(item), maxWidth = width, maxHeight = height)
 
 	fun getPrimaryImageUrl(
 		item: BaseItemDto,
@@ -109,7 +135,7 @@ class ImageHelper(
 		} ?: item.itemImages[ImageType.PRIMARY]
 
 		return image?.getUrl(
-			api = api,
+			api = getApiClient(item),
 			fillWidth = fillWidth,
 			fillHeight = fillHeight,
 		)
@@ -119,19 +145,20 @@ class ImageHelper(
 		item: BaseItemDto?,
 		maxWidth: Int? = null
 	): String? {
-		val image = item?.itemImages[ImageType.LOGO] ?: item?.parentImages[ImageType.LOGO]
-		return image?.getUrl(api, maxWidth = maxWidth)
+		if (item == null) return null
+		val image = item.itemImages[ImageType.LOGO] ?: item.parentImages[ImageType.LOGO]
+		return image?.getUrl(getApiClient(item), maxWidth = maxWidth)
 	}
 
 	fun getThumbImageUrl(
 		item: BaseItemDto,
 		fillWidth: Int,
 		fillHeight: Int,
-	): String? = item.itemImages[ImageType.THUMB]?.getUrl(api, fillWidth = fillWidth, fillHeight = fillHeight)
+	): String? = item.itemImages[ImageType.THUMB]?.getUrl(getApiClient(item), fillWidth = fillWidth, fillHeight = fillHeight)
 		?: getPrimaryImageUrl(item, true, fillWidth, fillHeight)
 
 	fun getBannerImageUrl(item: BaseItemDto, fillWidth: Int, fillHeight: Int): String? =
-		item.itemImages[ImageType.BANNER]?.getUrl(api, fillWidth = fillWidth, fillHeight = fillHeight)
+		item.itemImages[ImageType.BANNER]?.getUrl(getApiClient(item), fillWidth = fillWidth, fillHeight = fillHeight)
 			?: getPrimaryImageUrl(item, true, fillWidth, fillHeight)
 
 	/**

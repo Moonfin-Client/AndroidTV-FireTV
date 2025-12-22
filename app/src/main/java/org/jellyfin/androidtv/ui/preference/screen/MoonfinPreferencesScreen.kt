@@ -74,6 +74,12 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 			}
 
 			checkbox {
+				setTitle(R.string.pref_multi_server_libraries)
+				setContent(R.string.pref_multi_server_libraries_description)
+				bind(userPreferences, UserPreferences.enableMultiServerLibraries)
+			}
+
+			checkbox {
 				setTitle(R.string.pref_confirm_exit)
 				setContent(R.string.pref_confirm_exit_description)
 				bind(userPreferences, UserPreferences.confirmExit)

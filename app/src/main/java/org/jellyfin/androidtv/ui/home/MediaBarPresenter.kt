@@ -40,8 +40,8 @@ class MediaBarPresenter(
 				MediaBarSlideshowView(
 					viewModel = viewModel,
 					onItemClick = { item ->
-						// Navigate to item details
-						navigationRepository.navigate(Destinations.itemDetails(item.itemId))
+						// Navigate to item details with serverId for multi-server support
+						navigationRepository.navigate(Destinations.itemDetails(item.itemId, item.serverId))
 					}
 				)
 			}

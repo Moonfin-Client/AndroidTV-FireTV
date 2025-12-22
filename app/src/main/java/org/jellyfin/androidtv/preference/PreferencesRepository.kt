@@ -14,10 +14,14 @@ class PreferencesRepository(
 ) {
 	private val libraryPreferences = mutableMapOf<String, LibraryPreferences>()
 
-	fun getLibraryPreferences(preferencesId: String): LibraryPreferences {
-		val store = libraryPreferences[preferencesId] ?: LibraryPreferences(preferencesId, api)
+	fun getLibraryPreferences(preferencesId: String): LibraryPreferences =
+		getLibraryPreferences(preferencesId, api)
 
-		libraryPreferences[preferencesId] = store
+	fun getLibraryPreferences(preferencesId: String, apiClient: ApiClient): LibraryPreferences {
+		val key = "${apiClient.baseUrl}_$preferencesId"
+		val store = libraryPreferences[key] ?: LibraryPreferences(preferencesId, apiClient)
+
+		libraryPreferences[key] = store
 
 		// FIXME: Make [getLibraryPreferences] suspended when usages are converted to Kotlin
 		if (store.shouldUpdate) runBlocking { store.update() }

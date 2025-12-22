@@ -4,6 +4,7 @@ import android.content.Context;
 
 import androidx.annotation.Nullable;
 
+import org.jellyfin.androidtv.auth.repository.SessionRepository;
 import org.jellyfin.androidtv.constant.LiveTvOption;
 import org.jellyfin.androidtv.constant.QueryType;
 import org.jellyfin.androidtv.data.model.ChapterItemInfo;
@@ -16,6 +17,7 @@ import org.jellyfin.androidtv.ui.playback.MediaManager;
 import org.jellyfin.androidtv.ui.playback.PlaybackLauncher;
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter;
 import org.jellyfin.androidtv.util.PlaybackHelper;
+import org.jellyfin.androidtv.util.UUIDUtils;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.Response;
 import org.jellyfin.androidtv.util.sdk.compat.JavaCompat;
@@ -27,12 +29,16 @@ import org.koin.java.KoinJavaComponent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import kotlin.Lazy;
+import kotlin.coroutines.EmptyCoroutineContext;
+import kotlinx.coroutines.BuildersKt;
 import timber.log.Timber;
 
 public class ItemLauncher {
     private final Lazy<NavigationRepository> navigationRepository = KoinJavaComponent.<NavigationRepository>inject(NavigationRepository.class);
+    private final Lazy<SessionRepository> sessionRepository = KoinJavaComponent.<SessionRepository>inject(SessionRepository.class);
     private final Lazy<PreferencesRepository> preferencesRepository = KoinJavaComponent.<PreferencesRepository>inject(org.jellyfin.androidtv.preference.PreferencesRepository .class);
     private final Lazy<MediaManager> mediaManager = KoinJavaComponent.<MediaManager>inject(MediaManager.class);
     private final Lazy<PlaybackLauncher> playbackLauncher = KoinJavaComponent.<PlaybackLauncher>inject(PlaybackLauncher.class);
@@ -67,6 +73,27 @@ public class ItemLauncher {
     }
 
     public void launch(final BaseRowItem rowItem, MutableObjectAdapter<Object> adapter, final Context context) {
+        UUID serverId = null;
+        Timber.d("ItemLauncher: rowItem type is %s", rowItem.getClass().getSimpleName());
+        if (rowItem instanceof AggregatedItemBaseRowItem) {
+            serverId = ((AggregatedItemBaseRowItem) rowItem).getServer().getId();
+            Timber.d("ItemLauncher: Item is from server %s", serverId);
+        } else if (rowItem instanceof BaseItemPersonBaseRowItem) {
+            serverId = ((BaseItemPersonBaseRowItem) rowItem).getServerId();
+            Timber.d("ItemLauncher: Person item has serverId=%s", serverId);
+        } else {
+            BaseItemDto item = rowItem.getBaseItem();
+            if (item != null && item.getServerId() != null) {
+                Timber.d("ItemLauncher: Item has serverId=%s from BaseItemDto", item.getServerId());
+                serverId = UUIDUtils.parseUUID(item.getServerId());
+                if (serverId != null) {
+                    Timber.d("ItemLauncher: Parsed serverId to %s", serverId);
+                }
+            } else {
+                Timber.d("ItemLauncher: Item has no serverId, using default server");
+            }
+        }
+        
         switch (rowItem.getBaseRowType()) {
             case BaseItem:
                 BaseItemDto baseItem = rowItem.getBaseItem();
@@ -91,7 +118,8 @@ public class ItemLauncher {
                         return;
                     case SERIES:
                     case MUSIC_ARTIST:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(baseItem.getId()));
+                        // Pass serverId for aggregated items
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(baseItem.getId(), serverId));
                         return;
 
                     case MUSIC_ALBUM:
@@ -154,20 +182,44 @@ public class ItemLauncher {
                         baseItem = JavaCompat.copyWithDisplayPreferencesId(baseItem, baseItem.getId().toString());
                     }
 
-                    navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowser(baseItem));
+                    // Pass serverId for aggregated items so the browser can use the correct server
+                    if (serverId != null) {
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowser(baseItem, serverId));
+                    } else {
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowser(baseItem, null));
+                    }
                 } else {
                     switch (rowItem.getSelectAction()) {
 
                         case ShowDetails:
-                            navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(baseItem.getId()));
+                            // Pass serverId for aggregated items so the details page can use the correct server
+                            if (serverId != null) {
+                                navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(baseItem.getId(), serverId));
+                            } else {
+                                navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(baseItem.getId(), null));
+                            }
                             break;
                         case Play:
                             //Just play it directly
+                            final UUID finalServerId = serverId; // Capture serverId for lambda
                             playbackHelper.getValue().getItemsToPlay(context, baseItem, baseItem.getType() == BaseItemKind.MOVIE, false, new Response<List<BaseItemDto>>() {
                                 @Override
                                 public void onResponse(List<BaseItemDto> response) {
                                     if (!isActive()) return;
-                                    playbackLauncher.getValue().launch(context, response);
+                                    // Wrap items with serverId if playing from aggregated item
+                                    List<BaseItemDto> itemsToPlay = response;
+                                    if (finalServerId != null) {
+                                        itemsToPlay = new ArrayList<>(response.size());
+                                        for (BaseItemDto item : response) {
+                                            String serverIdString = finalServerId.toString();
+                                            Timber.d("ItemLauncher: Before copy - finalServerId UUID=%s, toString()=%s", finalServerId, serverIdString);
+                                            BaseItemDto wrappedItem = JavaCompat.copyWithServerId(item, serverIdString);
+                                            Timber.d("ItemLauncher: After copy - wrappedItem.serverId=%s", wrappedItem.getServerId());
+                                            itemsToPlay.add(wrappedItem);
+                                        }
+                                        Timber.d("ItemLauncher: Wrapped %d items with serverId %s for playback", itemsToPlay.size(), finalServerId);
+                                    }
+                                    playbackLauncher.getValue().launch(context, itemsToPlay);
                                 }
                             });
                             break;
@@ -175,13 +227,14 @@ public class ItemLauncher {
                 }
                 break;
             case Person:
-                navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(rowItem.getItemId()));
+                // Pass serverId for aggregated items
+                navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(rowItem.getItemId(), serverId));
 
                 break;
             case Chapter:
                 final ChapterItemInfo chapter = ((ChapterItemInfoBaseRowItem) rowItem).getChapterInfo();
                 //Start playback of the item at the chapter point
-                ItemLauncherHelper.getItem(rowItem.getItemId(), new Response<BaseItemDto>() {
+                ItemLauncherHelper.getItem(rowItem.getItemId(), serverId, new Response<BaseItemDto>() {
                     @Override
                     public void onResponse(BaseItemDto response) {
                         if (!isActive()) return;
@@ -203,7 +256,7 @@ public class ItemLauncher {
                         break;
                     case Play:
                         //Just play it directly - need to retrieve program channel via items api to convert to BaseItem
-                        ItemLauncherHelper.getItem(program.getChannelId(), new Response<BaseItemDto>() {
+                        ItemLauncherHelper.getItem(program.getChannelId(), serverId, new Response<BaseItemDto>() {
                             @Override
                             public void onResponse(BaseItemDto response) {
                                 if (!isActive()) return;
@@ -219,7 +272,7 @@ public class ItemLauncher {
             case LiveTvChannel:
                 //Just tune to it by playing
                 final BaseItemDto channel = rowItem.getBaseItem();
-                ItemLauncherHelper.getItem(channel.getId(), new Response<BaseItemDto>() {
+                ItemLauncherHelper.getItem(channel.getId(), serverId, new Response<BaseItemDto>() {
                     @Override
                     public void onResponse(BaseItemDto response) {
                         if (!isActive()) return;
@@ -242,7 +295,7 @@ public class ItemLauncher {
                         break;
                     case Play:
                         //Just play it directly but need to retrieve as base item
-                        ItemLauncherHelper.getItem(rowItem.getBaseItem().getId(), new Response<BaseItemDto>() {
+                        ItemLauncherHelper.getItem(rowItem.getBaseItem().getId(), serverId, new Response<BaseItemDto>() {
                             @Override
                             public void onResponse(BaseItemDto response) {
                                 if (!isActive()) return;

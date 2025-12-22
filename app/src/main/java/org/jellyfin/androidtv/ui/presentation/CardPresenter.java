@@ -403,7 +403,7 @@ public class CardPresenter extends Presenter {
             imageUrl = rowItem.getImageUrl(holder.mCardView.getContext(), imageHelper.getValue(), mImageType, fillWidth, fillHeight);
             blurHash = null;
         } else {
-            imageUrl = imageHelper.getValue().getImageUrl(image, fillWidth, fillHeight);
+            imageUrl = imageHelper.getValue().getImageUrl(image, rowItem.getBaseItem(), fillWidth, fillHeight);
             blurHash = image.getBlurHash();
         }
 

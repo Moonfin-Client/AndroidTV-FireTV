@@ -4,9 +4,11 @@ import android.content.Context
 import org.jellyfin.androidtv.constant.ImageType
 import org.jellyfin.androidtv.util.ImageHelper
 import org.jellyfin.sdk.model.api.BaseItemPerson
+import java.util.UUID
 
 class BaseItemPersonBaseRowItem(
 	val person: BaseItemPerson,
+	val serverId: UUID? = null,
 ) : BaseRowItem(
 	baseRowType = BaseRowType.Person,
 	staticHeight = true,
@@ -17,7 +19,7 @@ class BaseItemPersonBaseRowItem(
 		imageType: ImageType,
 		fillWidth: Int,
 		fillHeight: Int
-	) = imageHelper.getPrimaryImageUrl(person, fillHeight)
+	) = imageHelper.getPrimaryImageUrl(person, serverId, fillHeight)
 
 	override val itemId get() = person.id
 	override fun getFullName(context: Context) = person.name

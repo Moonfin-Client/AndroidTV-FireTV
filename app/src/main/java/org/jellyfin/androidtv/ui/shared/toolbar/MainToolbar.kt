@@ -42,9 +42,11 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.auth.repository.Session
 import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.constant.ShuffleContentType
+import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.ui.NowPlayingComposable
 import org.jellyfin.androidtv.ui.base.Icon
@@ -100,6 +102,8 @@ fun MainToolbar(
 	val userRepository = koinInject<UserRepository>()
 	val api = koinInject<ApiClient>()
 	val userViewsRepository = koinInject<UserViewsRepository>()
+	val multiServerRepository = koinInject<org.jellyfin.androidtv.data.repository.MultiServerRepository>()
+	val sessionRepository = koinInject<org.jellyfin.androidtv.auth.repository.SessionRepository>()
 	val jellyseerrPreferences = koinInject<JellyseerrPreferences>(named("global"))
 	val userPreferences = koinInject<UserPreferences>()
 	val imageLoader = koinInject<coil3.ImageLoader>()
@@ -143,12 +147,14 @@ fun MainToolbar(
 	var showGenresButton by remember { mutableStateOf(true) }
 	var showFavoritesButton by remember { mutableStateOf(true) }
 	var showLibrariesInToolbar by remember { mutableStateOf(true) }
+	var enableMultiServer by remember { mutableStateOf(false) }
 	var shuffleContentType by remember { mutableStateOf("both") }
 	LaunchedEffect(Unit) {
 		showShuffleButton = userPreferences[UserPreferences.showShuffleButton] ?: true
 		showGenresButton = userPreferences[UserPreferences.showGenresButton] ?: true
 		showFavoritesButton = userPreferences[UserPreferences.showFavoritesButton] ?: true
 		showLibrariesInToolbar = userPreferences[UserPreferences.showLibrariesInToolbar] ?: true
+		enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries] ?: false
 		shuffleContentType = userPreferences[UserPreferences.shuffleContentType] ?: "both"
 	}
 
@@ -160,12 +166,33 @@ fun MainToolbar(
 			userViews = views.filter { it.collectionType != CollectionType.PLAYLISTS }.toList()
 		}
 	}
+	
+	// Load aggregated libraries from all servers
+	val aggregationScope = rememberCoroutineScope()
+	var aggregatedLibraries by remember { mutableStateOf<List<org.jellyfin.androidtv.data.model.AggregatedLibrary>>(emptyList()) }
+	LaunchedEffect(enableMultiServer) {
+		if (enableMultiServer) {
+			aggregationScope.launch(Dispatchers.IO) {
+				try {
+					aggregatedLibraries = multiServerRepository.getAggregatedLibraries()
+						.filter { it.library.collectionType != CollectionType.PLAYLISTS }
+				} catch (e: Exception) {
+				}
+			}
+		}
+	}
+	
+	// Track current session for server switching
+	val currentSession by sessionRepository.currentSession.collectAsState()
 
 	MainToolbar(
 		userImage = userImage,
 		activeButton = activeButton,
 		activeLibraryId = activeLibraryId,
 		userViews = userViews,
+		aggregatedLibraries = aggregatedLibraries,
+		enableMultiServer = enableMultiServer,
+		currentSession = currentSession,
 		jellyseerrEnabled = jellyseerrEnabled,
 		showShuffleButton = showShuffleButton,
 		showGenresButton = showGenresButton,
@@ -181,6 +208,9 @@ private fun MainToolbar(
 	activeButton: MainToolbarActiveButton,
 	activeLibraryId: UUID? = null,
 	userViews: List<BaseItemDto> = emptyList(),
+	aggregatedLibraries: List<org.jellyfin.androidtv.data.model.AggregatedLibrary> = emptyList(),
+	enableMultiServer: Boolean = false,
+	currentSession: Session? = null,
 	jellyseerrEnabled: Boolean = false,
 	showShuffleButton: Boolean = true,
 	showGenresButton: Boolean = true,
@@ -238,9 +268,10 @@ private fun MainToolbar(
 				horizontalArrangement = Arrangement.spacedBy(8.dp),
 				verticalAlignment = Alignment.CenterVertically,
 			) {
-				val userImagePainter = rememberAsyncImagePainter(userImage)
-				val userImageState by userImagePainter.state.collectAsState()
-				val userImageVisible = userImageState is AsyncImagePainter.State.Success
+				val userImagePainter = userImage?.let { rememberAsyncImagePainter(it) }
+				val userImageState by userImagePainter?.state?.collectAsState()
+					?: remember { mutableStateOf<AsyncImagePainter.State?>(null) }
+				val userImageVisible = userImagePainter != null && userImageState is AsyncImagePainter.State.Success
 
 				val interactionSource = remember { MutableInteractionSource() }
 				val isFocused by interactionSource.collectIsFocusedAsState()
@@ -278,7 +309,7 @@ private fun MainToolbar(
 						)
 					} else {
 						Image(
-							painter = userImagePainter,
+							painter = requireNotNull(userImagePainter),
 							contentDescription = stringResource(R.string.lbl_switch_user),
 							contentScale = ContentScale.Crop,
 							modifier = Modifier
@@ -447,19 +478,44 @@ private fun MainToolbar(
 			// Dynamic library buttons (conditional)
 			if (showLibrariesInToolbar) {
 				ProvideTextStyle(JellyfinTheme.typography.default.copy(fontWeight = FontWeight.Bold)) {
-					userViews.forEach { library ->
-					val isActiveLibrary = activeButton == MainToolbarActiveButton.Library &&
-						activeLibraryId == library.id
-											Button(
-							onClick = {
-								if (!isActiveLibrary) {
-									val destination = itemLauncher.getUserViewDestination(library)
-									navigationRepository.navigate(destination)
-								}
-							},
-							colors = if (isActiveLibrary) activeButtonColors else toolbarButtonColors,
-							content = { Text(library.name ?: "") }
-						)
+					if (enableMultiServer && aggregatedLibraries.isNotEmpty()) {
+						// Show aggregated libraries from all servers
+						aggregatedLibraries.forEach { aggLib ->
+							val isActiveLibrary = activeButton == MainToolbarActiveButton.Library &&
+								activeLibraryId == aggLib.library.id
+							
+							Button(
+								onClick = {
+									if (!isActiveLibrary) {
+										scope.launch {
+											// Navigate to library - no session switching needed
+										// Pass serverId so the library view can fetch content from the correct server
+										val destination = Destinations.libraryBrowser(aggLib.library, aggLib.server.id)
+											navigationRepository.navigate(destination)
+										}
+									}
+								},
+								colors = if (isActiveLibrary) activeButtonColors else toolbarButtonColors,
+								content = { Text(aggLib.displayName) }
+							)
+						}
+					} else {
+						// Show libraries from current server only
+						userViews.forEach { library ->
+							val isActiveLibrary = activeButton == MainToolbarActiveButton.Library &&
+								activeLibraryId == library.id
+							
+							Button(
+								onClick = {
+									if (!isActiveLibrary) {
+										val destination = itemLauncher.getUserViewDestination(library)
+										navigationRepository.navigate(destination)
+									}
+								},
+								colors = if (isActiveLibrary) activeButtonColors else toolbarButtonColors,
+								content = { Text(library.name ?: "") }
+							)
+						}
 					}
 				}
 			}

@@ -18,10 +18,13 @@ import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.itemBackdropImages
 import org.jellyfin.androidtv.util.apiclient.parentBackdropImages
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.model.api.BaseItemDto
+import timber.log.Timber
+import java.util.UUID
 import java.time.Instant
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -39,6 +42,7 @@ class BackgroundService(
 	private val api: ApiClient,
 	private val userPreferences: UserPreferences,
 	private val imageLoader: ImageLoader,
+	private val apiClientFactory: ApiClientFactory,
 ) {
 	companion object {
 		val SLIDESHOW_DURATION = 30.seconds
@@ -73,9 +77,12 @@ class BackgroundService(
 		// Set blur context
 		_blurContext.value = blurContext
 
+		// Get the appropriate API client for this item's server
+		val itemApi = apiClientFactory.getApiClientForItemOrFallback(baseItem, api)
+		
 		// Get all backdrop urls
 		val backdropUrls = (baseItem.itemBackdropImages + baseItem.parentBackdropImages)
-			.map { it.getUrl(api) }
+			.map { it.getUrl(itemApi) }
 			.toSet()
 
 		loadBackgrounds(backdropUrls)

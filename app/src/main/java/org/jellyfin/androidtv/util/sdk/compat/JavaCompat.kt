@@ -2,6 +2,7 @@
 
 package org.jellyfin.androidtv.util.sdk.compat
 
+import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.MediaSourceInfo
 import org.jellyfin.sdk.model.api.UserItemDataDto
@@ -48,6 +49,12 @@ fun BaseItemDto.copyWithUserData(
 	userData: UserItemDataDto?,
 ) = copy(
 	userData = userData,
+)
+
+fun BaseItemDto.copyWithServerId(
+	serverId: String?,
+) = copy(
+	serverId = UUIDUtils.normalizeUUIDString(serverId),
 )
 
 fun MediaSourceInfo.getVideoStream() = mediaStreams?.firstOrNull {

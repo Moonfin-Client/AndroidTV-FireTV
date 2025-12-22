@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.data.compat.PlaybackException
 import org.jellyfin.androidtv.data.compat.StreamInfo
 import org.jellyfin.androidtv.data.compat.VideoOptions
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.androidtv.util.apiclient.Response
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.hlsSegmentApi
@@ -16,6 +17,7 @@ import org.jellyfin.sdk.api.client.extensions.videosApi
 import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PlaybackInfoDto
 import org.jellyfin.sdk.model.api.PlaybackInfoResponse
+import timber.log.Timber
 
 private fun createStreamInfo(
 	api: ApiClient,
@@ -59,8 +61,22 @@ private fun createStreamInfo(
 }
 
 class PlaybackManager(
-	private val api: ApiClient
+	private val api: ApiClient,
+	private val apiClientFactory: ApiClientFactory? = null
 ) {
+	/**
+	 * Get the appropriate API client for the given options.
+	 * Uses server-specific API if serverId is present, otherwise uses default API.
+	 */
+	private fun getApiClient(options: VideoOptions): ApiClient {
+		return if (options.serverId != null && apiClientFactory != null) {
+			Timber.d("PlaybackManager: Using server-specific API client for server %s", options.serverId)
+			apiClientFactory.getApiClientForServer(options.serverId!!) ?: api
+		} else {
+			api
+		}
+	}
+	
 	fun getVideoStreamInfo(
 		lifecycleOwner: LifecycleOwner,
 		options: VideoOptions,
@@ -80,9 +96,11 @@ class PlaybackManager(
 		startTimeTicks: Long,
 		callback: Response<StreamInfo>
 	) = lifecycleOwner.lifecycleScope.launch {
+		val apiClient = getApiClient(options)
+		
 		if (stream.playSessionId != null && stream.playMethod != PlayMethod.DIRECT_PLAY) {
 			withContext(Dispatchers.IO) {
-				api.hlsSegmentApi.stopEncodingProcess(api.deviceInfo.id, stream.playSessionId)
+				apiClient.hlsSegmentApi.stopEncodingProcess(apiClient.deviceInfo.id, stream.playSessionId)
 			}
 		}
 
@@ -96,8 +114,10 @@ class PlaybackManager(
 		options: VideoOptions,
 		startTimeTicks: Long
 	) = runCatching {
+		val apiClient = getApiClient(options)
+		
 		val response = withContext(Dispatchers.IO) {
-			api.mediaInfoApi.getPostedPlaybackInfo(
+			apiClient.mediaInfoApi.getPostedPlaybackInfo(
 				itemId = requireNotNull(options.itemId) { "Item id cannot be null" },
 				data = PlaybackInfoDto(
 					mediaSourceId = options.mediaSourceId,
@@ -121,6 +141,6 @@ class PlaybackManager(
 			}
 		}
 
-		createStreamInfo(api, options, response)
+		createStreamInfo(apiClient, options, response)
 	}
 }

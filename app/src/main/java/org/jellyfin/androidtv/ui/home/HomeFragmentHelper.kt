@@ -30,7 +30,16 @@ class HomeFragmentHelper(
 	private val api by inject<ApiClient>()
 
 	fun loadRecentlyAdded(userViews: Collection<BaseItemDto>): HomeFragmentRow {
-		return HomeFragmentLatestRow(userRepository, userViews)
+		// Check if multi-server is enabled
+		val enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
+		
+		return if (enableMultiServer) {
+			// Use aggregated row that shows items from all servers
+			HomeFragmentAggregatedLatestRow()
+		} else {
+			// Use normal row for current server only
+			HomeFragmentLatestRow(userRepository, userViews)
+		}
 	}
 
 	fun loadResume(title: String, includeMediaTypes: Collection<MediaType>): HomeFragmentRow {
@@ -47,10 +56,29 @@ class HomeFragmentHelper(
 	}
 
 	fun loadResumeVideo(): HomeFragmentRow {
-		return loadResume(context.getString(R.string.lbl_continue_watching), listOf(MediaType.VIDEO))
+		// Check if multi-server is enabled
+		val enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
+		
+		return if (enableMultiServer) {
+			// Use aggregated row that shows items from all servers
+			HomeFragmentAggregatedResumeRow(ITEM_LIMIT_RESUME)
+		} else {
+			// Use normal row for current server only
+			loadResume(context.getString(R.string.lbl_continue_watching), listOf(MediaType.VIDEO))
+		}
 	}
 
 	fun loadMergedContinueWatching(): HomeFragmentRow {
+		// Check if multi-server is enabled
+		val enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
+		
+		if (enableMultiServer) {
+			// Use aggregated row that shows items from all servers
+			// Note: This combines both resume and next up automatically
+			return HomeFragmentAggregatedResumeRow(ITEM_LIMIT_RESUME + ITEM_LIMIT_NEXT_UP)
+		}
+		
+		// Use normal merged row for current server only
 		val resumeQuery = GetResumeItemsRequest(
 			limit = ITEM_LIMIT_RESUME,
 			fields = ItemRepository.itemFields,
@@ -94,6 +122,15 @@ class HomeFragmentHelper(
 	}
 
 	fun loadNextUp(): HomeFragmentRow {
+		// Check if multi-server is enabled
+		val enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
+		
+		if (enableMultiServer) {
+			// Use aggregated row that shows items from all servers
+			return HomeFragmentAggregatedNextUpRow(ITEM_LIMIT_NEXT_UP)
+		}
+		
+		// Use normal row for current server only
 		val query = GetNextUpRequest(
 			imageTypeLimit = 1,
 			limit = ITEM_LIMIT_NEXT_UP,

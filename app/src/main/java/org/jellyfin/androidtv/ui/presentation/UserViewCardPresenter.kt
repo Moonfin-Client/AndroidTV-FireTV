@@ -43,7 +43,7 @@ class UserViewCardPresenter(
 			// Load image
 			val image = baseItem?.itemImages[ImageType.PRIMARY]
 			cardView.mainImageView.load(
-				url = image?.let { imageHelper.getImageUrl(it, fillWidth, fillHeight) },
+			url = if (image != null && baseItem != null) imageHelper.getImageUrl(image, baseItem, fillWidth, fillHeight) else null,
 				blurHash = image?.blurHash,
 				placeholder = ContextCompat.getDrawable(cardView.context, R.drawable.tile_land_folder),
 				aspectRatio = ImageHelper.ASPECT_RATIO_16_9,

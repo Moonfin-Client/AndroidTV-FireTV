@@ -10,6 +10,12 @@ open class AudioOptions {
 	var itemId: UUID? = null
 	var mediaSources: List<MediaSourceInfo>? = null
 	var profile: DeviceProfile? = null
+	
+	/**
+	 * Optional server ID for multi-server support.
+	 * When set, playback will use the API client for this specific server.
+	 */
+	var serverId: UUID? = null
 
 	/**
 	 * Optional. Only needed if a specific AudioStreamIndex or SubtitleStreamIndex are requested.

@@ -14,6 +14,7 @@ import org.jellyfin.playback.core.queue.queue
 import org.jellyfin.playback.jellyfin.queue.baseItem
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.playStateApi
+import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PlaybackOrder
 import org.jellyfin.sdk.model.api.PlaybackProgressInfo
@@ -22,11 +23,13 @@ import org.jellyfin.sdk.model.api.PlaybackStopInfo
 import org.jellyfin.sdk.model.api.QueueItem
 import org.jellyfin.sdk.model.extensions.inWholeTicks
 import timber.log.Timber
+import java.util.UUID
 import kotlin.math.roundToInt
 import org.jellyfin.sdk.model.api.RepeatMode as SdkRepeatMode
 
 class PlaySessionService(
 	private val api: ApiClient,
+	private val apiClientResolver: ((UUID?) -> ApiClient?)? = null,
 ) : PlayerService() {
 	override suspend fun onInitialize() {
 		state.playState.onEach { playState ->
@@ -53,6 +56,38 @@ class PlaySessionService(
 			RepeatMode.REPEAT_ENTRY_INFINITE -> SdkRepeatMode.REPEAT_ALL
 		}
 
+	/**
+	 * Get the correct API client for the given item.
+	 * If the item has a serverId and we have an apiClientResolver, use the item's server API client.
+	 * Otherwise, fall back to the default API client.
+	 */
+	private fun getApiClientForItem(item: BaseItemDto): ApiClient {
+		val serverId = item.serverId
+		if (serverId.isNullOrEmpty() || apiClientResolver == null) return api
+		
+		val serverUuid = parseServerId(serverId) ?: return api
+		return apiClientResolver.invoke(serverUuid) ?: api
+	}
+
+	/**
+	 * Parse a serverId string to UUID, handling the case where hyphens may be missing.
+	 */
+	private fun parseServerId(serverId: String): UUID? {
+		// Try parsing directly first
+		try {
+			return UUID.fromString(serverId)
+		} catch (_: IllegalArgumentException) {}
+		
+		// If 32 chars without hyphens, add them back (8-4-4-4-12 format)
+		if (serverId.length == 32 && !serverId.contains("-")) {
+			val normalized = "${serverId.substring(0, 8)}-${serverId.substring(8, 12)}-${serverId.substring(12, 16)}-${serverId.substring(16, 20)}-${serverId.substring(20)}"
+			try {
+				return UUID.fromString(normalized)
+			} catch (_: IllegalArgumentException) {}
+		}
+		return null
+	}
+
 	suspend fun sendUpdateIfActive() {
 		coroutineScope.launch { sendStreamUpdate() }
 	}
@@ -70,9 +105,10 @@ class PlaySessionService(
 		val entry = manager.queue.entry.value ?: return
 		val stream = entry.mediaStream ?: return
 		val item = entry.baseItem ?: return
+		val itemApi = getApiClientForItem(item)
 
 		runCatching {
-			api.playStateApi.reportPlaybackStart(
+			itemApi.playStateApi.reportPlaybackStart(
 				PlaybackStartInfo(
 					itemId = item.id,
 					playSessionId = stream.identifier,
@@ -100,9 +136,10 @@ class PlaySessionService(
 		val entry = manager.queue.entry.value ?: return
 		val stream = entry.mediaStream ?: return
 		val item = entry.baseItem ?: return
+		val itemApi = getApiClientForItem(item)
 
 		runCatching {
-			api.playStateApi.reportPlaybackProgress(
+			itemApi.playStateApi.reportPlaybackProgress(
 				PlaybackProgressInfo(
 					itemId = item.id,
 					playSessionId = stream.identifier,
@@ -130,9 +167,10 @@ class PlaySessionService(
 		val entry = manager.queue.entry.value ?: return
 		val stream = entry.mediaStream ?: return
 		val item = entry.baseItem ?: return
+		val itemApi = getApiClientForItem(item)
 
 		runCatching {
-			api.playStateApi.reportPlaybackStopped(
+			itemApi.playStateApi.reportPlaybackStopped(
 				PlaybackStopInfo(
 					itemId = item.id,
 					playSessionId = stream.identifier,

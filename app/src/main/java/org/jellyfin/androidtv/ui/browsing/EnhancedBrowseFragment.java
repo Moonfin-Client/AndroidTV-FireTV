@@ -55,6 +55,7 @@ import org.jellyfin.androidtv.util.CoroutineUtils;
 import org.jellyfin.androidtv.util.InfoLayoutHelper;
 import org.jellyfin.androidtv.util.KeyProcessor;
 import org.jellyfin.androidtv.util.MarkdownRenderer;
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory;
 import org.jellyfin.androidtv.util.sdk.compat.JavaCompat;
 import org.jellyfin.sdk.api.client.ApiClient;
 import org.jellyfin.sdk.model.api.BaseItemDto;
@@ -102,6 +103,7 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
     private final Lazy<CustomMessageRepository> customMessageRepository = inject(CustomMessageRepository.class);
     private final Lazy<NavigationRepository> navigationRepository = inject(NavigationRepository.class);
     private final Lazy<ApiClient> api = inject(ApiClient.class);
+    private final Lazy<ApiClientFactory> apiClientFactory = inject(ApiClientFactory.class);
     private final Lazy<ItemLauncher> itemLauncher = inject(ItemLauncher.class);
     private final Lazy<KeyProcessor> keyProcessor = inject(KeyProcessor.class);
 
@@ -228,6 +230,16 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
         ps.addClassPresenter(GridButtonBaseRowItem.class, new GridButtonPresenter(155, 140));
         ps.addClassPresenter(BaseRowItem.class, mCardPresenter);
 
+        ApiClient folderApiClient = null;
+        String folderServerId = null;
+        if (mFolder != null) {
+            folderApiClient = apiClientFactory.getValue().getApiClientForItem(mFolder);
+            folderServerId = mFolder.getServerId();
+        }
+        if (folderApiClient == null) {
+            folderApiClient = api.getValue();
+        }
+
         for (BrowseRowDef def : rows) {
             HeaderItem header = new HeaderItem(def.getHeaderText());
             ItemRowAdapter rowAdapter;
@@ -268,6 +280,11 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
                 default:
                     rowAdapter = new ItemRowAdapter(requireContext(), def.getQuery(), def.getChunkSize(), def.getPreferParentThumb(), def.isStaticHeight(), ps, mRowsAdapter, def.getQueryType());
                     break;
+            }
+
+            rowAdapter.setApiClient(folderApiClient);
+            if (folderServerId != null) {
+                rowAdapter.setServerId(folderServerId);
             }
 
             rowAdapter.setReRetrieveTriggers(def.getChangeTriggers());
@@ -364,19 +381,19 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
                     case ALBUMS:
                         mFolder = JavaCompat.copyWithDisplayPreferencesId(mFolder, mFolder.getId() + "AL");
 
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowser(mFolder, BaseItemKind.MUSIC_ALBUM.getSerialName()));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowserWithType(mFolder, BaseItemKind.MUSIC_ALBUM.getSerialName()));
                         break;
 
                     case ALBUM_ARTISTS:
                         mFolder = JavaCompat.copyWithDisplayPreferencesId(mFolder, mFolder.getId() + "AR");
 
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowser(mFolder, "AlbumArtist"));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowserWithType(mFolder, "AlbumArtist"));
                         break;
 
                     case ARTISTS:
                         mFolder = JavaCompat.copyWithDisplayPreferencesId(mFolder, mFolder.getId() + "AR");
 
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowser(mFolder, "Artist"));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowserWithType(mFolder, "Artist"));
                         break;
 
                     case BY_LETTER:

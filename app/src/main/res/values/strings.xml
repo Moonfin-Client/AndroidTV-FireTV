@@ -343,6 +343,8 @@
     <string name="pref_developer_link">Developer options</string>
     <string name="pref_developer_link_description">Advanced and experimental features</string>
     <string name="lbl_hidden">Hidden</string>
+    <string name="lbl_visible">Visible</string>
+    <string name="lbl_library_visibility_description">Show this library in the home screen and toolbar</string>
     <string name="discovered_servers_title">Discovered servers</string>
     <string name="discovered_servers_empty">No servers found on local network.</string>
     <string name="connect_manually_by_address">Enter server address</string>
@@ -823,6 +825,8 @@
     <string name="home_section_settings">Home Screen</string>
     <string name="pref_confirm_exit">Confirm Exit</string>
     <string name="pref_confirm_exit_description">Show confirmation dialog when exiting the app</string>
+    <string name="pref_multi_server_libraries">Show All Server Libraries</string>
+    <string name="pref_multi_server_libraries_description">Display libraries and content from all logged-in servers in the home screen and toolbar</string>
     <string name="pref_show_shuffle_button">Show Shuffle Button</string>
     <string name="pref_show_shuffle_button_description">Display shuffle button in main toolbar</string>
     <string name="pref_show_genres_button">Show Genres Button</string>

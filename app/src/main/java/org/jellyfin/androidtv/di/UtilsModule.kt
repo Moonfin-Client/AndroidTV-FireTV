@@ -4,5 +4,5 @@ import org.jellyfin.androidtv.util.ImageHelper
 import org.koin.dsl.module
 
 val utilsModule = module {
-	single { ImageHelper(get()) }
+	single { ImageHelper(get(), get()) }
 }

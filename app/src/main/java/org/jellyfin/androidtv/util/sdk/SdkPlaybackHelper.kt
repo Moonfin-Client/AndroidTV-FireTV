@@ -23,6 +23,7 @@ import org.jellyfin.sdk.api.client.extensions.tvShowsApi
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.api.client.extensions.videosApi
 import org.jellyfin.sdk.model.api.BaseItemDto
+import timber.log.Timber
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
@@ -34,6 +35,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class SdkPlaybackHelper(
 	private val api: ApiClient,
+	private val apiClientFactory: ApiClientFactory,
 	private val userPreferences: UserPreferences,
 	private val playbackLauncher: PlaybackLauncher,
 	private val playbackControllerContainer: PlaybackControllerContainer,
@@ -71,11 +73,12 @@ class SdkPlaybackHelper(
 		allowIntros: Boolean,
 		shuffle: Boolean,
 	): List<BaseItemDto> = withContext(Dispatchers.IO) {
+		val itemApi = apiClientFactory.getApiClientForItemOrFallback(mainItem, api)
 		when (mainItem.type) {
 			BaseItemKind.EPISODE -> {
 				val seriesId = mainItem.seriesId
 				if (userPreferences[UserPreferences.mediaQueuingEnabled] && seriesId != null) {
-					val response by api.tvShowsApi.getEpisodes(
+					val response by itemApi.tvShowsApi.getEpisodes(
 						seriesId = seriesId,
 						startItemId = mainItem.id,
 						isMissing = false,
@@ -90,7 +93,7 @@ class SdkPlaybackHelper(
 			}
 
 			BaseItemKind.SERIES -> {
-				val response by api.tvShowsApi.getEpisodes(
+				val response by itemApi.tvShowsApi.getEpisodes(
 					seriesId = mainItem.id,
 					isMissing = false,
 					sortBy = if (shuffle) ItemSortBy.RANDOM else ItemSortBy.SORT_NAME,
@@ -101,7 +104,7 @@ class SdkPlaybackHelper(
 			}
 
 			BaseItemKind.SEASON -> {
-				val response by api.tvShowsApi.getEpisodes(
+				val response by itemApi.tvShowsApi.getEpisodes(
 					seriesId = requireNotNull(mainItem.seriesId),
 					seasonId = mainItem.id,
 					isMissing = false,
@@ -113,7 +116,7 @@ class SdkPlaybackHelper(
 			}
 
 			BaseItemKind.FOLDER -> {
-				val response by api.itemsApi.getItems(
+				val response by itemApi.itemsApi.getItems(
 					parentId = mainItem.id,
 					isMissing = false,
 					includeItemTypes = listOf(
@@ -131,7 +134,7 @@ class SdkPlaybackHelper(
 			}
 
 			BaseItemKind.BOX_SET -> {
-				val response by api.itemsApi.getItems(
+				val response by itemApi.itemsApi.getItems(
 					parentId = mainItem.id,
 					isMissing = false,
 					includeItemTypes = listOf(
@@ -149,7 +152,7 @@ class SdkPlaybackHelper(
 			}
 
 			BaseItemKind.MUSIC_ALBUM -> {
-				val response by api.itemsApi.getItems(
+				val response by itemApi.itemsApi.getItems(
 					isMissing = false,
 					mediaTypes = listOf(MediaType.AUDIO),
 					filters = listOf(ItemFilter.IS_NOT_FOLDER),
@@ -169,7 +172,7 @@ class SdkPlaybackHelper(
 			}
 
 			BaseItemKind.MUSIC_ARTIST -> {
-				val response by api.itemsApi.getItems(
+				val response by itemApi.itemsApi.getItems(
 					isMissing = false,
 					mediaTypes = listOf(MediaType.AUDIO),
 					filters = listOf(ItemFilter.IS_NOT_FOLDER),
@@ -189,7 +192,7 @@ class SdkPlaybackHelper(
 			}
 
 			BaseItemKind.PLAYLIST -> {
-				val response by api.itemsApi.getItems(
+				val response by itemApi.itemsApi.getItems(
 					parentId = mainItem.id,
 					isMissing = false,
 					sortBy = if (shuffle) listOf(ItemSortBy.RANDOM) else null,
@@ -203,7 +206,7 @@ class SdkPlaybackHelper(
 
 			BaseItemKind.PROGRAM -> {
 				val parentId = requireNotNull(mainItem.parentId)
-				val channel by api.userLibraryApi.getItem(parentId)
+				val channel by itemApi.userLibraryApi.getItem(parentId)
 				val channelWithProgramMetadata = channel.copy(
 					premiereDate = mainItem.premiereDate,
 					endDate = mainItem.endDate,
@@ -215,7 +218,7 @@ class SdkPlaybackHelper(
 			}
 
 			BaseItemKind.TV_CHANNEL -> {
-				val channel by api.liveTvApi.getChannel(mainItem.id)
+				val channel by itemApi.liveTvApi.getChannel(mainItem.id)
 				val currentProgram = channel.currentProgram
 				if (currentProgram != null) {
 					val channelWithCurrentProgramMetadata = channel.copy(
@@ -235,7 +238,7 @@ class SdkPlaybackHelper(
 				val addIntros = allowIntros && userPreferences[UserPreferences.cinemaModeEnabled]
 
 				if (addIntros) {
-					val intros = runCatching { api.userLibraryApi.getIntros(mainItem.id).content.items }.getOrNull()
+					val intros = runCatching { itemApi.userLibraryApi.getIntros(mainItem.id).content.items }.getOrNull()
 						.orEmpty()
 						// Force the type to be trailer as the legacy playback UI uses it to determine if it should show the next up screen
 						.map { it.copy(type = BaseItemKind.TRAILER) }
@@ -253,7 +256,8 @@ class SdkPlaybackHelper(
 
 		val partCount = item.partCount
 		if (partCount != null && partCount > 1) {
-			val response by api.videosApi.getAdditionalPart(item.id)
+			val itemApi = apiClientFactory.getApiClientForItemOrFallback(item, api)
+			val response by itemApi.videosApi.getAdditionalPart(item.id)
 			addAll(response.items)
 		}
 	}
@@ -287,8 +291,9 @@ class SdkPlaybackHelper(
 
 	override fun playInstantMix(context: Context, item: BaseItemDto) {
 		getScope(context).launch {
+			val itemApi = apiClientFactory.getApiClientForItemOrFallback(item, api)
 			val response = withContext(Dispatchers.IO) {
-				api.instantMixApi.getInstantMixFromItem(
+				itemApi.instantMixApi.getInstantMixFromItem(
 					itemId = item.id,
 					fields = ItemRepository.itemFields
 				).content

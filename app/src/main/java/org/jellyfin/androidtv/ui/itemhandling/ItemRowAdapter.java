@@ -32,6 +32,7 @@ import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter;
 import org.jellyfin.androidtv.ui.presentation.TextItemPresenter;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.EmptyResponse;
+import org.jellyfin.androidtv.util.sdk.compat.JavaCompat;
 import org.jellyfin.sdk.model.api.BaseItemDto;
 import org.jellyfin.sdk.model.api.BaseItemPerson;
 import org.jellyfin.sdk.model.api.ItemSortBy;
@@ -52,6 +53,7 @@ import org.koin.java.KoinJavaComponent;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import kotlin.Lazy;
 import timber.log.Timber;
@@ -84,6 +86,7 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     private Instant lastFullRetrieve;
 
     private BaseItemPerson[] mPersons;
+    private UUID mPersonsServerId;
     private List<ChapterItemInfo> mChapters;
     private List<org.jellyfin.sdk.model.api.BaseItemDto> mItems;
     private MutableObjectAdapter<Row> mParent;
@@ -101,6 +104,8 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     private boolean staticHeight = false;
 
     private final Lazy<org.jellyfin.sdk.api.client.ApiClient> api = inject(org.jellyfin.sdk.api.client.ApiClient.class);
+    private org.jellyfin.sdk.api.client.ApiClient customApiClient = null;
+    private String serverId = null; // ServerId to annotate items with for multi-server support
     private final Lazy<UserViewsRepository> userViewsRepository = inject(UserViewsRepository.class);
     private Context context;
 
@@ -134,6 +139,22 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
 
     public void setReRetrieveTriggers(ChangeTriggerType[] reRetrieveTriggers) {
         this.reRetrieveTriggers = reRetrieveTriggers;
+    }
+
+    public void setApiClient(org.jellyfin.sdk.api.client.ApiClient apiClient) {
+        this.customApiClient = apiClient;
+    }
+
+    public void setServerId(String serverId) {
+        this.serverId = serverId;
+    }
+
+    public String getServerId() {
+        return this.serverId;
+    }
+
+    private org.jellyfin.sdk.api.client.ApiClient getApiClient() {
+        return customApiClient != null ? customApiClient : api.getValue();
     }
 
     public ItemRowAdapter(Context context, GetItemsRequest query, int chunkSize, boolean preferParentThumb, Presenter presenter, MutableObjectAdapter<Row> parent) {
@@ -214,10 +235,15 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     }
 
     public ItemRowAdapter(List<BaseItemPerson> people, Context context, Presenter presenter, MutableObjectAdapter<Row> parent) {
+        this(people, null, context, presenter, parent);
+    }
+
+    public ItemRowAdapter(List<BaseItemPerson> people, UUID serverId, Context context, Presenter presenter, MutableObjectAdapter<Row> parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mPersons = people.toArray(new BaseItemPerson[people.size()]);
+        mPersonsServerId = serverId;
         staticHeight = true;
         queryType = QueryType.StaticPeople;
     }
@@ -507,7 +533,7 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
                 }
                 notifyRetrieveStarted();
 
-                ItemRowAdapterHelperKt.retrieveLiveTvChannels(this, api.getValue(), mTvChannelQuery, itemsLoaded, chunkSize);
+                ItemRowAdapterHelperKt.retrieveLiveTvChannels(this, getApiClient(), mTvChannelQuery, itemsLoaded, chunkSize);
                 break;
 
             case Artists:
@@ -516,7 +542,7 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
                 }
                 notifyRetrieveStarted();
 
-                ItemRowAdapterHelperKt.retrieveArtists(this, api.getValue(), mArtistsQuery, itemsLoaded, chunkSize);
+                ItemRowAdapterHelperKt.retrieveArtists(this, getApiClient(), mArtistsQuery, itemsLoaded, chunkSize);
                 break;
 
             case AlbumArtists:
@@ -525,7 +551,7 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
                 }
                 notifyRetrieveStarted();
 
-                ItemRowAdapterHelperKt.retrieveAlbumArtists(this, api.getValue(), mAlbumArtistsQuery, itemsLoaded, chunkSize);
+                ItemRowAdapterHelperKt.retrieveAlbumArtists(this, getApiClient(), mAlbumArtistsQuery, itemsLoaded, chunkSize);
                 break;
 
             default:
@@ -534,7 +560,7 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
                 }
                 notifyRetrieveStarted();
 
-                ItemRowAdapterHelperKt.retrieveItems(this, api.getValue(), mQuery, itemsLoaded, chunkSize);
+                ItemRowAdapterHelperKt.retrieveItems(this, getApiClient(), mQuery, itemsLoaded, chunkSize);
                 break;
         }
     }
@@ -578,38 +604,38 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
         switch (queryType) {
             case Items:
                 if (mQuery.getStartIndex() != null && mQuery.getLimit() != null) {
-                    ItemRowAdapterHelperKt.retrieveItems(this, api.getValue(), mQuery, mQuery.getStartIndex(), mQuery.getLimit());
+                    ItemRowAdapterHelperKt.retrieveItems(this, getApiClient(), mQuery, mQuery.getStartIndex(), mQuery.getLimit());
                 } else {
-                    ItemRowAdapterHelperKt.retrieveItems(this, api.getValue(), mQuery, 0, chunkSize);
+                    ItemRowAdapterHelperKt.retrieveItems(this, getApiClient(), mQuery, 0, chunkSize);
                 }
                 break;
             case NextUp:
-                ItemRowAdapterHelperKt.retrieveNextUpItems(this, api.getValue(), mNextUpQuery);
+                ItemRowAdapterHelperKt.retrieveNextUpItems(this, getApiClient(), mNextUpQuery);
                 break;
             case LatestItems:
-                ItemRowAdapterHelperKt.retrieveLatestMedia(this, api.getValue(), mLatestQuery);
+                ItemRowAdapterHelperKt.retrieveLatestMedia(this, getApiClient(), mLatestQuery);
                 break;
             case Upcoming:
-                ItemRowAdapterHelperKt.retrieveUpcomingEpisodes(this, api.getValue(), mUpcomingQuery);
+                ItemRowAdapterHelperKt.retrieveUpcomingEpisodes(this, getApiClient(), mUpcomingQuery);
                 break;
             case Season:
-                ItemRowAdapterHelperKt.retrieveSeasons(this, api.getValue(), mSeasonQuery);
+                ItemRowAdapterHelperKt.retrieveSeasons(this, getApiClient(), mSeasonQuery);
                 break;
             case Views:
-                ItemRowAdapterHelperKt.retrieveUserViews(this, api.getValue(), userViewsRepository.getValue());
+                ItemRowAdapterHelperKt.retrieveUserViews(this, getApiClient(), userViewsRepository.getValue());
                 break;
             case SimilarSeries:
             case SimilarMovies:
-                ItemRowAdapterHelperKt.retrieveSimilarItems(this, api.getValue(), mSimilarQuery);
+                ItemRowAdapterHelperKt.retrieveSimilarItems(this, getApiClient(), mSimilarQuery);
                 break;
             case LiveTvChannel:
-                ItemRowAdapterHelperKt.retrieveLiveTvChannels(this, api.getValue(), mTvChannelQuery, 0, chunkSize);
+                ItemRowAdapterHelperKt.retrieveLiveTvChannels(this, getApiClient(), mTvChannelQuery, itemsLoaded, chunkSize);
                 break;
             case LiveTvProgram:
-                ItemRowAdapterHelperKt.retrieveLiveTvRecommendedPrograms(this, api.getValue(), mTvProgramQuery);
+                ItemRowAdapterHelperKt.retrieveLiveTvRecommendedPrograms(this, getApiClient(), mTvProgramQuery);
                 break;
             case LiveTvRecording:
-                ItemRowAdapterHelperKt.retrieveLiveTvRecordings(this, api.getValue(), mTvRecordingQuery);
+                ItemRowAdapterHelperKt.retrieveLiveTvRecordings(this, getApiClient(), mTvRecordingQuery);
                 break;
             case StaticPeople:
                 loadPeople();
@@ -621,39 +647,39 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
                 loadStaticItems();
                 break;
             case Specials:
-                ItemRowAdapterHelperKt.retrieveSpecialFeatures(this, api.getValue(), mSpecialsQuery);
+                ItemRowAdapterHelperKt.retrieveSpecialFeatures(this, getApiClient(), mSpecialsQuery);
                 break;
             case AdditionalParts:
-                ItemRowAdapterHelperKt.retrieveAdditionalParts(this, api.getValue(), mAdditionalPartsQuery);
+                ItemRowAdapterHelperKt.retrieveAdditionalParts(this, getApiClient(), mAdditionalPartsQuery);
                 break;
             case Trailers:
-                ItemRowAdapterHelperKt.retrieveTrailers(this, api.getValue(), mTrailersQuery);
+                ItemRowAdapterHelperKt.retrieveTrailers(this, getApiClient(), mTrailersQuery);
                 break;
             case Search:
                 loadStaticItems();
                 addToParentIfResultsReceived();
                 break;
             case Artists:
-                ItemRowAdapterHelperKt.retrieveArtists(this, api.getValue(), mArtistsQuery, 0, chunkSize);
+                ItemRowAdapterHelperKt.retrieveArtists(this, getApiClient(), mArtistsQuery, itemsLoaded, chunkSize);
                 break;
             case AlbumArtists:
-                ItemRowAdapterHelperKt.retrieveAlbumArtists(this, api.getValue(), mAlbumArtistsQuery, 0, chunkSize);
+                ItemRowAdapterHelperKt.retrieveAlbumArtists(this, getApiClient(), mAlbumArtistsQuery, itemsLoaded, chunkSize);
                 break;
             case AudioPlaylists:
                 retrieveAudioPlaylists(mQuery);
                 break;
             case Premieres:
-                ItemRowAdapterHelperKt.retrievePremieres(this, api.getValue(), mQuery);
+                ItemRowAdapterHelperKt.retrievePremieres(this, getApiClient(), mQuery);
                 break;
             case SeriesTimer:
                 boolean canManageRecordings = Utils.canManageRecordings(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue());
-                ItemRowAdapterHelperKt.retrieveLiveTvSeriesTimers(this, api.getValue(), context, canManageRecordings);
+                ItemRowAdapterHelperKt.retrieveLiveTvSeriesTimers(this, getApiClient(), context, canManageRecordings);
                 break;
             case Resume:
-                ItemRowAdapterHelperKt.retrieveResumeItems(this, api.getValue(), resumeQuery);
+                ItemRowAdapterHelperKt.retrieveResumeItems(this, getApiClient(), resumeQuery);
                 break;
             case MergedContinueWatching:
-                ItemRowAdapterHelperKt.retrieveMergedContinueWatchingItems(this, api.getValue(), resumeQuery, mNextUpQuery);
+                ItemRowAdapterHelperKt.retrieveMergedContinueWatchingItems(this, getApiClient(), resumeQuery, mNextUpQuery);
                 break;
         }
     }
@@ -661,7 +687,7 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     private void loadPeople() {
         if (mPersons != null) {
             for (BaseItemPerson person : mPersons) {
-                add(new BaseItemPersonBaseRowItem(person));
+                add(new BaseItemPersonBaseRowItem(person, mPersonsServerId));
             }
 
         } else {
@@ -687,6 +713,10 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     private void loadStaticItems() {
         if (mItems != null) {
             for (org.jellyfin.sdk.model.api.BaseItemDto item : mItems) {
+                // Annotate item with serverId if set for multi-server support
+                if (serverId != null && item.getServerId() == null) {
+                    item = JavaCompat.copyWithServerId(item, serverId);
+                }
                 add(new BaseItemDtoBaseRowItem(item));
             }
             itemsLoaded = mItems.size();
@@ -708,7 +738,7 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
         clear();
         add(new GridButtonBaseRowItem(new GridButton(EnhancedBrowseFragment.FAVSONGS, context.getString(R.string.lbl_favorites), R.drawable.favorites)));
         itemsLoaded = 1;
-        ItemRowAdapterHelperKt.retrieveItems(this, api.getValue(), mQuery, 0, chunkSize);
+        ItemRowAdapterHelperKt.retrieveItems(this, getApiClient(), mQuery, 0, chunkSize);
     }
 
     protected void notifyRetrieveFinished() {

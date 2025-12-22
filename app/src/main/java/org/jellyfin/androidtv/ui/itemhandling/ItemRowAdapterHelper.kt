@@ -16,6 +16,7 @@ import org.jellyfin.androidtv.data.querying.GetTrailersRequest
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.ui.GridButton
 import org.jellyfin.androidtv.ui.browsing.BrowseGridFragment.SortOption
+import org.jellyfin.androidtv.util.sdk.compat.copyWithServerId
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.client.extensions.artistsApi
@@ -58,7 +59,14 @@ fun <T : Any> ItemRowAdapter.setItems(
 
 		// Add loaded items
 		val mappedItems = items.mapIndexedNotNull { index, item ->
-			transform(item, itemsLoaded + index)
+			// Annotate BaseItemDto objects with serverId if set on adapter
+			val annotatedItem = if (item is org.jellyfin.sdk.model.api.BaseItemDto && this@setItems.serverId != null && item.serverId == null) {
+				item.copyWithServerId(this@setItems.serverId)
+			} else {
+				item
+			}
+			@Suppress("UNCHECKED_CAST")
+			transform(annotatedItem as T, itemsLoaded + index)
 		}
 		mappedItems.forEach { add(it) }
 

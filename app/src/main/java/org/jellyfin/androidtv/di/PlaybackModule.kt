@@ -35,7 +35,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import org.jellyfin.androidtv.ui.playback.PlaybackManager as LegacyPlaybackManager
 
 val playbackModule = module {
-	single { LegacyPlaybackManager(get()) }
+	single<LegacyPlaybackManager> { LegacyPlaybackManager(get(), get()) }
 	single { VideoQueueManager() }
 	single<MediaManager> { RewriteMediaManager(get(), get()) }
 
@@ -87,7 +87,14 @@ fun Scope.createPlaybackManager() = playbackManager(androidContext()) {
 	install(media3SessionPlugin(get(), mediaSessionOptions))
 
 	val deviceProfileBuilder = { createDeviceProfile(androidContext(), userPreferences, get()) }
-	install(jellyfinPlugin(get(), deviceProfileBuilder, ProcessLifecycleOwner.get().lifecycle))
+	
+	// Create API client resolver for cross-server support
+	val apiClientFactory = get<org.jellyfin.androidtv.util.sdk.ApiClientFactory>()
+	val apiClientResolver: (java.util.UUID?) -> org.jellyfin.sdk.api.client.ApiClient? = { serverId ->
+		serverId?.let { apiClientFactory.getApiClientForServer(it) }
+	}
+	
+	install(jellyfinPlugin(get(), deviceProfileBuilder, ProcessLifecycleOwner.get().lifecycle, apiClientResolver))
 
 	// Options
 	val userSettingPreferences = get<UserSettingPreferences>()

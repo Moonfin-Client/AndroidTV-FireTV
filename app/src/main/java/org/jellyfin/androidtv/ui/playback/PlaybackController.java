@@ -27,10 +27,12 @@ import org.jellyfin.androidtv.ui.InteractionTrackerViewModel;
 import org.jellyfin.androidtv.ui.livetv.TvManager;
 import org.jellyfin.androidtv.ui.playback.PrePlaybackTrackSelector;
 import org.jellyfin.androidtv.util.TimeUtils;
+import org.jellyfin.androidtv.util.UUIDUtils;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.ReportingHelper;
 import org.jellyfin.androidtv.util.apiclient.Response;
 import org.jellyfin.androidtv.util.profile.DeviceProfileKt;
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory;
 import org.jellyfin.androidtv.util.sdk.compat.JavaCompat;
 import org.jellyfin.sdk.api.client.ApiClient;
 import org.jellyfin.sdk.model.ServerVersion;
@@ -51,6 +53,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.UUID;
 
 import kotlin.Lazy;
 import timber.log.Timber;
@@ -65,6 +68,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     private Lazy<UserPreferences> userPreferences = inject(UserPreferences.class);
     private Lazy<VideoQueueManager> videoQueueManager = inject(VideoQueueManager.class);
     private Lazy<ApiClient> api = inject(ApiClient.class);
+    private Lazy<ApiClientFactory> apiClientFactory = inject(ApiClientFactory.class);
     private Lazy<DataRefreshService> dataRefreshService = inject(DataRefreshService.class);
     private Lazy<ReportingHelper> reportingHelper = inject(ReportingHelper.class);
     private final Lazy<InteractionTrackerViewModel> lazyInteractionTracker = inject(InteractionTrackerViewModel.class);
@@ -509,6 +513,14 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         VideoOptions internalOptions = new VideoOptions();
         internalOptions.setItemId(item.getId());
         internalOptions.setMediaSources(item.getMediaSources());
+        
+        // Extract serverId for multi-server support
+        UUID parsedServerId = UUIDUtils.parseUUID(item.getServerId());
+        if (parsedServerId != null) {
+            internalOptions.setServerId(parsedServerId);
+            Timber.i("PlaybackController: Using server %s for playback", parsedServerId);
+        }
+        
         if (playbackRetries > 0 || (isLiveTv && !directStreamLiveTv)) internalOptions.setEnableDirectPlay(false);
         if (playbackRetries > 1) internalOptions.setEnableDirectStream(false);
         
@@ -676,7 +688,16 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         if (mFragment != null) mFragment.updateDisplay();
 
         if (mVideoManager != null) {
-            mVideoManager.setMediaStreamInfo(api.getValue(), response);
+            // Get server-specific API client for subtitle URLs
+            ApiClient subtitleApi = api.getValue();
+            if (mCurrentOptions.getServerId() != null) {
+                ApiClient serverApi = apiClientFactory.getValue().getApiClientForServer(mCurrentOptions.getServerId());
+                if (serverApi != null) {
+                    subtitleApi = serverApi;
+                    Timber.d("PlaybackController: Using server-specific API for subtitles: %s", mCurrentOptions.getServerId());
+                }
+            }
+            mVideoManager.setMediaStreamInfo(subtitleApi, response);
         }
 
         PlaybackControllerHelperKt.applyMediaSegments(this, item, () -> {
@@ -1008,7 +1029,16 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                     if (!isActive()) return;
                     mCurrentStreamInfo = response;
                     if (mVideoManager != null) {
-                        mVideoManager.setMediaStreamInfo(api.getValue(), response);
+                        // Get server-specific API client for subtitle URLs
+                        ApiClient subtitleApi = api.getValue();
+                        if (mCurrentOptions.getServerId() != null) {
+                            ApiClient serverApi = apiClientFactory.getValue().getApiClientForServer(mCurrentOptions.getServerId());
+                            if (serverApi != null) {
+                                subtitleApi = serverApi;
+                                Timber.d("PlaybackController: Using server-specific API for subtitles (changeVideoStream): %s", mCurrentOptions.getServerId());
+                            }
+                        }
+                        mVideoManager.setMediaStreamInfo(subtitleApi, response);
                         mVideoManager.start();
                     }
                 }

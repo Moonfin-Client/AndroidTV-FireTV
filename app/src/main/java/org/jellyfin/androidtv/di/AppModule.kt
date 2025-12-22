@@ -164,6 +164,10 @@ val appModule = module {
 	single<NavigationRepository> { NavigationRepositoryImpl(Destinations.home) }
 	single<SearchRepository> { SearchRepositoryImpl(get()) }
 	single<MediaSegmentRepository> { MediaSegmentRepositoryImpl(get(), get()) }
+	single<org.jellyfin.androidtv.data.repository.MultiServerRepository> { 
+		org.jellyfin.androidtv.data.repository.MultiServerRepositoryImpl(get(), get(), get(), get(), get(defaultDeviceInfo), get(), get()) 
+	}
+	single { org.jellyfin.androidtv.util.sdk.ApiClientFactory(get(), get(), get(defaultDeviceInfo)) }
 
 	// Jellyseerr - Global preferences (server URL, UI settings)
 	single(named("global")) { JellyseerrPreferences(androidContext()) }
@@ -181,16 +185,16 @@ val appModule = module {
 	viewModel { DreamViewModel(get(), get(), get(), get(), get()) }
 	viewModel { SettingsViewModel() }
 	viewModel { org.jellyfin.androidtv.ui.jellyseerr.JellyseerrViewModel(get(), get(named("global"))) }
-	single { MediaBarSlideshowViewModel(get(), get(), get(), get(), androidContext(), get()) } // Singleton so both fragments share the same instance
+	single { MediaBarSlideshowViewModel(get(), get(), get(), get(), androidContext(), get(), get()) } // Singleton so both fragments share the same instance
 
-	single { BackgroundService(get(), get(), get(), get(), get()) }
+	single { BackgroundService(get(), get(), get(), get(), get(), get()) }
 	single { UpdateCheckerService(get()) }
 
 	single { MarkdownRenderer(get()) }
 	single { ItemLauncher() }
 	single { KeyProcessor() }
-	single { ReportingHelper(get(), get()) }
-	single<PlaybackHelper> { SdkPlaybackHelper(get(), get(), get(), get()) }
+	single { ReportingHelper(get(), get(), get()) }
+	single<PlaybackHelper> { SdkPlaybackHelper(get(), get(), get(), get(), get()) }
 	single { org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer(androidContext()) }
 
 	factory { (context: Context) -> 

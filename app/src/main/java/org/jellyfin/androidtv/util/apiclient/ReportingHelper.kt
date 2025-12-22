@@ -8,6 +8,7 @@ import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.data.compat.StreamInfo
 import org.jellyfin.androidtv.data.model.DataRefreshService
 import org.jellyfin.androidtv.ui.playback.PlaybackController
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.playStateApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -23,6 +24,7 @@ import java.time.Instant
 class ReportingHelper(
 	private val dataRefreshService: DataRefreshService,
 	private val api: ApiClient,
+	private val apiClientFactory: ApiClientFactory,
 ) {
 	fun reportStart(
 		lifecycleOwner: LifecycleOwner,
@@ -50,8 +52,9 @@ class ReportingHelper(
 
 		lifecycleOwner.lifecycleScope.launch(Dispatchers.IO + NonCancellable) {
 			Timber.i("Reporting ${item.name} playback started at $position")
+			val itemApi = apiClientFactory.getApiClientForItemOrFallback(item, api)
 			runCatching {
-				api.playStateApi.reportPlaybackStart(info)
+				itemApi.playStateApi.reportPlaybackStart(info)
 			}.onFailure { error -> Timber.e(error, "Failed to report started playback!") }
 		}
 	}
@@ -82,8 +85,9 @@ class ReportingHelper(
 
 		lifecycleOwner.lifecycleScope.launch(Dispatchers.IO + NonCancellable) {
 			Timber.d("Reporting ${item.name} playback progress at $position")
+			val itemApi = apiClientFactory.getApiClientForItemOrFallback(item, api)
 			runCatching {
-				api.playStateApi.reportPlaybackProgress(info)
+				itemApi.playStateApi.reportPlaybackProgress(info)
 			}.onFailure { error -> Timber.w(error, "Failed to report playback progress") }
 		}
 	}
@@ -100,8 +104,9 @@ class ReportingHelper(
 
 		lifecycleOwner.lifecycleScope.launch(Dispatchers.IO + NonCancellable) {
 			Timber.i("Reporting ${item.name} playback stopped at $position")
+			val itemApi = apiClientFactory.getApiClientForItemOrFallback(item, api)
 			runCatching {
-				api.playStateApi.reportPlaybackStopped(info)
+				itemApi.playStateApi.reportPlaybackStopped(info)
 			}.onFailure { error -> Timber.e(error, "Failed to report stopped playback!") }
 		}
 

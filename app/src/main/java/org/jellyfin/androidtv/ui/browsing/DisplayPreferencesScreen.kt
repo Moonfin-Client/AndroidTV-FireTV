@@ -29,6 +29,16 @@ class DisplayPreferencesScreen : OptionsFragment() {
 		setTitle(R.string.lbl_display_preferences)
 
 		category {
+			checkbox {
+				setTitle(R.string.lbl_visible)
+				setContent(R.string.lbl_library_visibility_description)
+				bind {
+					get { !libraryPreferences[LibraryPreferences.hidden] }
+					set { visible -> libraryPreferences[LibraryPreferences.hidden] = !visible }
+					default { true }
+				}
+			}
+
 			enum<PosterSize> {
 				setTitle(R.string.lbl_image_size)
 				bind(libraryPreferences, LibraryPreferences.posterSize)

@@ -18,6 +18,7 @@ data class MediaBarConfig(
  */
 data class MediaBarSlideItem(
 	val itemId: UUID,
+	val serverId: UUID?,
 	val title: String,
 	val overview: String?,
 	val backdropUrl: String?,

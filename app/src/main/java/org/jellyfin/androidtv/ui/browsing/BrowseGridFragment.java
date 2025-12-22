@@ -61,6 +61,7 @@ import org.jellyfin.androidtv.util.InfoLayoutHelper;
 import org.jellyfin.androidtv.util.KeyProcessor;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.EmptyResponse;
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory;
 import org.jellyfin.sdk.api.client.ApiClient;
 import org.jellyfin.sdk.model.api.BaseItemDto;
 import org.jellyfin.sdk.model.api.BaseItemKind;
@@ -100,6 +101,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
     private UUID mParentId;
     private BaseItemDto mFolder;
     private LibraryPreferences libraryPreferences;
+    private UUID mServerId = null;
 
     private HorizontalGridBrowseBinding binding;
     private ItemRowAdapter mAdapter;
@@ -122,6 +124,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
     private final Lazy<ItemLauncher> itemLauncher = inject(ItemLauncher.class);
     private final Lazy<KeyProcessor> keyProcessor = inject(KeyProcessor.class);
     private final Lazy<ApiClient> api = inject(ApiClient.class);
+    private final Lazy<ApiClientFactory> apiClientFactory = inject(ApiClientFactory.class);
 
     private int mCardsScreenEst = 0;
     private int mCardsScreenStride = 0;
@@ -148,6 +151,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
 
         mFolder = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), getArguments().getString(Extras.Folder));
         mParentId = mFolder.getId();
+        mServerId = Utils.uuidOrNull(getArguments().getString("ServerId"));
         mainTitle = mFolder.getName();
         libraryPreferences = preferencesRepository.getValue().getLibraryPreferences(Objects.requireNonNull(mFolder.getDisplayPreferencesId()));
         mPosterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
@@ -655,6 +659,14 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                 break;
         }
         mDirty = false;
+
+        // If browsing a library from another server, use that server's API client
+        if (mServerId != null) {
+            ApiClient serverApiClient = apiClientFactory.getValue().getApiClientForServer(mServerId);
+            if (serverApiClient != null) {
+                mAdapter.setApiClient(serverApiClient);
+            }
+        }
 
         FilterOptions filters = new FilterOptions();
         filters.setFavoriteOnly(libraryPreferences.get(LibraryPreferences.Companion.getFilterFavoritesOnly()));

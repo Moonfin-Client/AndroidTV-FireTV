@@ -77,6 +77,7 @@ import org.jellyfin.androidtv.util.MarkdownRenderer;
 import org.jellyfin.androidtv.util.PlaybackHelper;
 import org.jellyfin.androidtv.util.TimeUtils;
 import org.jellyfin.androidtv.util.Utils;
+import org.jellyfin.androidtv.util.UUIDUtils;
 import org.jellyfin.androidtv.util.apiclient.BaseItemUtils;
 import org.jellyfin.androidtv.util.apiclient.Response;
 import org.jellyfin.androidtv.util.sdk.BaseItemExtensionsKt;
@@ -144,6 +145,8 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
     private ArrayList<MediaSourceInfo> versions;
     private final Lazy<org.jellyfin.sdk.api.client.ApiClient> api = inject(org.jellyfin.sdk.api.client.ApiClient.class);
+    private final Lazy<org.jellyfin.androidtv.util.sdk.ApiClientFactory> apiClientFactory = inject(org.jellyfin.androidtv.util.sdk.ApiClientFactory.class);
+    private org.jellyfin.sdk.api.client.ApiClient serverSpecificApi = null;
     private final Lazy<UserPreferences> userPreferences = inject(UserPreferences.class);
     private final Lazy<DataRefreshService> dataRefreshService = inject(DataRefreshService.class);
     private final Lazy<BackgroundService> backgroundService = inject(BackgroundService.class);
@@ -178,6 +181,16 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
         mItemId = Utils.uuidOrNull(getArguments().getString("ItemId"));
         mChannelId = Utils.uuidOrNull(getArguments().getString("ChannelId"));
+        
+        // Check if a specific serverId was provided (for multi-server items)
+        UUID serverId = Utils.uuidOrNull(getArguments().getString("ServerId"));
+        if (serverId != null) {
+            serverSpecificApi = apiClientFactory.getValue().getApiClientForServer(serverId);
+            if (serverSpecificApi == null) {
+                Timber.w("Failed to create API client for server %s, using current session", serverId);
+            }
+        }
+        
         String programJson = getArguments().getString("ProgramInfo");
         if (programJson != null) {
             mProgramInfo = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), programJson);
@@ -217,6 +230,35 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         loadItem(mItemId);
 
         return binding.getRoot();
+    }
+
+    private ApiClient getApiClient() {
+        return serverSpecificApi != null ? serverSpecificApi : api.getValue();
+    }
+
+    private void setAdapterApiClient(ItemRowAdapter adapter) {
+        if (serverSpecificApi != null) {
+            adapter.setApiClient(serverSpecificApi);
+            String serverIdString = getArguments() != null ? getArguments().getString("ServerId") : null;
+            if (serverIdString == null && mBaseItem != null && mBaseItem.getServerId() != null) {
+                serverIdString = mBaseItem.getServerId();
+            }
+            if (serverIdString != null) {
+                adapter.setServerId(serverIdString);
+            }
+        }
+    }
+
+    private UUID getItemServerId() {
+        String serverIdString = getArguments() != null ? getArguments().getString("ServerId") : null;
+        if (serverIdString != null) {
+            UUID serverId = UUIDUtils.parseUUID(serverIdString);
+            if (serverId != null) return serverId;
+        }
+        if (mBaseItem != null && mBaseItem.getServerId() != null) {
+            return UUIDUtils.parseUUID(mBaseItem.getServerId());
+        }
+        return null;
     }
 
     int getResumePreroll() {
@@ -533,34 +575,41 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 //Additional Parts
                 if (mBaseItem.getPartCount() != null && mBaseItem.getPartCount() > 0) {
                     ItemRowAdapter additionalPartsAdapter = new ItemRowAdapter(requireContext(), new GetAdditionalPartsRequest(mBaseItem.getId()), new CardPresenter(), adapter);
+                    setAdapterApiClient(additionalPartsAdapter);
                     addItemRow(adapter, additionalPartsAdapter, 0, getString(R.string.lbl_additional_parts));
                 }
 
                 //Cast/Crew
                 if (mBaseItem.getPeople() != null && !mBaseItem.getPeople().isEmpty()) {
-                    ItemRowAdapter castAdapter = new ItemRowAdapter(mBaseItem.getPeople(), requireContext(), new CardPresenter(true, 130), adapter);
+                    UUID castServerId = getItemServerId();
+                    ItemRowAdapter castAdapter = new ItemRowAdapter(mBaseItem.getPeople(), castServerId, requireContext(), new CardPresenter(true, 130), adapter);
                     addItemRow(adapter, castAdapter, 1, getString(R.string.lbl_cast_crew));
                 }
 
                 //Specials
                 if (mBaseItem.getSpecialFeatureCount() != null && mBaseItem.getSpecialFeatureCount() > 0) {
-                    addItemRow(adapter, new ItemRowAdapter(requireContext(), new GetSpecialsRequest(mBaseItem.getId()), new CardPresenter(), adapter), 3, getString(R.string.lbl_specials));
+                    ItemRowAdapter specialsAdapter = new ItemRowAdapter(requireContext(), new GetSpecialsRequest(mBaseItem.getId()), new CardPresenter(), adapter);
+                    setAdapterApiClient(specialsAdapter);
+                    addItemRow(adapter, specialsAdapter, 3, getString(R.string.lbl_specials));
                 }
 
                 //Trailers
                 if (mBaseItem.getLocalTrailerCount() != null && mBaseItem.getLocalTrailerCount() > 1) {
-                    addItemRow(adapter, new ItemRowAdapter(requireContext(), new GetTrailersRequest(mBaseItem.getId()), new CardPresenter(), adapter), 4, getString(R.string.lbl_trailers));
+                    ItemRowAdapter trailersAdapter = new ItemRowAdapter(requireContext(), new GetTrailersRequest(mBaseItem.getId()), new CardPresenter(), adapter);
+                    setAdapterApiClient(trailersAdapter);
+                    addItemRow(adapter, trailersAdapter, 4, getString(R.string.lbl_trailers));
                 }
 
                 //Chapters
                 if (mBaseItem.getChapters() != null && !mBaseItem.getChapters().isEmpty()) {
-                    List<ChapterItemInfo> chapters = BaseItemExtensionsKt.buildChapterItems(mBaseItem, api.getValue());
+                    List<ChapterItemInfo> chapters = BaseItemExtensionsKt.buildChapterItems(mBaseItem, getApiClient());
                     ItemRowAdapter chapterAdapter = new ItemRowAdapter(requireContext(), chapters, new CardPresenter(true, 120), adapter);
                     addItemRow(adapter, chapterAdapter, 2, getString(R.string.lbl_chapters));
                 }
 
                 //Similar
                 ItemRowAdapter similarMoviesAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSimilarItemsRequest(mBaseItem.getId()), QueryType.SimilarMovies, new CardPresenter(), adapter);
+                setAdapterApiClient(similarMoviesAdapter);
                 addItemRow(adapter, similarMoviesAdapter, 5, getString(R.string.lbl_more_like_this));
 
                 addInfoRows(adapter);
@@ -569,52 +618,65 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
                 //Cast/Crew
                 if (mBaseItem.getPeople() != null && !mBaseItem.getPeople().isEmpty()) {
-                    ItemRowAdapter castAdapter = new ItemRowAdapter(mBaseItem.getPeople(), requireContext(), new CardPresenter(true, 130), adapter);
+                    UUID trailerCastServerId = getItemServerId();
+                    ItemRowAdapter castAdapter = new ItemRowAdapter(mBaseItem.getPeople(), trailerCastServerId, requireContext(), new CardPresenter(true, 130), adapter);
                     addItemRow(adapter, castAdapter, 0, getString(R.string.lbl_cast_crew));
                 }
 
                 //Similar
                 ItemRowAdapter similarTrailerAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSimilarItemsRequest(mBaseItem.getId()), QueryType.SimilarMovies, new CardPresenter(), adapter);
+                setAdapterApiClient(similarTrailerAdapter);
                 addItemRow(adapter, similarTrailerAdapter, 4, getString(R.string.lbl_more_like_this));
                 addInfoRows(adapter);
                 break;
             case PERSON:
                 ItemRowAdapter personMoviesAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createPersonItemsRequest(mBaseItem.getId(), BaseItemKind.MOVIE), 100, false, new CardPresenter(), adapter);
+                setAdapterApiClient(personMoviesAdapter);
                 addItemRow(adapter, personMoviesAdapter, 0, getString(R.string.lbl_movies));
 
                 ItemRowAdapter personSeriesAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createPersonItemsRequest(mBaseItem.getId(), BaseItemKind.SERIES), 100, false, new CardPresenter(), adapter);
+                setAdapterApiClient(personSeriesAdapter);
                 addItemRow(adapter, personSeriesAdapter, 1, getString(R.string.lbl_tv_series));
 
                 ItemRowAdapter personEpisodesAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createPersonItemsRequest(mBaseItem.getId(), BaseItemKind.EPISODE), 100, false, new CardPresenter(), adapter);
+                setAdapterApiClient(personEpisodesAdapter);
                 addItemRow(adapter, personEpisodesAdapter, 2, getString(R.string.lbl_episodes));
 
                 break;
             case MUSIC_ARTIST:
                 ItemRowAdapter artistAlbumsAdapter = new ItemRowAdapter(requireContext(),  BrowsingUtils.createArtistItemsRequest(mBaseItem.getId(), BaseItemKind.MUSIC_ALBUM), 100, false, new CardPresenter(), adapter);
+                setAdapterApiClient(artistAlbumsAdapter);
                 addItemRow(adapter, artistAlbumsAdapter, 0, getString(R.string.lbl_albums));
 
                 break;
             case SERIES:
                 ItemRowAdapter nextUpAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSeriesGetNextUpRequest(mBaseItem.getId()), true, new CardPresenter(), adapter);
+                setAdapterApiClient(nextUpAdapter);
                 addItemRow(adapter, nextUpAdapter, 0, getString(R.string.lbl_next_up));
 
                 ItemRowAdapter seasonsAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSeasonsRequest(mBaseItem.getId()), new CardPresenter(), adapter);
+                setAdapterApiClient(seasonsAdapter);
                 addItemRow(adapter, seasonsAdapter, 1, getString(R.string.lbl_seasons));
 
                 //Specials
                 if (mBaseItem.getSpecialFeatureCount() != null && mBaseItem.getSpecialFeatureCount() > 0) {
-                    addItemRow(adapter, new ItemRowAdapter(requireContext(), new GetSpecialsRequest(mBaseItem.getId()), new CardPresenter(), adapter), 3, getString(R.string.lbl_specials));
+                    ItemRowAdapter specialsAdapter = new ItemRowAdapter(requireContext(), new GetSpecialsRequest(mBaseItem.getId()), new CardPresenter(), adapter);
+                    setAdapterApiClient(specialsAdapter);
+                    addItemRow(adapter, specialsAdapter, 3, getString(R.string.lbl_specials));
                 }
 
                 ItemRowAdapter upcomingAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createUpcomingEpisodesRequest(mBaseItem.getId()), new CardPresenter(), adapter);
+                setAdapterApiClient(upcomingAdapter);
                 addItemRow(adapter, upcomingAdapter, 2, getString(R.string.lbl_upcoming));
 
                 if (mBaseItem.getPeople() != null && !mBaseItem.getPeople().isEmpty()) {
-                    ItemRowAdapter seriesCastAdapter = new ItemRowAdapter(mBaseItem.getPeople(), requireContext(), new CardPresenter(true, 130), adapter);
+                    UUID seriesCastServerId = getItemServerId();
+                    ItemRowAdapter seriesCastAdapter = new ItemRowAdapter(mBaseItem.getPeople(), seriesCastServerId, requireContext(), new CardPresenter(true, 130), adapter);
                     addItemRow(adapter, seriesCastAdapter, 3, getString(R.string.lbl_cast_crew));
                 }
 
                 ItemRowAdapter similarAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSimilarItemsRequest(mBaseItem.getId()), QueryType.SimilarSeries, new CardPresenter(), adapter);
+                setAdapterApiClient(similarAdapter);
                 addItemRow(adapter, similarAdapter, 4, getString(R.string.lbl_more_like_this));
                 break;
 
@@ -622,6 +684,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 if (mBaseItem.getSeasonId() != null && mBaseItem.getIndexNumber() != null) {
                     // query index is zero-based but episode no is not
                     ItemRowAdapter nextAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createNextEpisodesRequest(mBaseItem.getSeasonId(), mBaseItem.getIndexNumber()), 0, false, true, new CardPresenter(true, 120), adapter);
+                    setAdapterApiClient(nextAdapter);
                     addItemRow(adapter, nextAdapter, 5, getString(R.string.lbl_next_episode));
                 }
 
@@ -639,7 +702,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
                 //Chapters
                 if (mBaseItem.getChapters() != null && !mBaseItem.getChapters().isEmpty()) {
-                    List<ChapterItemInfo> chapters = BaseItemExtensionsKt.buildChapterItems(mBaseItem, api.getValue());
+                    List<ChapterItemInfo> chapters = BaseItemExtensionsKt.buildChapterItems(mBaseItem, getApiClient());
                     ItemRowAdapter chapterAdapter = new ItemRowAdapter(requireContext(), chapters, new CardPresenter(true, 120), adapter);
                     addItemRow(adapter, chapterAdapter, 1, getString(R.string.lbl_chapters));
                 }
@@ -808,12 +871,24 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     }
 
     void gotoSeries() {
-        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mBaseItem.getSeriesId()));
+        // Pass serverId to preserve multi-server context when navigating to series
+        String serverId = getArguments() != null ? getArguments().getString("ServerId") : null;
+        if (serverId == null && mBaseItem.getServerId() != null) {
+            serverId = mBaseItem.getServerId().toString();
+        }
+        UUID serverIdUUID = serverId != null ? Utils.uuidOrNull(serverId) : null;
+        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mBaseItem.getSeriesId(), serverIdUUID));
     }
 
     void gotoPreviousEpisode() {
         if (mPrevItemId != null) {
-            navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mPrevItemId));
+            // Pass serverId to preserve multi-server context when navigating to previous episode
+            String serverId = getArguments() != null ? getArguments().getString("ServerId") : null;
+            if (serverId == null && mBaseItem.getServerId() != null) {
+                serverId = mBaseItem.getServerId().toString();
+            }
+            UUID serverIdUUID = serverId != null ? Utils.uuidOrNull(serverId) : null;
+            navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mPrevItemId, serverIdUUID));
         }
     }
 
@@ -826,7 +901,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 .setPositiveButton(R.string.lbl_delete, (dialog, which) -> {
                     FullDetailsFragmentHelperKt.deleteItem(
                             this,
-                            api.getValue(),
+                            getApiClient(),
                             mBaseItem,
                             dataRefreshService.getValue(),
                             navigationRepository.getValue()
@@ -1154,7 +1229,13 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 @Override
                 public void onClick(View v) {
                     if (mPrevItemId != null) {
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mPrevItemId));
+                        // Pass serverId to preserve multi-server context when navigating to previous episode
+                        String serverId = getArguments() != null ? getArguments().getString("ServerId") : null;
+                        if (serverId == null && mBaseItem.getServerId() != null) {
+                            serverId = mBaseItem.getServerId().toString();
+                        }
+                        UUID serverIdUUID = serverId != null ? Utils.uuidOrNull(serverId) : null;
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mPrevItemId, serverIdUUID));
                     }
                 }
             });
@@ -1408,8 +1489,25 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                     return;
                 }
 
-                interactionTracker.getValue().notifyStartSession(item, response);
-                KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class).launch(getContext(), response, pos, false, 0, shuffle);
+                // Annotate items with serverId if this is a cross-server item
+                List<BaseItemDto> itemsToPlay = response;
+                String serverIdString = getArguments() != null ? getArguments().getString("ServerId") : null;
+                if (serverIdString == null && mBaseItem != null && mBaseItem.getServerId() != null) {
+                    serverIdString = mBaseItem.getServerId();
+                }
+                if (serverIdString != null) {
+                    itemsToPlay = new ArrayList<>(response.size());
+                    for (BaseItemDto playItem : response) {
+                        if (playItem.getServerId() == null) {
+                            playItem = JavaCompat.copyWithServerId(playItem, serverIdString);
+                        }
+                        itemsToPlay.add(playItem);
+                    }
+                    Timber.d("FullDetailsFragment: Annotated %d items with serverId %s for playback", itemsToPlay.size(), serverIdString);
+                }
+
+                interactionTracker.getValue().notifyStartSession(item, itemsToPlay);
+                KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class).launch(getContext(), itemsToPlay, pos, false, 0, shuffle);
             }
         });
     }
@@ -1419,6 +1517,24 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         
         if (items.isEmpty()) return;
         if (shuffle) Collections.shuffle(items);
-        KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class).launch(getContext(), items, pos);
+        
+        // Annotate items with serverId if this is a cross-server item
+        List<BaseItemDto> itemsToPlay = items;
+        String serverIdString = getArguments() != null ? getArguments().getString("ServerId") : null;
+        if (serverIdString == null && mBaseItem != null && mBaseItem.getServerId() != null) {
+            serverIdString = mBaseItem.getServerId();
+        }
+        if (serverIdString != null) {
+            itemsToPlay = new ArrayList<>(items.size());
+            for (BaseItemDto item : items) {
+                if (item.getServerId() == null) {
+                    item = JavaCompat.copyWithServerId(item, serverIdString);
+                }
+                itemsToPlay.add(item);
+            }
+            Timber.d("FullDetailsFragment: Annotated %d items with serverId %s for playback", itemsToPlay.size(), serverIdString);
+        }
+        
+        KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class).launch(getContext(), itemsToPlay, pos);
     }
 }

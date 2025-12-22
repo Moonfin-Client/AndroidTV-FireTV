@@ -87,6 +87,12 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var confirmExit = booleanPreference("confirm_exit", true)
 
+		/**
+		 * Enable multi-server library aggregation
+		 * When enabled, shows libraries and content from all logged-in servers
+		 */
+		var enableMultiServerLibraries = booleanPreference("enable_multi_server_libraries", false)
+
 		/* Playback - General*/
 		/**
 		 * Maximum bitrate in megabit for playback.
