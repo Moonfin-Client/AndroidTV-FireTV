@@ -88,6 +88,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var confirmExit = booleanPreference("confirm_exit", true)
 
 		/**
+		 * Seasonal surprise effect selection (none, winter, spring, fall)
+		 */
+		var seasonalSurprise = stringPreference("seasonal_surprise", "none")
+
+		/**
 		 * Enable multi-server library aggregation
 		 * When enabled, shows libraries and content from all logged-in servers
 		 */

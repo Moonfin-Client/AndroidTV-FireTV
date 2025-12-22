@@ -881,4 +881,13 @@
     <string name="pref_parental_controls_rating_allowed">Allowed</string>
     <string name="pref_parental_controls_category_info">Information</string>
     <string name="pref_parental_controls_info_description">Selected ratings will be hidden from home rows, libraries, search, and media bar across all servers</string>
+    
+    <!-- Seasonal Surprise -->
+    <string name="pref_seasonal_surprise">Seasonal Surprise</string>
+    <string name="pref_seasonal_none">None</string>
+    <string name="pref_seasonal_winter">Winter ❄️</string>
+    <string name="pref_seasonal_spring">Spring 🌸</string>
+    <string name="pref_seasonal_summer">Summer ☀️</string>
+    <string name="pref_seasonal_halloween">Halloween 🎃</string>
+    <string name="pref_seasonal_fall">Fall 🍁</string>
 </resources>

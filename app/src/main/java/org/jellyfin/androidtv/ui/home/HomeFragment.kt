@@ -18,6 +18,7 @@ import coil3.request.crossfade
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowViewModel
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
@@ -27,6 +28,7 @@ import org.koin.android.ext.android.inject
 class HomeFragment : Fragment() {
 	private val mediaBarViewModel by inject<MediaBarSlideshowViewModel>()
 	private val userSettingPreferences by inject<UserSettingPreferences>()
+	private val userPreferences by inject<UserPreferences>()
 
 	private var titleView: TextView? = null
 	private var logoView: ImageView? = null
@@ -34,6 +36,11 @@ class HomeFragment : Fragment() {
 	private var summaryView: TextView? = null
 	private var backgroundImage: ImageView? = null
 	private var rowsFragment: HomeRowsFragment? = null
+	private var snowfallView: SnowfallView? = null
+	private var petalfallView: PetalfallView? = null
+	private var leaffallView: LeaffallView? = null
+	private var summerView: SummerView? = null
+	private var halloweenView: HalloweenView? = null
 
 	override fun onCreateView(
 		inflater: LayoutInflater,
@@ -48,6 +55,11 @@ class HomeFragment : Fragment() {
 		infoRowView = view.findViewById(R.id.infoRow)
 		summaryView = view.findViewById(R.id.summary)
 		backgroundImage = view.findViewById(R.id.backgroundImage)
+		snowfallView = view.findViewById(R.id.snowfallView)
+		petalfallView = view.findViewById(R.id.petalfallView)
+		leaffallView = view.findViewById(R.id.leaffallView)
+		summerView = view.findViewById(R.id.summerView)
+		halloweenView = view.findViewById(R.id.halloweenView)
 
 		// Setup toolbar Compose
 		val toolbarView = view.findViewById<ComposeView>(R.id.toolbar)
@@ -62,6 +74,9 @@ class HomeFragment : Fragment() {
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
+
+		// Setup seasonal surprise (snowfall effect)
+		setupSeasonalSurprise()
 
 		// Observe selected item state from HomeRowsFragment
 		rowsFragment = childFragmentManager.findFragmentById(R.id.rowsFragment) as? HomeRowsFragment
@@ -151,13 +166,67 @@ class HomeFragment : Fragment() {
 		}
 	}
 
+	/**
+	 * Setup the seasonal surprise effects based on user selection.
+	 * Options: none, winter (❄️), spring (🌸🌼), summer (☀️🏐), fall (🍁🍂)
+	 */
+	private fun setupSeasonalSurprise() {
+		val selection = userPreferences[UserPreferences.seasonalSurprise]
+		
+		// Stop all effects first
+		snowfallView?.isVisible = false
+		snowfallView?.stopSnowing()
+		petalfallView?.isVisible = false
+		petalfallView?.stopFalling()
+		leaffallView?.isVisible = false
+		leaffallView?.stopFalling()
+		summerView?.isVisible = false
+		summerView?.stopEffect()
+		halloweenView?.isVisible = false
+		halloweenView?.stopEffect()
+		
+		when (selection) {
+			"winter" -> {
+				snowfallView?.isVisible = true
+				snowfallView?.startSnowing()
+			}
+			"spring" -> {
+				petalfallView?.isVisible = true
+				petalfallView?.startFalling()
+			}
+			"summer" -> {
+				summerView?.isVisible = true
+				summerView?.startEffect()
+			}
+			"halloween" -> {
+				halloweenView?.isVisible = true
+				halloweenView?.startEffect()
+			}
+			"fall" -> {
+				leaffallView?.isVisible = true
+				leaffallView?.startFalling()
+			}
+			// "none" or any other value - no effect
+		}
+	}
+
 	override fun onDestroyView() {
 		super.onDestroyView()
+		snowfallView?.stopSnowing()
+		petalfallView?.stopFalling()
+		leaffallView?.stopFalling()
+		summerView?.stopEffect()
+		halloweenView?.stopEffect()
 		titleView = null
 		logoView = null
 		summaryView = null
 		infoRowView = null
 		backgroundImage = null
 		rowsFragment = null
+		snowfallView = null
+		petalfallView = null
+		leaffallView = null
+		summerView = null
+		halloweenView = null
 	}
 }

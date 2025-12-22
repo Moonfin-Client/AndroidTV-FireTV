@@ -91,6 +91,19 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 				icon = R.drawable.ic_lock
 				withFragment<ParentalControlsPreferencesScreen>()
 			}
+
+			list {
+				setTitle(R.string.pref_seasonal_surprise)
+				entries = mapOf(
+					"none" to getString(R.string.pref_seasonal_none),
+					"winter" to getString(R.string.pref_seasonal_winter),
+					"spring" to getString(R.string.pref_seasonal_spring),
+					"summer" to getString(R.string.pref_seasonal_summer),
+					"halloween" to getString(R.string.pref_seasonal_halloween),
+					"fall" to getString(R.string.pref_seasonal_fall)
+				)
+				bind(userPreferences, UserPreferences.seasonalSurprise)
+			}
 		}
 
 		// Media Bar Settings
