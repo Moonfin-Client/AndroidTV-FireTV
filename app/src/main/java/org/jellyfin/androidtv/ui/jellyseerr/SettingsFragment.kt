@@ -22,13 +22,20 @@ import timber.log.Timber
 
 class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 	private val viewModel: JellyseerrViewModel by viewModel()
-	private val preferences: JellyseerrPreferences by inject(named("global"))
+	private val globalPreferences: JellyseerrPreferences by inject(named("global"))
 	private val apiClient: ApiClient by inject()
 	private val userPreferences: UserPreferences by inject()
 	private val userRepository: UserRepository by inject()
 
 	private var _binding: FragmentJellyseerrSettingsBinding? = null
 	private val binding get() = _binding!!
+	
+	// Per-user Jellyseerr preferences (lazy initialized with current user ID)
+	private val userJellyseerrPrefs: JellyseerrPreferences by lazy {
+		val userId = userRepository.currentUser.value?.id?.toString()
+			?: throw IllegalStateException("No user logged in")
+		JellyseerrPreferences(requireContext(), userId)
+	}
 
 	override fun setupUI(view: View, savedInstanceState: Bundle?) {
 		_binding = FragmentJellyseerrSettingsBinding.bind(view)
@@ -43,8 +50,9 @@ class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 
 		// Enable/disable toggle
 		binding.enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
-			preferences[JellyseerrPreferences.enabled] = isChecked
-			preferences[JellyseerrPreferences.showInToolbar] = isChecked
+			globalPreferences[JellyseerrPreferences.enabled] = isChecked
+			// Update per-user showInToolbar preference
+			userJellyseerrPrefs[JellyseerrPreferences.showInToolbar] = isChecked
 			binding.settingsGroup.alpha = if (isChecked) 1f else 0.5f
 		}
 
@@ -67,7 +75,7 @@ class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 		binding.fetchLimitSpinner.adapter = adapter
 		
 		// Set initial selection
-		val currentLimit = preferences[JellyseerrPreferences.fetchLimit]
+		val currentLimit = globalPreferences[JellyseerrPreferences.fetchLimit]
 		val currentIndex = fetchLimitOptions.indexOf(currentLimit)
 		if (currentIndex >= 0) {
 			binding.fetchLimitSpinner.setSelection(currentIndex)
@@ -77,7 +85,7 @@ class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 		binding.fetchLimitSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
 			override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
 				val selectedLimit = fetchLimitOptions[position]
-				preferences[JellyseerrPreferences.fetchLimit] = selectedLimit
+				globalPreferences[JellyseerrPreferences.fetchLimit] = selectedLimit
 				Timber.d("Fetch limit changed to: ${selectedLimit.limit} items")
 			}
 			
@@ -123,8 +131,8 @@ class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 
 	private fun loadSavedSettings() {
 		// Load saved URL
-		val savedUrl = preferences[JellyseerrPreferences.serverUrl]
-		val isEnabled = preferences[JellyseerrPreferences.enabled]
+		val savedUrl = globalPreferences[JellyseerrPreferences.serverUrl]
+		val isEnabled = globalPreferences[JellyseerrPreferences.enabled]
 
 		binding.serverUrlInput.setText(savedUrl)
 		binding.enabledSwitch.isChecked = isEnabled
@@ -134,7 +142,7 @@ class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 
 		// Show last connection status
 		if (savedUrl.isNotBlank()) {
-			val wasSuccessful = preferences[JellyseerrPreferences.lastConnectionSuccess]
+			val wasSuccessful = globalPreferences[JellyseerrPreferences.lastConnectionSuccess]
 			if (wasSuccessful) {
 				binding.statusText.text = "✓ Connected"
 				binding.statusIcon.setImageResource(R.drawable.ic_check)
@@ -143,7 +151,7 @@ class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 	}
 
 	private fun testConnection() {
-		val serverUrl = preferences[JellyseerrPreferences.serverUrl]
+		val serverUrl = globalPreferences[JellyseerrPreferences.serverUrl]
 
 		// Validate that connection was set up
 		if (serverUrl.isNullOrEmpty()) {
@@ -226,8 +234,8 @@ class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 				
 				result.onSuccess { user ->
 					// Save credentials (using cookie-based auth)
-					preferences[JellyseerrPreferences.serverUrl] = jellyseerrServerUrl
-					preferences[JellyseerrPreferences.enabled] = true
+					globalPreferences[JellyseerrPreferences.serverUrl] = jellyseerrServerUrl
+					globalPreferences[JellyseerrPreferences.enabled] = true
 					binding.enabledSwitch.isChecked = true
 					
 				// Initialize connection (using cookie-based auth)
@@ -252,7 +260,7 @@ class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 	private fun updateConnectionStatus(isAvailable: Boolean) {
 		if (isAvailable) {
 			// Update preferences to record successful connection
-			preferences[JellyseerrPreferences.lastConnectionSuccess] = true
+			globalPreferences[JellyseerrPreferences.lastConnectionSuccess] = true
 		}
 	}
 

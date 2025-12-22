@@ -1,5 +1,10 @@
 package org.jellyfin.androidtv.ui.home.mediabar
 
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,27 +25,43 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.toBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.base.Text
+import org.jellyfin.androidtv.ui.shared.LogoView
 import org.jellyfin.androidtv.util.TimeUtils
-import androidx.compose.ui.platform.LocalContext
+import org.jellyfin.androidtv.util.isImagePrimarilyDark
 import org.koin.compose.koinInject
+import timber.log.Timber
 
 /**
  * Media Bar Slideshow Compose component
@@ -56,7 +77,7 @@ fun MediaBarSlideshowView(
 	val playbackState by viewModel.playbackState.collectAsState()
 	val isFocused by viewModel.isFocused.collectAsState()
 	val userSettingPreferences = koinInject<UserSettingPreferences>()
-	
+
 	// Get overlay preferences
 	val overlayOpacity = userSettingPreferences[UserSettingPreferences.mediaBarOverlayOpacity] / 100f
 	val overlayColor = when (userSettingPreferences[UserSettingPreferences.mediaBarOverlayColor]) {
@@ -79,7 +100,7 @@ fun MediaBarSlideshowView(
 			viewModel.setFocused(false)
 		}
 	}
-	
+
 	// When focus returns to Media Bar and it's empty, trigger a reload
 	LaunchedEffect(isFocused) {
 		if (isFocused && state is MediaBarState.Loading) {
@@ -99,7 +120,7 @@ fun MediaBarSlideshowView(
 				if (keyEvent.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) {
 					return@onKeyEvent false
 				}
-				
+
 				when (keyEvent.key) {
 					Key.DirectionLeft, Key.MediaPrevious -> {
 						viewModel.previousSlide()
@@ -134,23 +155,50 @@ fun MediaBarSlideshowView(
 				LoadingView()
 			}
 			is MediaBarState.Ready -> {
-				// Logo and backdrop are managed by HomeFragment
-				// Media info overlay (with padding, raised to avoid clipping with indicator dots)
-				Box(
+				val item = currentState.items.getOrNull(playbackState.currentIndex)
+
+				// Content row: Info overlay on left, logo on right
+				Row(
 					modifier = Modifier
 						.align(Alignment.BottomStart)
-						.padding(start = 43.dp, end = 43.dp, bottom = 30.dp)
+						.fillMaxWidth()
+						.padding(start = 43.dp, end = 43.dp, bottom = 30.dp),
+					horizontalArrangement = Arrangement.SpaceBetween,
+					verticalAlignment = Alignment.Bottom
 				) {
-					val item = currentState.items.getOrNull(playbackState.currentIndex)
+					// Media info overlay on the left
 					if (item != null) {
 						MediaInfoOverlay(
 							item = item,
 							overlayColor = overlayColor,
-							overlayOpacity = overlayOpacity
+							overlayOpacity = overlayOpacity,
+							modifier = Modifier.width(600.dp)
 						)
 					}
+
+					// Logo on the right - fills remaining space
+					Box(
+						modifier = Modifier
+							.weight(1f)
+							.height(140.dp)
+							.padding(start = 24.dp),
+						contentAlignment = Alignment.Center
+					) {
+						Crossfade(
+							targetState = item?.logoUrl,
+							animationSpec = tween(300),
+							label = "mediabar_logo_transition"
+						) { logoUrl ->
+							if (logoUrl != null) {
+								LogoView(
+									url = logoUrl,
+									modifier = Modifier.fillMaxSize()
+								)
+							}
+						}
+					}
 				}
-				
+
 				// Navigation arrows (without padding, close to edges, raised by 40%)
 				if (currentState.items.size > 1) {
 					// Left arrow - closer to left edge
@@ -169,7 +217,7 @@ fun MediaBarSlideshowView(
 							modifier = Modifier.size(24.dp)
 						)
 					}
-					
+
 					// Right arrow - closer to right edge
 					Box(
 						modifier = Modifier
@@ -186,7 +234,7 @@ fun MediaBarSlideshowView(
 							modifier = Modifier.size(24.dp)
 						)
 					}
-					
+
 					// Indicator dots - centered at bottom
 					Box(
 						modifier = Modifier
@@ -343,9 +391,9 @@ private fun CarouselIndicatorDots(
 				modifier = Modifier
 					.size(if (index == currentIndex) 10.dp else 8.dp)
 					.background(
-						color = if (index == currentIndex) 
+						color = if (index == currentIndex)
 							Color.White.copy(alpha = 0.9f)
-						else 
+						else
 							Color.White.copy(alpha = 0.4f),
 						shape = CircleShape
 					)

@@ -9,6 +9,8 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.await
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -29,7 +31,7 @@ import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
 @Suppress("unused")
-class JellyfinApplication : Application() {
+class JellyfinApplication : Application(), SingletonImageLoader.Factory {
 	override fun onCreate() {
 		super.onCreate()
 
@@ -41,6 +43,16 @@ class JellyfinApplication : Application() {
 		
 		// Monitor Jellyfin user changes and clear Jellyseerr cookies when user switches
 		setupJellyseerrUserMonitoring()
+	}
+
+	/**
+	 * Provide the Koin-configured ImageLoader as the singleton for Coil.
+	 * This ensures all Coil Compose components (AsyncImage, rememberAsyncImagePainter, etc.)
+	 * use the ImageLoader with proper authentication, caching, and decoders.
+	 */
+	override fun newImageLoader(context: Context): ImageLoader {
+		val imageLoader by inject<ImageLoader>()
+		return imageLoader
 	}
 	
 	private fun setupJellyseerrUserMonitoring() {

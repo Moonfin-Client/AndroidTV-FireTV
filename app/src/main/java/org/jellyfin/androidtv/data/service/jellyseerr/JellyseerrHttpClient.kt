@@ -102,6 +102,7 @@ class JellyseerrHttpClient(
 				connectTimeout(REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 				readTimeout(REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS)
 				writeTimeout(REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+				followRedirects(true)
 			}
 		}
 	}
@@ -606,17 +607,41 @@ class JellyseerrHttpClient(
 
 	/**
 	 * Login with local credentials and get API key
+	 * Handles 308 redirects by upgrading HTTP to HTTPS
 	 */
 	suspend fun loginLocal(email: String, password: String): Result<JellyseerrUserDto> = runCatching {
-		val url = URLBuilder("$baseUrl/api/v1/auth/local").build()
+		var url = URLBuilder("$baseUrl/api/v1/auth/local").build()
 		val loginBody = mapOf("email" to email, "password" to password)
 		
-		val response = httpClient.post(url) {
+		Timber.d("Jellyseerr: Attempting local login to URL: $url")
+		Timber.d("Jellyseerr: Base URL: $baseUrl")
+		
+		var response = httpClient.post(url) {
 			contentType(ContentType.Application.Json)
 			setBody(loginBody)
 		}
 		
-		Timber.d("Jellyseerr: Local login - Status: ${response.status}")
+		Timber.d("Jellyseerr: Local login response - Status: ${response.status.value} ${response.status.description}")
+		Timber.d("Jellyseerr: Response headers: ${response.headers.entries().joinToString { "${it.key}: ${it.value}" }}")
+		
+		// Handle 308 redirect (HTTP -> HTTPS upgrade)
+		if (response.status.value == 308) {
+			val location = response.headers["Location"]
+			if (location != null && location.startsWith("https://") && baseUrl.startsWith("http://")) {
+				Timber.w("Jellyseerr: Received 308 redirect from HTTP to HTTPS. Retrying with HTTPS URL: $location")
+				url = URLBuilder(location).build()
+				
+				response = httpClient.post(url) {
+					contentType(ContentType.Application.Json)
+					setBody(loginBody)
+				}
+				
+				Timber.d("Jellyseerr: HTTPS retry response - Status: ${response.status.value} ${response.status.description}")
+			} else {
+				Timber.e("Jellyseerr: Received 308 but no valid HTTPS redirect location found")
+				throw Exception("Server requires HTTPS but redirect location is invalid. Location: $location")
+			}
+		}
 		
 		if (response.status.value !in 200..299) {
 			val errorBody = response.body<String>()
@@ -624,23 +649,32 @@ class JellyseerrHttpClient(
 			throw Exception("Login failed: ${response.status}")
 		}
 		
-		response.body<JellyseerrUserDto>()
+		val user = response.body<JellyseerrUserDto>()
+		Timber.d("Jellyseerr: Successfully logged in as user: ${user.email}")
+		user
 	}.onFailure { error ->
-		Timber.e(error, "Jellyseerr: Failed to login locally")
+		Timber.e(error, "Jellyseerr: Failed to login locally - ${error.message}")
 	}
 
 	/**
 	 * Login with Jellyfin credentials
 	 * First attempts without hostname (for already-configured servers)
 	 * Falls back to including hostname on 401 (for initial server setup)
+	 * Handles 308 redirects by upgrading HTTP to HTTPS
 	 */
 	suspend fun loginJellyfin(username: String, password: String, jellyfinUrl: String): Result<JellyseerrUserDto> = runCatching {
-		val url = URLBuilder("$baseUrl/api/v1/auth/jellyfin").build()
+		var url = URLBuilder("$baseUrl/api/v1/auth/jellyfin").build()
+		
+		Timber.d("Jellyseerr: Attempting Jellyfin login to URL: $url")
+		Timber.d("Jellyseerr: Base URL: $baseUrl")
+		Timber.d("Jellyseerr: Jellyfin URL: $jellyfinUrl")
+		Timber.d("Jellyseerr: Username: $username")
 		
 		// Clear any existing cookies to prevent stale session issues
 		clearCookies()
 		
 		// First attempt: without hostname (standard for already-configured servers)
+		Timber.d("Jellyseerr: Attempting login without hostname parameter")
 		var response = httpClient.post(url) {
 			contentType(ContentType.Application.Json)
 			setBody(mapOf(
@@ -649,13 +683,41 @@ class JellyseerrHttpClient(
 			))
 		}
 		
+		Timber.d("Jellyseerr: Jellyfin login response - Status: ${response.status.value} ${response.status.description}")
+		Timber.d("Jellyseerr: Response headers: ${response.headers.entries().joinToString { "${it.key}: ${it.value}" }}")
+		
+		// Handle 308 redirect (HTTP -> HTTPS upgrade)
+		if (response.status.value == 308) {
+			val location = response.headers["Location"]
+			if (location != null && location.startsWith("https://") && baseUrl.startsWith("http://")) {
+				Timber.w("Jellyseerr: Received 308 redirect from HTTP to HTTPS. Retrying with HTTPS URL: $location")
+				url = URLBuilder(location).build()
+				
+				response = httpClient.post(url) {
+					contentType(ContentType.Application.Json)
+					setBody(mapOf(
+						"username" to username,
+						"password" to password
+					))
+				}
+				
+				Timber.d("Jellyseerr: HTTPS retry response - Status: ${response.status.value} ${response.status.description}")
+			} else {
+				Timber.e("Jellyseerr: Received 308 but no valid HTTPS redirect location found")
+				throw Exception("Server requires HTTPS but redirect location is invalid. Location: $location")
+			}
+		}
+		
 		// Success - return user
 		if (response.status.value in 200..299) {
-			return@runCatching response.body<JellyseerrUserDto>()
+			val user = response.body<JellyseerrUserDto>()
+			Timber.d("Jellyseerr: Successfully logged in as user: ${user.email}")
+			return@runCatching user
 		}
 		
 		// 401 - Server not configured yet, retry with hostname
 		if (response.status.value == 401) {
+			Timber.d("Jellyseerr: Received 401, retrying with hostname parameter")
 			response = httpClient.post(url) {
 				contentType(ContentType.Application.Json)
 				setBody(mapOf(
@@ -665,26 +727,33 @@ class JellyseerrHttpClient(
 				))
 			}
 			
+			Timber.d("Jellyseerr: Second attempt response - Status: ${response.status.value} ${response.status.description}")
+			
 			if (response.status.value in 200..299) {
-				return@runCatching response.body<JellyseerrUserDto>()
+				val user = response.body<JellyseerrUserDto>()
+				Timber.d("Jellyseerr: Successfully logged in as user: ${user.email}")
+				return@runCatching user
 			}
 			
 			// Handle errors from second attempt
 			val errorBody = response.body<String>()
+			Timber.e("Jellyseerr: Second login attempt failed: $errorBody")
 			throw Exception("Jellyfin login failed: ${response.status} - $errorBody")
 		}
 		
 		// 500 - Likely wrong credentials on configured server
 		if (response.status.value == 500) {
 			val errorBody = response.body<String>()
+			Timber.e("Jellyseerr: Received 500 error: $errorBody")
 			throw Exception("Authentication failed. Verify your username and password are correct, and that the Jellyfin server URL in Jellyseerr settings matches: $jellyfinUrl")
 		}
 		
 		// Other errors
 		val errorBody = response.body<String>()
+		Timber.e("Jellyseerr: Unexpected status ${response.status}: $errorBody")
 		throw Exception("Jellyfin login failed: ${response.status} - $errorBody")
 	}.onFailure { error ->
-		Timber.e(error, "Jellyseerr: Failed to login with Jellyfin")
+		Timber.e(error, "Jellyseerr: Failed to login with Jellyfin - ${error.message}")
 	}
 
 	/**

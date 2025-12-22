@@ -19,6 +19,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import coil3.ImageLoader
 import coil3.asDrawable
+import coil3.load
 import coil3.request.ImageRequest
 import coil3.toBitmap
 import kotlinx.coroutines.launch
@@ -188,17 +189,7 @@ class PersonDetailsFragment : Fragment() {
 
 			personDetails?.profilePath?.let { path ->
 				val imageUrl = "https://image.tmdb.org/t/p/w185$path"
-				lifecycleScope.launch {
-					try {
-						val request = ImageRequest.Builder(requireContext())
-							.data(imageUrl)
-							.build()
-						val result = imageLoader.execute(request).image?.asDrawable(resources)
-						setImageDrawable(result)
-					} catch (e: Exception) {
-						Timber.e(e, "Failed to load person profile image")
-					}
-				}
+				load(imageUrl)
 			}
 		}
 		headerContainer.addView(profileImage)
@@ -458,15 +449,7 @@ class PersonDetailsFragment : Fragment() {
 
 			item.posterPath?.let { path ->
 				val imageUrl = "https://image.tmdb.org/t/p/w500$path"
-				lifecycleScope.launch {
-					try {
-						val request = ImageRequest.Builder(requireContext()).data(imageUrl).build()
-						val result = imageLoader.execute(request).image?.toBitmap()
-						result?.let { setImageBitmap(it) }
-					} catch (e: Exception) {
-						Timber.e(e, "Failed to load movie poster")
-					}
-				}
+				load(imageUrl)
 			}
 		}
 		imageContainer.addView(posterImage)

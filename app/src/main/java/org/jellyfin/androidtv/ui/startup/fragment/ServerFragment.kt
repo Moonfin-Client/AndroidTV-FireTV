@@ -38,9 +38,11 @@ import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.databinding.FragmentServerBinding
 import org.jellyfin.androidtv.ui.ServerButtonView
 import org.jellyfin.androidtv.ui.card.UserCardView
+import org.jellyfin.androidtv.ui.startup.PinEntryDialog
 import org.jellyfin.androidtv.ui.startup.StartupViewModel
 import org.jellyfin.androidtv.util.ListAdapter
 import org.jellyfin.androidtv.util.MarkdownRenderer
+import org.jellyfin.androidtv.util.PinCodeUtil
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.activityViewModel
@@ -70,45 +72,53 @@ class ServerFragment : Fragment() {
 
 		_binding = FragmentServerBinding.inflate(inflater, container, false)
 
-		val userAdapter = UserAdapter(requireContext(), server, startupViewModel, authenticationRepository, serverUserRepository)
-		userAdapter.onItemPressed = { user ->
-			startupViewModel.authenticate(server, user).onEach { state ->
-				when (state) {
-					// Ignored states
-					AuthenticatingState -> Unit
-					AuthenticatedState -> Unit
-					// Actions
-					RequireSignInState -> navigateFragment<UserLoginFragment>(bundleOf(
-						UserLoginFragment.ARG_SERVER_ID to server.id.toString(),
-						UserLoginFragment.ARG_USERNAME to user.name,
-					))
-					// Errors
-					ServerUnavailableState,
-					is ApiClientErrorLoginState -> Toast.makeText(context, R.string.server_connection_failed, Toast.LENGTH_LONG).show()
-
-					is ServerVersionNotSupported -> Toast.makeText(
-						context,
-						getString(
-							R.string.server_issue_outdated_version,
-							state.server.version,
-							ServerRepository.recommendedServerVersion.toString()
-						),
-						Toast.LENGTH_LONG
-					).show()
-				}
-			}.launchIn(lifecycleScope)
+	val userAdapter = UserAdapter(requireContext(), server, startupViewModel, authenticationRepository, serverUserRepository)
+	userAdapter.onItemPressed = { user ->
+		// Check if user has PIN protection enabled
+		if (PinCodeUtil.isPinEnabled(requireContext(), user.id)) {
+			showPinEntry(server, user)
+		} else {
+			authenticateUser(server, user)
 		}
-		binding.users.adapter = userAdapter
+	}
+	binding.users.adapter = userAdapter
 
-		startupViewModel.users
-			.flowWithLifecycle(viewLifecycleOwner.lifecycle, Lifecycle.State.STARTED)
-			.onEach { users ->
+	startupViewModel.users
+		.flowWithLifecycle(viewLifecycleOwner.lifecycle, Lifecycle.State.STARTED)
+		.onEach { users ->
 				userAdapter.items = users
+				
+				// Calculate centering padding once layout is complete
+				binding.users.post {
+					val parentWidth = (binding.users.parent as? View)?.width ?: 0
+					
+					if (parentWidth > 0 && users.isNotEmpty()) {
+						val density = resources.displayMetrics.density
+						val cardWidthPx = (130 * density).toInt()
+						val itemSpacingPx = (16 * density).toInt()
+						val totalContentWidth = (cardWidthPx * users.size) + (itemSpacingPx * (users.size - 1))
+						val padding = maxOf(0, (parentWidth - totalContentWidth) / 2)
+						binding.users.setPadding(padding, 0, padding, 0)
+					}
+				}
 
 				binding.users.isFocusable = users.any()
 				binding.noUsersWarning.isVisible = users.isEmpty()
+				
+				// Show edit button if there are users, hide the action buttons
+				val hasUsers = users.isNotEmpty()
+				binding.editButton.isVisible = hasUsers
+				binding.actionsContainer.isVisible = !hasUsers
+				
 				binding.root.requestFocus()
 			}.launchIn(viewLifecycleOwner.lifecycleScope)
+
+		// Setup edit button to toggle actions visibility
+		binding.editButton.setOnClickListener {
+			binding.actionsContainer.isVisible = true
+			binding.editButton.isVisible = false
+			binding.addUserButton.requestFocus()
+		}
 
 		startupViewModel.loadUsers(server)
 
@@ -128,6 +138,69 @@ class ServerFragment : Fragment() {
 		super.onDestroyView()
 
 		_binding = null
+	}
+
+	private fun showPinEntry(server: Server, user: User) {
+		PinEntryDialog.show(
+			context = requireContext(),
+			mode = PinEntryDialog.Mode.VERIFY,
+			onComplete = { pin ->
+				if (pin != null) {
+					val userPrefs = org.jellyfin.androidtv.preference.UserSettingPreferences(requireContext(), user.id)
+					val storedHash = userPrefs[org.jellyfin.androidtv.preference.UserSettingPreferences.userPinHash]
+					
+					if (PinCodeUtil.hashPin(pin) == storedHash) {
+						// Correct PIN
+						authenticateUser(server, user)
+					} else {
+						// Incorrect PIN - show error and reopen dialog
+						Toast.makeText(context, R.string.lbl_pin_code_incorrect, Toast.LENGTH_SHORT).show()
+						// Reopen the dialog after a short delay
+						binding.root.postDelayed({
+							showPinEntry(server, user)
+						}, 500)
+					}
+				} else {
+					// User cancelled, restore focus to users grid
+					binding.users.requestFocus()
+				}
+			},
+			onForgotPin = {
+				// Navigate to password-based authentication screen
+				navigateFragment<UserLoginFragment>(bundleOf(
+					UserLoginFragment.ARG_SERVER_ID to server.id.toString(),
+					UserLoginFragment.ARG_USERNAME to user.name,
+				))
+			}
+		)
+	}
+
+	private fun authenticateUser(server: Server, user: User) {
+		startupViewModel.authenticate(server, user).onEach { state ->
+			when (state) {
+				// Ignored states
+				AuthenticatingState -> Unit
+				AuthenticatedState -> Unit
+				// Actions
+				RequireSignInState -> navigateFragment<UserLoginFragment>(bundleOf(
+					UserLoginFragment.ARG_SERVER_ID to server.id.toString(),
+					UserLoginFragment.ARG_USERNAME to user.name,
+				))
+				// Errors
+				ServerUnavailableState,
+				is ApiClientErrorLoginState -> Toast.makeText(context, R.string.server_connection_failed, Toast.LENGTH_LONG).show()
+
+				is ServerVersionNotSupported -> Toast.makeText(
+					context,
+					getString(
+						R.string.server_issue_outdated_version,
+						state.server.version,
+						ServerRepository.recommendedServerVersion.toString()
+					),
+					Toast.LENGTH_LONG
+				).show()
+			}
+		}.launchIn(lifecycleScope)
 	}
 
 	private fun onServerChange(server: Server) {
@@ -246,4 +319,3 @@ class ServerFragment : Fragment() {
 		) : RecyclerView.ViewHolder(cardView)
 	}
 }
-

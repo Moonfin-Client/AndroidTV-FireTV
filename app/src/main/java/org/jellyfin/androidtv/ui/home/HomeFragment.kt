@@ -129,7 +129,6 @@ class HomeFragment : Fragment() {
 			val playbackState = mediaBarViewModel.playbackState.value
 			val currentItem = state.items.getOrNull(playbackState.currentIndex)
 			val backdropUrl = currentItem?.backdropUrl
-			val logoUrl = currentItem?.logoUrl
 			
 			// Show background if we have a backdrop URL
 			if (backdropUrl != null) {
@@ -141,17 +140,9 @@ class HomeFragment : Fragment() {
 				backgroundImage?.isVisible = false
 			}
 			
-			// Show logo if available, otherwise show title
-			if (logoUrl != null) {
-				logoView?.isVisible = true
-				titleView?.isVisible = false
-				logoView?.load(logoUrl) {
-					crossfade(300) // 300ms crossfade - faster and smoother
-				}
-			} else {
-				logoView?.isVisible = false
-				titleView?.isVisible = true
-			}
+			// Hide logo and title when on media bar - MediaBarSlideshowView handles its own logo display
+			logoView?.isVisible = false
+			titleView?.isVisible = false
 		} else {
 			// Hide background and logo when media bar is disabled or on other rows
 			backgroundImage?.isVisible = false
