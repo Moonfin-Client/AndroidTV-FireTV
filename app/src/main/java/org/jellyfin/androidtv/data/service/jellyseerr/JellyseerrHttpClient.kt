@@ -754,6 +754,17 @@ class JellyseerrHttpClient(
 		Timber.d("Jellyseerr: Attempting local login to URL: $url")
 		Timber.d("Jellyseerr: Base URL: $baseUrl")
 		
+		// First, make a GET request to obtain CSRF token cookie
+		// This is required when CSRF protection is enabled on the Jellyseerr server
+		Timber.d("Jellyseerr: Fetching CSRF token via GET request")
+		try {
+			val csrfResponse = httpClient.get(url)
+			Timber.d("Jellyseerr: CSRF token fetch response - Status: ${csrfResponse.status.value}")
+		} catch (e: Exception) {
+			Timber.w("Jellyseerr: Failed to fetch CSRF token (non-critical): ${e.message}")
+			// Continue anyway - server might not require CSRF
+		}
+		
 		var response = httpClient.post(url) {
 			contentType(ContentType.Application.Json)
 			setBody(loginBody)
@@ -808,8 +819,16 @@ class JellyseerrHttpClient(
 		Timber.d("Jellyseerr: Jellyfin URL: $jellyfinUrl")
 		Timber.d("Jellyseerr: Username: $username")
 		
-		// Clear any existing cookies to prevent stale session issues
-		clearCookies()
+		// First, make a GET request to obtain CSRF token cookie
+		// This is required when CSRF protection is enabled on the Jellyseerr server
+		Timber.d("Jellyseerr: Fetching CSRF token via GET request")
+		try {
+			val csrfResponse = httpClient.get(url)
+			Timber.d("Jellyseerr: CSRF token fetch response - Status: ${csrfResponse.status.value}")
+		} catch (e: Exception) {
+			Timber.w("Jellyseerr: Failed to fetch CSRF token (non-critical): ${e.message}")
+			// Continue anyway - server might not require CSRF
+		}
 		
 		// First attempt: without hostname (standard for already-configured servers)
 		Timber.d("Jellyseerr: Attempting login without hostname parameter")
