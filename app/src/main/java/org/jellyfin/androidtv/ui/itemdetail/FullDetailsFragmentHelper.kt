@@ -1,6 +1,7 @@
 package org.jellyfin.androidtv.ui.itemdetail
 
 import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.view.View
 import android.widget.Toast
 import androidx.core.view.isVisible
@@ -169,7 +170,11 @@ fun FullDetailsFragment.playTrailers() {
 	// External trailer
 	if (localTrailerCount < 1) try {
 		val intent = getExternalTrailerIntent(requireContext(), mBaseItem)
-		if (intent != null) startActivity(intent)
+		if (intent != null) {
+			// Show app chooser to allow user to select their preferred app (e.g., SmartTube instead of YouTube)
+			val chooser = Intent.createChooser(intent, getString(R.string.lbl_play_trailers))
+			startActivity(chooser)
+		}
 	} catch (exception: ActivityNotFoundException) {
 		Timber.w(exception, "Unable to open external trailer")
 		Toast.makeText(

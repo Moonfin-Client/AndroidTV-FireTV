@@ -1923,24 +1923,17 @@ class MediaDetailsFragment : Fragment() {
 		val searchQuery = "$title ${year ?: ""} official trailer"
 		
 		try {
-			// Try YouTube app first
-			val youtubeIntent = android.content.Intent(
-				android.content.Intent.ACTION_SEARCH
-			).apply {
-				setPackage("com.google.android.youtube.tv")
-				putExtra("query", searchQuery)
-			}
+			// Create a generic YouTube search intent without specifying a package
+			// This allows the user to choose their preferred app (YouTube, SmartTube, etc.)
+			val youtubeSearchUrl = "https://www.youtube.com/results?search_query=${android.net.Uri.encode(searchQuery)}"
+			val intent = android.content.Intent(
+				android.content.Intent.ACTION_VIEW,
+				android.net.Uri.parse(youtubeSearchUrl)
+			)
 			
-			if (youtubeIntent.resolveActivity(requireContext().packageManager) != null) {
-				startActivity(youtubeIntent)
-			} else {
-				// Fallback to browser
-				val browserIntent = android.content.Intent(
-					android.content.Intent.ACTION_VIEW,
-					android.net.Uri.parse("https://www.youtube.com/results?search_query=${android.net.Uri.encode(searchQuery)}")
-				)
-				startActivity(browserIntent)
-			}
+			// Show app chooser to allow user to select their preferred app
+			val chooser = android.content.Intent.createChooser(intent, "Play Trailer")
+			startActivity(chooser)
 		} catch (e: Exception) {
 			Timber.e(e, "Error opening trailer")
 			Toast.makeText(requireContext(), "Unable to open trailer", Toast.LENGTH_SHORT).show()
