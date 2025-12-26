@@ -32,6 +32,7 @@ import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemFilter
 import timber.log.Timber
+import java.util.Locale
 import java.util.UUID
 
 class MediaBarSlideshowViewModel(
@@ -118,17 +119,59 @@ class MediaBarSlideshowViewModel(
 			setOf(ItemFilter.IS_NOT_FOLDER)
 		}
 		
-		val response by apiClient.itemsApi.getItems(
-			includeItemTypes = setOf(itemType),
-			recursive = true,
-			sortBy = setOf(org.jellyfin.sdk.model.api.ItemSortBy.RANDOM),
-			limit = (maxItems * 1.5).toInt(), // Fetch 1.5x for filtering
-			filters = filters,
-			fields = setOf(ItemFields.OVERVIEW, ItemFields.GENRES),
-			imageTypeLimit = 1,
-			enableImageTypes = setOf(ImageType.BACKDROP, ImageType.LOGO),
-		)
-		return response.items.orEmpty()
+		// Get parent library IDs that match the requested item type
+		// This prevents scanning through unrelated libraries (e.g., music, recordings, live TV)
+		val matchingLibraries = try {
+			val viewsResponse by apiClient.itemsApi.getItems(
+				includeItemTypes = setOf(org.jellyfin.sdk.model.api.BaseItemKind.COLLECTION_FOLDER),
+				userId = userRepository.currentUser.value?.id,
+			)
+			viewsResponse.items.orEmpty()
+				.filter { view ->
+					// ONLY include movie or TV show libraries based on what we're fetching
+					// Excludes: music, recordings, live TV, photos, books, etc.
+					val collectionType = view.collectionType?.toString()?.lowercase(Locale.ROOT)
+					when (itemType) {
+						BaseItemKind.MOVIE -> collectionType == "movies"
+						BaseItemKind.SERIES -> collectionType == "tvshows"
+						else -> false
+					}
+				}
+		} catch (e: Exception) {
+			Timber.w(e, "Failed to get library views")
+			emptyList()
+		}
+		
+		// If no matching libraries found, return empty list immediately
+		// This prevents slow recursive searches through all libraries
+		if (matchingLibraries.isEmpty()) {
+			Timber.d("MediaBar: No ${itemType.name} libraries found, skipping fetch")
+			return emptyList()
+		}
+		
+		// Fetch from ALL matching libraries and combine results
+		// Distribute the item count across libraries for better variety
+		val itemsPerLibrary = (maxItems * 1.5 / matchingLibraries.size).toInt().coerceAtLeast(5)
+		
+		return matchingLibraries.mapNotNull { library ->
+			try {
+				val response by apiClient.itemsApi.getItems(
+					includeItemTypes = setOf(itemType),
+					parentId = library.id,
+					recursive = true,
+					sortBy = setOf(org.jellyfin.sdk.model.api.ItemSortBy.RANDOM),
+					limit = itemsPerLibrary,
+					filters = filters,
+					fields = setOf(ItemFields.OVERVIEW, ItemFields.GENRES),
+					imageTypeLimit = 1,
+					enableImageTypes = setOf(ImageType.BACKDROP, ImageType.LOGO),
+				)
+				response.items.orEmpty()
+			} catch (e: Exception) {
+				Timber.w(e, "Failed to fetch from library ${library.name}")
+				null
+			}
+		}.flatten()
 	}
 
 	/**
