@@ -7,6 +7,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -219,20 +220,26 @@ class MediaBarSlideshowViewModel(
 					
 					loggedInServers.map { session ->
 						async {
-							try {
-								val serverItems = when (contentType) {
-									"movies" -> fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer)
-									"tv" -> fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer)
-									else -> { // "both"
-										val movies = async { fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer / 2 + 1) }
-										val shows = async { fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer / 2 + 1) }
-										movies.await() + shows.await()
+							// Add 10 second timeout per server to prevent slow servers from blocking
+							withTimeoutOrNull(10_000L) {
+								try {
+									val serverItems = when (contentType) {
+										"movies" -> fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer)
+										"tv" -> fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer)
+										else -> { // "both"
+											val movies = async { fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer / 2 + 1) }
+											val shows = async { fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer / 2 + 1) }
+											movies.await() + shows.await()
+										}
 									}
+									Timber.d("MediaBar: Got ${serverItems.size} items from server ${session.server.name}")
+									serverItems.map { ItemWithApiClient(it, session.apiClient, session.server.id) }
+								} catch (e: Exception) {
+									Timber.e(e, "MediaBar: Failed to fetch from server ${session.server.name}")
+									emptyList()
 								}
-								Timber.d("MediaBar: Got ${serverItems.size} items from server ${session.server.name}")
-								serverItems.map { ItemWithApiClient(it, session.apiClient, session.server.id) }
-							} catch (e: Exception) {
-								Timber.e(e, "MediaBar: Failed to fetch from server ${session.server.name}")
+							} ?: run {
+								Timber.w("MediaBar: Timeout fetching from server ${session.server.name}")
 								emptyList()
 							}
 						}
@@ -506,19 +513,25 @@ class MediaBarSlideshowViewModel(
 					val itemsPerServer = (itemsToReplace / loggedInServers.size).coerceAtLeast(2)
 					loggedInServers.map { session ->
 						async {
-							try {
-								val serverItems = when (contentType) {
-									"movies" -> fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer)
-									"tv" -> fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer)
-									else -> {
-										val movies = async { fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer / 2 + 1) }
-										val shows = async { fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer / 2 + 1) }
-										movies.await() + shows.await()
+							// Add 10 second timeout per server to prevent slow servers from blocking
+							withTimeoutOrNull(10_000L) {
+								try {
+									val serverItems = when (contentType) {
+										"movies" -> fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer)
+										"tv" -> fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer)
+										else -> {
+											val movies = async { fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer / 2 + 1) }
+											val shows = async { fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer / 2 + 1) }
+											movies.await() + shows.await()
+										}
 									}
+									serverItems.map { ItemWithApiClient(it, session.apiClient, session.server.id) }
+								} catch (e: Exception) {
+									Timber.e(e, "MediaBar refresh: Failed to fetch from server ${session.server.name}")
+									emptyList()
 								}
-								serverItems.map { ItemWithApiClient(it, session.apiClient, session.server.id) }
-							} catch (e: Exception) {
-								Timber.e(e, "MediaBar refresh: Failed to fetch from server ${session.server.name}")
+							} ?: run {
+								Timber.w("MediaBar refresh: Timeout fetching from server ${session.server.name}")
 								emptyList()
 							}
 						}
