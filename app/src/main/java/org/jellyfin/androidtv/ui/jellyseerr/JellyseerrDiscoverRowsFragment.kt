@@ -60,11 +60,33 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 	private val rowTypeToIndex = mutableMapOf<JellyseerrRowType, Int>()
 	private val indexToRowType = mutableMapOf<Int, JellyseerrRowType>()
 
+	companion object {
+		private const val STATE_LAST_FOCUSED_POSITION = "last_focused_position"
+		private const val STATE_LAST_FOCUSED_SUB_POSITION = "last_focused_sub_position"
+		private const val STATE_IS_RETURNING_FROM_DETAIL = "is_returning_from_detail"
+	}
+
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
+		
+		savedInstanceState?.let {
+			lastFocusedPosition = it.getInt(STATE_LAST_FOCUSED_POSITION, 0)
+			lastFocusedSubPosition = it.getInt(STATE_LAST_FOCUSED_SUB_POSITION, 0)
+			isReturningFromDetail = it.getBoolean(STATE_IS_RETURNING_FROM_DETAIL, false)
+			Timber.d("JellyseerrDiscoverRowsFragment: Restored state - position=$lastFocusedPosition, subPosition=$lastFocusedSubPosition, isReturning=$isReturningFromDetail")
+		}
+		
 		setupRows()
 		setupObservers()
 		loadContent()
+	}
+	
+	override fun onSaveInstanceState(outState: Bundle) {
+		super.onSaveInstanceState(outState)
+		outState.putInt(STATE_LAST_FOCUSED_POSITION, lastFocusedPosition)
+		outState.putInt(STATE_LAST_FOCUSED_SUB_POSITION, lastFocusedSubPosition)
+		outState.putBoolean(STATE_IS_RETURNING_FROM_DETAIL, isReturningFromDetail)
+		Timber.d("JellyseerrDiscoverRowsFragment: Saved state - position=$lastFocusedPosition, subPosition=$lastFocusedSubPosition, isReturning=$isReturningFromDetail")
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

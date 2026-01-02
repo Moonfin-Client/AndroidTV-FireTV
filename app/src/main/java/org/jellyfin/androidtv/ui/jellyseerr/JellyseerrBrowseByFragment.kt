@@ -262,7 +262,7 @@ class JellyseerrBrowseByFragment : Fragment() {
 	}
 	
 	private fun setupGrid() {
-		gridPresenter = VerticalGridPresenter(FocusHighlight.ZOOM_FACTOR_MEDIUM).apply {
+		gridPresenter = VerticalGridPresenter(FocusHighlight.ZOOM_FACTOR_MEDIUM, false).apply {
 			numberOfColumns = NUM_COLUMNS
 			shadowEnabled = false
 		}
@@ -301,6 +301,8 @@ class JellyseerrBrowseByFragment : Fragment() {
 			gridViewHolder?.let { holder ->
 				val gridView = holder.gridView
 				gridView.setNumColumns(NUM_COLUMNS)
+				val verticalSpacing = Utils.convertDpToPixel(requireContext(), 40)
+				gridView.setVerticalSpacing(verticalSpacing)
 				
 				// Remove horizontal padding, add top padding
 				val topPadding = Utils.convertDpToPixel(requireContext(), 8)

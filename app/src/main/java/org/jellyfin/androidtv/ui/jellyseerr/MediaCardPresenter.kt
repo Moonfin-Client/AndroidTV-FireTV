@@ -30,6 +30,7 @@ class MediaCardPresenter(
 				isSingleLine = true
 				isSelected = true
 			}
+			cardView.alpha = 1.0f
 		}
 
 		fun setItem(item: JellyseerrDiscoverItemDto) {
