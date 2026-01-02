@@ -46,6 +46,7 @@ import timber.log.Timber
 @Composable
 fun SettingsMainScreen() {
 	val router = LocalRouter.current
+	val context = LocalContext.current
 	val updateChecker by inject<UpdateCheckerService>(UpdateCheckerService::class.java)
 	val userPreferences = koinInject<UserPreferences>()
 

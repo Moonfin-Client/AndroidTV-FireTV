@@ -14,7 +14,7 @@ import androidx.fragment.app.replace
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.preference.PreferencesActivity
-import org.jellyfin.androidtv.ui.preference.screen.LibrariesPreferencesScreen
+import org.jellyfin.androidtv.ui.preference.screen.MoonfinPreferencesScreen
 import org.jellyfin.androidtv.ui.shared.toolbar.StartupToolbar
 
 class StartupToolbarFragment : Fragment() {
@@ -37,7 +37,7 @@ class StartupToolbarFragment : Fragment() {
 						val intent = Intent(requireContext(), PreferencesActivity::class.java).apply {
 							putExtras(
 								bundleOf(
-									PreferencesActivity.EXTRA_SCREEN to LibrariesPreferencesScreen::class.qualifiedName,
+									PreferencesActivity.EXTRA_SCREEN to MoonfinPreferencesScreen::class.qualifiedName,
 									PreferencesActivity.EXTRA_SCREEN_ARGS to bundleOf(),
 								)
 							)
