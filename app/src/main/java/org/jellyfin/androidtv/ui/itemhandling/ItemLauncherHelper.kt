@@ -5,6 +5,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.util.apiclient.Response
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
@@ -25,18 +26,26 @@ object ItemLauncherHelper {
 	fun getItem(itemId: UUID, serverId: UUID?, callback: Response<BaseItemDto>) {
 		ProcessLifecycleOwner.get().lifecycleScope.launch {
 			val defaultApi by KoinJavaComponent.inject<ApiClient>(ApiClient::class.java)
+			val sessionRepository by KoinJavaComponent.inject<SessionRepository>(SessionRepository::class.java)
 			
-			// If serverId is provided, try to get the API client for that server
-			val api = if (serverId != null) {
+			// Get current userId for multi-user support
+			val currentSession = sessionRepository.currentSession.value
+			val userId = currentSession?.userId
+			
+			// If serverId is provided, try to get the API client for that server AND user
+			val api = if (serverId != null && userId != null) {
 				val apiClientFactory by KoinJavaComponent.inject<ApiClientFactory>(ApiClientFactory::class.java)
-				val serverApi = apiClientFactory.getApiClientForServer(serverId)
+				val serverApi = apiClientFactory.getApiClient(serverId, userId)
 				if (serverApi != null) {
-					Timber.d("ItemLauncherHelper: Using API client for server $serverId")
+					Timber.d("ItemLauncherHelper: Using API client for server $serverId user $userId")
 					serverApi
 				} else {
-					Timber.w("ItemLauncherHelper: Could not get API client for server $serverId, using default")
+					Timber.w("ItemLauncherHelper: Could not get API client for server $serverId user $userId, using default")
 					defaultApi
 				}
+			} else if (serverId != null) {
+				val apiClientFactory by KoinJavaComponent.inject<ApiClientFactory>(ApiClientFactory::class.java)
+				apiClientFactory.getApiClientForServer(serverId) ?: defaultApi
 			} else {
 				defaultApi
 			}

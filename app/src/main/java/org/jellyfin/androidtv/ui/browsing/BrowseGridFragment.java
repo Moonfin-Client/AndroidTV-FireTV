@@ -59,6 +59,7 @@ import org.jellyfin.androidtv.util.KeyProcessor;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.EmptyResponse;
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory;
+import org.jellyfin.androidtv.auth.repository.SessionRepository;
 import org.jellyfin.sdk.api.client.ApiClient;
 import org.jellyfin.sdk.model.api.BaseItemDto;
 import org.jellyfin.sdk.model.api.BaseItemKind;
@@ -121,6 +122,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
     private final Lazy<KeyProcessor> keyProcessor = inject(KeyProcessor.class);
     private final Lazy<ApiClient> api = inject(ApiClient.class);
     private final Lazy<ApiClientFactory> apiClientFactory = inject(ApiClientFactory.class);
+    private final Lazy<SessionRepository> sessionRepository = inject(SessionRepository.class);
 
     private int mCardsScreenEst = 0;
     private int mCardsScreenStride = 0;
@@ -149,7 +151,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         mParentId = mFolder.getId();
         mServerId = Utils.uuidOrNull(getArguments().getString("ServerId"));
         mainTitle = mFolder.getName();
-        libraryPreferences = preferencesRepository.getValue().getLibraryPreferences(Objects.requireNonNull(mFolder.getDisplayPreferencesId()));
+        libraryPreferences = preferencesRepository.getValue().getLibraryPreferences(Objects.requireNonNull(mFolder.getDisplayPreferencesId()), api.getValue());
         mPosterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
         mImageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
         mGridDirection = libraryPreferences.get(LibraryPreferences.Companion.getGridDirection());
@@ -658,7 +660,14 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
 
         // If browsing a library from another server, use that server's API client
         if (mServerId != null) {
-            ApiClient serverApiClient = apiClientFactory.getValue().getApiClientForServer(mServerId);
+            // Get current user ID from session for multi-user support
+            org.jellyfin.androidtv.auth.repository.Session currentSession = sessionRepository.getValue().getCurrentSession().getValue();
+            UUID userId = (currentSession != null) ? currentSession.getUserId() : null;
+            
+            ApiClient serverApiClient = (userId != null) 
+                ? apiClientFactory.getValue().getApiClient(mServerId, userId)
+                : apiClientFactory.getValue().getApiClientForServer(mServerId);
+                
             if (serverApiClient != null) {
                 mAdapter.setApiClient(serverApiClient);
             }

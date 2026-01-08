@@ -317,19 +317,19 @@ fun ItemRowAdapter.retrieveAdditionalParts(api: ApiClient, query: GetAdditionalP
 
 fun ItemRowAdapter.retrieveUserViews(api: ApiClient, userViewsRepository: UserViewsRepository) {
 	ProcessLifecycleOwner.get().lifecycleScope.launch {
-		runCatching {
-			val preferencesRepository = preferencesRepositoryLazy.value
-			val response = withContext(Dispatchers.IO) {
-				api.userViewsApi.getUserViews().content
-			}
+			runCatching {
+				val preferencesRepository = preferencesRepositoryLazy.value
+				val response = withContext(Dispatchers.IO) {
+					api.userViewsApi.getUserViews().content
+				}
 
-			val filteredItems = response.items
-				.filter { userViewsRepository.isSupported(it.collectionType) }
-				.filter { view ->
-				val displayPreferencesId = view.displayPreferencesId ?: return@filter true
-				val prefs = preferencesRepository.getLibraryPreferences(displayPreferencesId)
-				!prefs[LibraryPreferences.hidden]
-			}
+				val filteredItems = response.items
+					.filter { userViewsRepository.isSupported(it.collectionType) }
+					.filter { view ->
+					val displayPreferencesId = view.displayPreferencesId ?: return@filter true
+					val prefs = preferencesRepository.getLibraryPreferences(displayPreferencesId, api)
+					!prefs[LibraryPreferences.hidden]
+				}
 
 			setItems(
 				items = filteredItems,

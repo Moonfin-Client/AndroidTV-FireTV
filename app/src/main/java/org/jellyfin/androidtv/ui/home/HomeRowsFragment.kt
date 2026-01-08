@@ -28,6 +28,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.constant.CustomMessage
 import org.jellyfin.androidtv.constant.HomeSectionType
@@ -69,6 +70,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyListener {
 	private val api by inject<ApiClient>()
+	private val sessionRepository by inject<SessionRepository>()
 	private val backgroundService by inject<BackgroundService>()
 	private val playbackManager by inject<PlaybackManager>()
 	private val mediaManager by inject<MediaManager>()
@@ -275,6 +277,24 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 					.onEach { refreshRows(force = true, delayed = false) }
 					.launchIn(this)
 			}
+		}
+		
+		// Listen for session/user changes and recreate the fragment with fresh data
+		lifecycleScope.launch {
+			sessionRepository.currentSession
+				.onEach { session ->
+					// When session changes (user switch), recreate fragment to load new user's data
+					if (session != null && adapter.size() > 0) {
+						Timber.i("Session changed to user ${session.userId}, recreating home fragment")
+						parentFragmentManager.beginTransaction()
+							.detach(this@HomeRowsFragment)
+							.commitNow()
+						parentFragmentManager.beginTransaction()
+							.attach(this@HomeRowsFragment)
+							.commitNow()
+					}
+				}
+				.launchIn(this)
 		}
 
 		// Subscribe to Audio messages

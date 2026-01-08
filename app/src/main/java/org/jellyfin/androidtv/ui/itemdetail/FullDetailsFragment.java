@@ -36,6 +36,8 @@ import androidx.lifecycle.Lifecycle;
 
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.auth.repository.ServerRepository;
+import org.jellyfin.androidtv.auth.repository.Session;
+import org.jellyfin.androidtv.auth.repository.SessionRepository;
 import org.jellyfin.androidtv.auth.repository.UserRepository;
 import org.jellyfin.androidtv.constant.CustomMessage;
 import org.jellyfin.androidtv.constant.ImageType;
@@ -165,6 +167,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     private final Lazy<org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer> themeMusicPlayer = inject(org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer.class);
     private final Lazy<LocalWatchlistRepository> watchlistRepository = inject(LocalWatchlistRepository.class);
     private final Lazy<ServerRepository> serverRepository = inject(ServerRepository.class);
+    private final Lazy<SessionRepository> sessionRepository = inject(SessionRepository.class);
 
     @Nullable
     @Override
@@ -187,9 +190,28 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         mItemId = Utils.uuidOrNull(getArguments().getString("ItemId"));
         mChannelId = Utils.uuidOrNull(getArguments().getString("ChannelId"));
         
+        // Get current session for the current user context
+        Session currentSession = sessionRepository.getValue().getCurrentSession().getValue();
+        
         // Check if a specific serverId was provided (for multi-server items)
         UUID serverId = Utils.uuidOrNull(getArguments().getString("ServerId"));
-        if (serverId != null) {
+        
+        // If no serverId provided, use current session's serverId
+        if (serverId == null && currentSession != null) {
+            serverId = currentSession.getServerId();
+        }
+        
+        // Get userId from current session - critical for multi-user on same server
+        UUID userId = currentSession != null ? currentSession.getUserId() : null;
+        
+        if (serverId != null && userId != null) {
+            // Use API client for specific server AND user (correct for multi-user)
+            serverSpecificApi = apiClientFactory.getValue().getApiClient(serverId, userId);
+            if (serverSpecificApi == null) {
+                Timber.w("Failed to create API client for server %s user %s, using current session", serverId, userId);
+            }
+        } else if (serverId != null) {
+            // Fallback: server only (picks first user - not ideal)
             serverSpecificApi = apiClientFactory.getValue().getApiClientForServer(serverId);
             if (serverSpecificApi == null) {
                 Timber.w("Failed to create API client for server %s, using current session", serverId);

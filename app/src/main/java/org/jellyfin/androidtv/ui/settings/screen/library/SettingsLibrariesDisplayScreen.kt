@@ -2,13 +2,11 @@ package org.jellyfin.androidtv.ui.settings.screen.library
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.preference.LibraryPreferences
-import org.jellyfin.androidtv.preference.PreferencesRepository
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.base.form.Checkbox
 import org.jellyfin.androidtv.ui.base.list.ListButton
@@ -21,12 +19,16 @@ import org.koin.compose.koinInject
 import java.util.UUID
 
 @Composable
-fun SettingsLibrariesDisplayScreen(itemId: UUID, displayPreferencesId: String) {
+fun SettingsLibrariesDisplayScreen(
+	itemId: UUID,
+	displayPreferencesId: String,
+	serverId: UUID,
+	userId: UUID
+) {
 	val router = LocalRouter.current
 	val userViewsRepository = koinInject<UserViewsRepository>()
-	val preferencesRepository = koinInject<PreferencesRepository>()
 	val userView = rememberUserView(itemId)
-	val libraryPreferences = remember(displayPreferencesId) { preferencesRepository.getLibraryPreferences(displayPreferencesId) }
+	val prefs = rememberLibraryPreferences(displayPreferencesId, serverId, userId) ?: return
 
 	val allowViewSelection = userViewsRepository.allowViewSelection(userView?.collectionType)
 
@@ -39,7 +41,7 @@ fun SettingsLibrariesDisplayScreen(itemId: UUID, displayPreferencesId: String) {
 		}
 
 		item {
-			var posterSize by rememberPreference(libraryPreferences, LibraryPreferences.posterSize)
+			var posterSize by rememberPreference(prefs, LibraryPreferences.posterSize)
 
 			ListButton(
 				headingContent = { Text(stringResource(R.string.lbl_image_size)) },
@@ -47,14 +49,19 @@ fun SettingsLibrariesDisplayScreen(itemId: UUID, displayPreferencesId: String) {
 				onClick = {
 					router.push(
 						Routes.LIBRARIES_DISPLAY_IMAGE_SIZE,
-						mapOf("itemId" to itemId.toString(), "displayPreferencesId" to displayPreferencesId)
+						mapOf(
+							"itemId" to itemId.toString(),
+							"displayPreferencesId" to displayPreferencesId,
+							"serverId" to serverId.toString(),
+							"userId" to userId.toString()
+						)
 					)
 				}
 			)
 		}
 
 		item {
-			var imageType by rememberPreference(libraryPreferences, LibraryPreferences.imageType)
+			var imageType by rememberPreference(prefs, LibraryPreferences.imageType)
 
 			ListButton(
 				headingContent = { Text(stringResource(R.string.lbl_image_type)) },
@@ -62,14 +69,19 @@ fun SettingsLibrariesDisplayScreen(itemId: UUID, displayPreferencesId: String) {
 				onClick = {
 					router.push(
 						Routes.LIBRARIES_DISPLAY_IMAGE_TYPE,
-						mapOf("itemId" to itemId.toString(), "displayPreferencesId" to displayPreferencesId)
+						mapOf(
+							"itemId" to itemId.toString(),
+							"displayPreferencesId" to displayPreferencesId,
+							"serverId" to serverId.toString(),
+							"userId" to userId.toString()
+						)
 					)
 				}
 			)
 		}
 
 		item {
-			var gridDirection by rememberPreference(libraryPreferences, LibraryPreferences.gridDirection)
+			var gridDirection by rememberPreference(prefs, LibraryPreferences.gridDirection)
 
 			ListButton(
 				headingContent = { Text(stringResource(R.string.grid_direction)) },
@@ -77,14 +89,19 @@ fun SettingsLibrariesDisplayScreen(itemId: UUID, displayPreferencesId: String) {
 				onClick = {
 					router.push(
 						Routes.LIBRARIES_DISPLAY_GRID,
-						mapOf("itemId" to itemId.toString(), "displayPreferencesId" to displayPreferencesId)
+						mapOf(
+							"itemId" to itemId.toString(),
+							"displayPreferencesId" to displayPreferencesId,
+							"serverId" to serverId.toString(),
+							"userId" to userId.toString()
+						)
 					)
 				}
 			)
 		}
 
 		if (allowViewSelection) item {
-			var enableSmartScreen by rememberPreference(libraryPreferences, LibraryPreferences.enableSmartScreen)
+			var enableSmartScreen by rememberPreference(prefs, LibraryPreferences.enableSmartScreen)
 
 			ListButton(
 				headingContent = { Text(stringResource(R.string.enable_smart_view)) },
@@ -95,7 +112,7 @@ fun SettingsLibrariesDisplayScreen(itemId: UUID, displayPreferencesId: String) {
 		}
 
 		item {
-			var hidden by rememberPreference(libraryPreferences, LibraryPreferences.hidden)
+			var hidden by rememberPreference(prefs, LibraryPreferences.hidden)
 
 			ListButton(
 				headingContent = { Text(stringResource(R.string.lbl_hide_from_navbar)) },

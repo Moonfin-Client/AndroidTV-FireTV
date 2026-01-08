@@ -30,7 +30,7 @@ class UserViewsRepositoryImpl(
 			.filter { isSupported(it.collectionType) }
 			.filter { view ->
 				val displayPreferencesId = view.displayPreferencesId ?: return@filter true
-				val prefs = preferencesRepository.getLibraryPreferences(displayPreferencesId)
+				val prefs = preferencesRepository.getLibraryPreferences(displayPreferencesId, api)
 				!prefs[LibraryPreferences.hidden]
 			}
 		emit(filteredViews)

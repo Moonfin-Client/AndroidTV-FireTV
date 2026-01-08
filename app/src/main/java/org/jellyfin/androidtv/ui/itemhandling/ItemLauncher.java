@@ -21,6 +21,7 @@ import org.jellyfin.androidtv.util.UUIDUtils;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.Response;
 import org.jellyfin.androidtv.util.sdk.compat.JavaCompat;
+import org.jellyfin.sdk.api.client.ApiClient;
 import org.jellyfin.sdk.model.api.BaseItemDto;
 import org.jellyfin.sdk.model.api.BaseItemKind;
 import org.jellyfin.sdk.model.api.CollectionType;
@@ -39,6 +40,7 @@ import timber.log.Timber;
 public class ItemLauncher {
     private final Lazy<NavigationRepository> navigationRepository = KoinJavaComponent.<NavigationRepository>inject(NavigationRepository.class);
     private final Lazy<SessionRepository> sessionRepository = KoinJavaComponent.<SessionRepository>inject(SessionRepository.class);
+    private final Lazy<ApiClient> api = KoinJavaComponent.<ApiClient>inject(ApiClient.class);
     private final Lazy<PreferencesRepository> preferencesRepository = KoinJavaComponent.<PreferencesRepository>inject(org.jellyfin.androidtv.preference.PreferencesRepository .class);
     private final Lazy<MediaManager> mediaManager = KoinJavaComponent.<MediaManager>inject(MediaManager.class);
     private final Lazy<PlaybackLauncher> playbackLauncher = KoinJavaComponent.<PlaybackLauncher>inject(PlaybackLauncher.class);
@@ -59,7 +61,7 @@ public class ItemLauncher {
         switch (collectionType) {
             case MOVIES:
             case TVSHOWS:
-                LibraryPreferences displayPreferences = preferencesRepository.getValue().getLibraryPreferences(baseItem.getDisplayPreferencesId());
+                LibraryPreferences displayPreferences = preferencesRepository.getValue().getLibraryPreferences(baseItem.getDisplayPreferencesId(), api.getValue());
                 boolean enableSmartScreen = displayPreferences.get(LibraryPreferences.Companion.getEnableSmartScreen());
 
                 if (!enableSmartScreen) return Destinations.INSTANCE.libraryBrowser(baseItem);

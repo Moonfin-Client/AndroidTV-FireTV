@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.util.sdk
 
+import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
 import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.sdk.Jellyfin
@@ -16,6 +17,7 @@ class ApiClientFactory(
 	private val jellyfin: Jellyfin,
 	private val authenticationStore: AuthenticationStore,
 	private val defaultDeviceInfo: DeviceInfo,
+	private val sessionRepository: SessionRepository,
 ) {
 	fun getApiClient(serverId: UUID, userId: UUID? = null): ApiClient? {
 		val server = authenticationStore.getServer(serverId)
@@ -67,7 +69,14 @@ class ApiClientFactory(
 
 	fun getApiClientForItem(item: BaseItemDto): ApiClient? {
 		val uuid = UUIDUtils.parseUUID(item.serverId) ?: return null
-		return getApiClientForServer(uuid)
+		
+		// Get current user ID from session for multi-user support
+		val userId = sessionRepository.currentSession.value?.userId
+		return if (userId != null) {
+			getApiClient(uuid, userId) ?: getApiClientForServer(uuid)
+		} else {
+			getApiClientForServer(uuid)
+		}
 	}
 
 	fun getApiClientForItemOrFallback(item: BaseItemDto, fallback: ApiClient): ApiClient {

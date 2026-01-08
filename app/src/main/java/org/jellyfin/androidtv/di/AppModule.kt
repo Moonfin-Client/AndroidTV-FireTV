@@ -171,7 +171,7 @@ val appModule = module {
 	single<org.jellyfin.androidtv.data.repository.MultiServerRepository> { 
 		org.jellyfin.androidtv.data.repository.MultiServerRepositoryImpl(get(), get(), get(), get(), get(defaultDeviceInfo), get(), get()) 
 	}
-	single { org.jellyfin.androidtv.util.sdk.ApiClientFactory(get(), get(), get(defaultDeviceInfo)) }
+	single { org.jellyfin.androidtv.util.sdk.ApiClientFactory(get(), get(), get(defaultDeviceInfo), get<org.jellyfin.androidtv.auth.repository.SessionRepository>()) }
 	single<org.jellyfin.androidtv.data.repository.ParentalControlsRepository> {
 		org.jellyfin.androidtv.data.repository.ParentalControlsRepositoryImpl(androidContext(), get(), get())
 	}
@@ -200,8 +200,8 @@ val appModule = module {
 	single { MarkdownRenderer(get()) }
 	single { ItemLauncher() }
 	single { KeyProcessor() }
-	single { ReportingHelper(get(), get(), get()) }
-	single<PlaybackHelper> { SdkPlaybackHelper(get(), get(), get(), get(), get()) }
+	single { ReportingHelper(get(), get(), get(), get()) }
+	single<PlaybackHelper> { SdkPlaybackHelper(get(), get(), get(), get(), get(), get()) }
 	single { org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer(androidContext()) }
 
 	factory { (context: Context) -> 

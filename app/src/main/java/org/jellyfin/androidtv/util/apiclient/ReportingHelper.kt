@@ -5,9 +5,11 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.data.compat.StreamInfo
 import org.jellyfin.androidtv.data.model.DataRefreshService
 import org.jellyfin.androidtv.ui.playback.PlaybackController
+import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.playStateApi
@@ -25,7 +27,32 @@ class ReportingHelper(
 	private val dataRefreshService: DataRefreshService,
 	private val api: ApiClient,
 	private val apiClientFactory: ApiClientFactory,
+	private val sessionRepository: SessionRepository,
 ) {
+	/**
+	 * Get the correct API client for an item, using the current user's context.
+	 * Critical for multi-user scenarios where multiple users are logged into the same server.
+	 */
+	private fun getApiClientForItem(item: BaseItemDto): ApiClient {
+		val serverId = UUIDUtils.parseUUID(item.serverId)
+		val currentSession = sessionRepository.currentSession.value
+		val userId = currentSession?.userId
+		
+		return if (serverId != null && userId != null) {
+			// Use API client for the specific server AND current user
+			apiClientFactory.getApiClient(serverId, userId) ?: run {
+				Timber.w("Failed to create API client for server $serverId user $userId, using fallback")
+				api
+			}
+		} else if (serverId != null) {
+			// Fallback: server only (may pick wrong user in multi-user scenarios)
+			apiClientFactory.getApiClientForServer(serverId) ?: api
+		} else {
+			// Use current session's API client
+			api
+		}
+	}
+	
 	fun reportStart(
 		lifecycleOwner: LifecycleOwner,
 		playbackController: PlaybackController?,
@@ -52,7 +79,7 @@ class ReportingHelper(
 
 		lifecycleOwner.lifecycleScope.launch(Dispatchers.IO + NonCancellable) {
 			Timber.i("Reporting ${item.name} playback started at $position")
-			val itemApi = apiClientFactory.getApiClientForItemOrFallback(item, api)
+			val itemApi = getApiClientForItem(item)
 			runCatching {
 				itemApi.playStateApi.reportPlaybackStart(info)
 			}.onFailure { error -> Timber.e(error, "Failed to report started playback!") }
@@ -85,7 +112,7 @@ class ReportingHelper(
 
 		lifecycleOwner.lifecycleScope.launch(Dispatchers.IO + NonCancellable) {
 			Timber.d("Reporting ${item.name} playback progress at $position")
-			val itemApi = apiClientFactory.getApiClientForItemOrFallback(item, api)
+			val itemApi = getApiClientForItem(item)
 			runCatching {
 				itemApi.playStateApi.reportPlaybackProgress(info)
 			}.onFailure { error -> Timber.w(error, "Failed to report playback progress") }
@@ -104,7 +131,7 @@ class ReportingHelper(
 
 		lifecycleOwner.lifecycleScope.launch(Dispatchers.IO + NonCancellable) {
 			Timber.i("Reporting ${item.name} playback stopped at $position")
-			val itemApi = apiClientFactory.getApiClientForItemOrFallback(item, api)
+			val itemApi = getApiClientForItem(item)
 			runCatching {
 				itemApi.playStateApi.reportPlaybackStopped(info)
 			}.onFailure { error -> Timber.e(error, "Failed to report stopped playback!") }

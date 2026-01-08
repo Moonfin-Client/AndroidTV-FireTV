@@ -17,6 +17,7 @@ import org.jellyfin.androidtv.util.apiclient.getPrimaryImage
 import org.jellyfin.androidtv.util.apiclient.getThumbImage
 import org.jellyfin.androidtv.util.apiclient.getThumbImageWithFallback
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
+import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -27,6 +28,7 @@ import org.jellyfin.sdk.model.api.UserDto
 class ImageHelper(
 	private val api: ApiClient,
 	private val apiClientFactory: ApiClientFactory,
+	private val sessionRepository: SessionRepository,
 ) {
 	/**
 	 * Get the appropriate API client for an item, considering its serverId.
@@ -39,8 +41,17 @@ class ImageHelper(
 			return api
 		}
 		
-		val serverApi = apiClientFactory.getApiClientForServer(uuid) ?: api
-		timber.log.Timber.d("ImageHelper.getApiClient: Using apiClient with baseUrl=${serverApi.baseUrl} for serverId=$uuid")
+		// Get current user ID from session for multi-user support
+		val userId = sessionRepository.currentSession.value?.userId
+		val serverApi = if (userId != null) {
+			timber.log.Timber.d("ImageHelper.getApiClient: Using apiClient for serverId=$uuid and userId=$userId")
+			apiClientFactory.getApiClient(uuid, userId) ?: apiClientFactory.getApiClientForServer(uuid) ?: api
+		} else {
+			timber.log.Timber.d("ImageHelper.getApiClient: No userId found, falling back to server-only for serverId=$uuid")
+			apiClientFactory.getApiClientForServer(uuid) ?: api
+		}
+		
+		timber.log.Timber.d("ImageHelper.getApiClient: Using apiClient with baseUrl=${serverApi.baseUrl}")
 		return serverApi
 	}
 	companion object {
@@ -97,7 +108,14 @@ class ImageHelper(
 		serverId: java.util.UUID?,
 		maxHeight: Int? = null,
 	): String? {
-		val serverApi = if (serverId != null) apiClientFactory.getApiClientForServer(serverId) ?: api else api
+		val userId = sessionRepository.currentSession.value?.userId
+		val serverApi = if (serverId != null && userId != null) {
+			apiClientFactory.getApiClient(serverId, userId) ?: apiClientFactory.getApiClientForServer(serverId) ?: api
+		} else if (serverId != null) {
+			apiClientFactory.getApiClientForServer(serverId) ?: api
+		} else {
+			api
+		}
 		return item.primaryImage?.getUrl(serverApi, maxHeight = maxHeight)
 	}
 

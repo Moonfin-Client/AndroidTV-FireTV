@@ -13,6 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.jellyfin.androidtv.R;
+import org.jellyfin.androidtv.auth.repository.SessionRepository;
 import org.jellyfin.androidtv.data.compat.PlaybackException;
 import org.jellyfin.androidtv.data.compat.StreamInfo;
 import org.jellyfin.androidtv.data.compat.VideoOptions;
@@ -69,6 +70,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     private Lazy<VideoQueueManager> videoQueueManager = inject(VideoQueueManager.class);
     private Lazy<ApiClient> api = inject(ApiClient.class);
     private Lazy<ApiClientFactory> apiClientFactory = inject(ApiClientFactory.class);
+    private Lazy<SessionRepository> sessionRepository = inject(SessionRepository.class);
     private Lazy<DataRefreshService> dataRefreshService = inject(DataRefreshService.class);
     private Lazy<ReportingHelper> reportingHelper = inject(ReportingHelper.class);
     private final Lazy<InteractionTrackerViewModel> lazyInteractionTracker = inject(InteractionTrackerViewModel.class);
@@ -709,13 +711,17 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         if (mFragment != null) mFragment.updateDisplay();
 
         if (mVideoManager != null) {
-            // Get server-specific API client for subtitle URLs
+            // Get server-specific API client for subtitle URLs with current user context
             ApiClient subtitleApi = api.getValue();
             if (mCurrentOptions.getServerId() != null) {
-                ApiClient serverApi = apiClientFactory.getValue().getApiClientForServer(mCurrentOptions.getServerId());
+                UUID currentUserId = sessionRepository.getValue().getCurrentSession().getValue() != null ? 
+                    sessionRepository.getValue().getCurrentSession().getValue().getUserId() : null;
+                ApiClient serverApi = currentUserId != null ?
+                    apiClientFactory.getValue().getApiClient(mCurrentOptions.getServerId(), currentUserId) :
+                    apiClientFactory.getValue().getApiClientForServer(mCurrentOptions.getServerId());
                 if (serverApi != null) {
                     subtitleApi = serverApi;
-                    Timber.d("PlaybackController: Using server-specific API for subtitles: %s", mCurrentOptions.getServerId());
+                    Timber.d("PlaybackController: Using server-specific API for subtitles: %s user: %s", mCurrentOptions.getServerId(), currentUserId);
                 }
             }
             mVideoManager.setMediaStreamInfo(subtitleApi, response);
@@ -1050,13 +1056,17 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                     if (!isActive()) return;
                     mCurrentStreamInfo = response;
                     if (mVideoManager != null) {
-                        // Get server-specific API client for subtitle URLs
+                        // Get server-specific API client for subtitle URLs with current user context
                         ApiClient subtitleApi = api.getValue();
                         if (mCurrentOptions.getServerId() != null) {
-                            ApiClient serverApi = apiClientFactory.getValue().getApiClientForServer(mCurrentOptions.getServerId());
+                            UUID currentUserId = sessionRepository.getValue().getCurrentSession().getValue() != null ? 
+                                sessionRepository.getValue().getCurrentSession().getValue().getUserId() : null;
+                            ApiClient serverApi = currentUserId != null ?
+                                apiClientFactory.getValue().getApiClient(mCurrentOptions.getServerId(), currentUserId) :
+                                apiClientFactory.getValue().getApiClientForServer(mCurrentOptions.getServerId());
                             if (serverApi != null) {
                                 subtitleApi = serverApi;
-                                Timber.d("PlaybackController: Using server-specific API for subtitles (changeVideoStream): %s", mCurrentOptions.getServerId());
+                                Timber.d("PlaybackController: Using server-specific API for subtitles (changeVideoStream): %s user: %s", mCurrentOptions.getServerId(), currentUserId);
                             }
                         }
                         mVideoManager.setMediaStreamInfo(subtitleApi, response);

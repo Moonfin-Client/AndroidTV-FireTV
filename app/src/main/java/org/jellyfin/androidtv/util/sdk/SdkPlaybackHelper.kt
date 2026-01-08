@@ -9,11 +9,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.data.repository.ItemRepository
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.playback.PlaybackControllerContainer
 import org.jellyfin.androidtv.ui.playback.PlaybackLauncher
 import org.jellyfin.androidtv.util.PlaybackHelper
+import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.androidtv.util.apiclient.Response
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.instantMixApi
@@ -36,12 +38,34 @@ import kotlin.time.Duration.Companion.seconds
 class SdkPlaybackHelper(
 	private val api: ApiClient,
 	private val apiClientFactory: ApiClientFactory,
+	private val sessionRepository: SessionRepository,
 	private val userPreferences: UserPreferences,
 	private val playbackLauncher: PlaybackLauncher,
 	private val playbackControllerContainer: PlaybackControllerContainer,
 ) : PlaybackHelper {
 	companion object {
 		const val ITEM_QUERY_LIMIT = 150
+	}
+	
+	/**
+	 * Get the correct API client for an item, using the current user's context.
+	 * Critical for multi-user scenarios where multiple users are logged into the same server.
+	 */
+	private fun getApiClientForItem(item: BaseItemDto): ApiClient {
+		val serverId = UUIDUtils.parseUUID(item.serverId)
+		val currentSession = sessionRepository.currentSession.value
+		val userId = currentSession?.userId
+		
+		return if (serverId != null && userId != null) {
+			apiClientFactory.getApiClient(serverId, userId) ?: run {
+				Timber.w("Failed to create API client for server $serverId user $userId, using fallback")
+				api
+			}
+		} else if (serverId != null) {
+			apiClientFactory.getApiClientForServer(serverId) ?: api
+		} else {
+			api
+		}
 	}
 
 	override fun getItemsToPlay(
@@ -73,7 +97,7 @@ class SdkPlaybackHelper(
 		allowIntros: Boolean,
 		shuffle: Boolean,
 	): List<BaseItemDto> = withContext(Dispatchers.IO) {
-		val itemApi = apiClientFactory.getApiClientForItemOrFallback(mainItem, api)
+		val itemApi = getApiClientForItem(mainItem)
 		when (mainItem.type) {
 			BaseItemKind.EPISODE -> {
 				val seriesId = mainItem.seriesId
@@ -256,7 +280,7 @@ class SdkPlaybackHelper(
 
 		val partCount = item.partCount
 		if (partCount != null && partCount > 1) {
-			val itemApi = apiClientFactory.getApiClientForItemOrFallback(item, api)
+			val itemApi = getApiClientForItem(item)
 			val response by itemApi.videosApi.getAdditionalPart(item.id)
 			addAll(response.items)
 		}
@@ -291,7 +315,7 @@ class SdkPlaybackHelper(
 
 	override fun playInstantMix(context: Context, item: BaseItemDto) {
 		getScope(context).launch {
-			val itemApi = apiClientFactory.getApiClientForItemOrFallback(item, api)
+			val itemApi = getApiClientForItem(item)
 			val response = withContext(Dispatchers.IO) {
 				itemApi.instantMixApi.getInstantMixFromItem(
 					itemId = item.id,

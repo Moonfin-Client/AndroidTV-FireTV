@@ -44,6 +44,49 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
+/**
+ * Helper function to get the correct API client for a fragment.
+ * This ensures we use the current session's userId, which is critical for
+ * multi-user scenarios on the same server.
+ */
+private fun FullDetailsFragment.getCorrectApiClient(): ApiClient {
+	val api by inject<ApiClient>()
+	val apiClientFactory by inject<org.jellyfin.androidtv.util.sdk.ApiClientFactory>()
+	val sessionRepository by inject<org.jellyfin.androidtv.auth.repository.SessionRepository>()
+	
+	// Check if a specific serverId was provided (for multi-server items)
+	val serverIdString: String? = arguments?.getString("ServerId")
+	var serverId = Utils.uuidOrNull(serverIdString)
+	
+	// Get current session for fallback and to get the current userId
+	val currentSession = sessionRepository.currentSession.value
+	
+	// If no serverId was provided, use the current session's serverId
+	if (serverId == null) {
+		serverId = currentSession?.serverId
+	}
+	
+	// Get the userId - critical for multi-user scenarios on the same server
+	val userId = currentSession?.userId
+	
+	return if (serverId != null && userId != null) {
+		// Use API client for the specific server AND user
+		apiClientFactory.getApiClient(serverId, userId) ?: run {
+			Timber.w("Failed to create API client for server $serverId user $userId, using current session")
+			api
+		}
+	} else if (serverId != null) {
+		// Fallback to server-only (picks first user - not ideal but better than nothing)
+		apiClientFactory.getApiClientForServer(serverId) ?: run {
+			Timber.w("Failed to create API client for server $serverId, using current session")
+			api
+		}
+	} else {
+		// Fallback to injected API client
+		api
+	}
+}
+
 fun FullDetailsFragment.deleteItem(
 	api: ApiClient,
 	item: BaseItemDto,
@@ -183,20 +226,7 @@ fun FullDetailsFragment.playTrailers() {
 			Toast.LENGTH_LONG
 		).show()
 	} else lifecycleScope.launch {
-		val api by inject<ApiClient>()
-		val apiClientFactory by inject<org.jellyfin.androidtv.util.sdk.ApiClientFactory>()
-		
-		// Check if a specific serverId was provided (for multi-server items)
-		val serverIdString: String? = arguments?.getString("ServerId")
-		val serverId = Utils.uuidOrNull(serverIdString)
-		val apiToUse = if (serverId != null) {
-			apiClientFactory.getApiClientForServer(serverId) ?: run {
-				Timber.w("Failed to create API client for server $serverId, using current session")
-				api
-			}
-		} else {
-			api
-		}
+		val apiToUse = getCorrectApiClient()
 
 		try {
 			val trailers = withContext(Dispatchers.IO) {
@@ -215,22 +245,12 @@ fun FullDetailsFragment.playTrailers() {
 }
 
 fun FullDetailsFragment.getItem(id: UUID, callback: (item: BaseItemDto?) -> Unit) {
-	val api by inject<ApiClient>()
-	val apiClientFactory by inject<org.jellyfin.androidtv.util.sdk.ApiClientFactory>()
+	val sessionRepository by inject<org.jellyfin.androidtv.auth.repository.SessionRepository>()
+	val apiToUse = getCorrectApiClient()
 	
-	// Check if a specific serverId was provided (for multi-server items)
+	// Get current serverId for annotating response
 	val serverIdString: String? = arguments?.getString("ServerId")
-	val serverId = Utils.uuidOrNull(serverIdString)
-	val apiToUse = if (serverId != null) {
-		// Use API client for the specific server
-		apiClientFactory.getApiClientForServer(serverId) ?: run {
-			Timber.w("Failed to create API client for server $serverId, using current session")
-			api
-		}
-	} else {
-		// Use current session's API client
-		api
-	}
+	val serverId = Utils.uuidOrNull(serverIdString) ?: sessionRepository.currentSession.value?.serverId
 
 	lifecycleScope.launch {
 		var response = try {
@@ -255,20 +275,7 @@ fun FullDetailsFragment.getItem(id: UUID, callback: (item: BaseItemDto?) -> Unit
 fun FullDetailsFragment.populatePreviousButton() {
 	if (mBaseItem.type != BaseItemKind.EPISODE) return
 
-	val api by inject<ApiClient>()
-	val apiClientFactory by inject<org.jellyfin.androidtv.util.sdk.ApiClientFactory>()
-	
-	// Check if a specific serverId was provided (for multi-server items)
-	val serverIdString: String? = arguments?.getString("ServerId")
-	val serverId = Utils.uuidOrNull(serverIdString)
-	val apiToUse = if (serverId != null) {
-		apiClientFactory.getApiClientForServer(serverId) ?: run {
-			Timber.w("Failed to create API client for server $serverId, using current session")
-			api
-		}
-	} else {
-		api
-	}
+	val apiToUse = getCorrectApiClient()
 
 	lifecycleScope.launch {
 		val siblings = withContext(Dispatchers.IO) {
@@ -298,20 +305,7 @@ fun FullDetailsFragment.getNextUpEpisode(callback: (BaseItemDto?) -> Unit) {
 }
 
 suspend fun FullDetailsFragment.getNextUpEpisode(): BaseItemDto? {
-	val api by inject<ApiClient>()
-	val apiClientFactory by inject<org.jellyfin.androidtv.util.sdk.ApiClientFactory>()
-	
-	// Check if a specific serverId was provided (for multi-server items)
-	val serverIdString: String? = arguments?.getString("ServerId")
-	val serverId = Utils.uuidOrNull(serverIdString)
-	val apiToUse = if (serverId != null) {
-		apiClientFactory.getApiClientForServer(serverId) ?: run {
-			Timber.w("Failed to create API client for server $serverId, using current session")
-			api
-		}
-	} else {
-		api
-	}
+	val apiToUse = getCorrectApiClient()
 
 	try {
 		val episodes = withContext(Dispatchers.IO) {

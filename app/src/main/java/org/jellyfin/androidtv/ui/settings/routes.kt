@@ -72,10 +72,10 @@ object Routes {
 	const val CUSTOMIZATION_SUBTITLES_BACKGROUND_COLOR = "/customization/subtitles/background-color"
 	const val CUSTOMIZATION_SUBTITLES_EDGE_COLOR = "/customization/subtitles/edge-color"
 	const val LIBRARIES = "/libraries"
-	const val LIBRARIES_DISPLAY = "/libraries/display/{itemId}/{displayPreferencesId}"
-	const val LIBRARIES_DISPLAY_IMAGE_SIZE = "/libraries/display/{itemId}/{displayPreferencesId}/image-size"
-	const val LIBRARIES_DISPLAY_IMAGE_TYPE = "/libraries/display/{itemId}/{displayPreferencesId}/image-type"
-	const val LIBRARIES_DISPLAY_GRID = "/libraries/display/{itemId}/{displayPreferencesId}/grid"
+	const val LIBRARIES_DISPLAY = "/libraries/display/{itemId}/{displayPreferencesId}/{serverId}/{userId}"
+	const val LIBRARIES_DISPLAY_IMAGE_SIZE = "/libraries/display/{itemId}/{displayPreferencesId}/{serverId}/{userId}/image-size"
+	const val LIBRARIES_DISPLAY_IMAGE_TYPE = "/libraries/display/{itemId}/{displayPreferencesId}/{serverId}/{userId}/image-type"
+	const val LIBRARIES_DISPLAY_GRID = "/libraries/display/{itemId}/{displayPreferencesId}/{serverId}/{userId}/grid"
 	const val HOME = "/home"
 	const val HOME_SECTION = "/home/section/{index}"
 	const val LIVETV_GUIDE_FILTERS = "/livetv/guide/filters"
@@ -171,16 +171,36 @@ val routes = mapOf<String, RouteComposable>(
 		SettingsLibrariesScreen()
 	},
 	Routes.LIBRARIES_DISPLAY to { context ->
-		SettingsLibrariesDisplayScreen(context.parameters["itemId"]?.toUUIDOrNull()!!, context.parameters["displayPreferencesId"]!!)
+		SettingsLibrariesDisplayScreen(
+			itemId = context.parameters["itemId"]?.toUUIDOrNull()!!,
+			displayPreferencesId = context.parameters["displayPreferencesId"]!!,
+			serverId = context.parameters["serverId"]?.toUUIDOrNull()!!,
+			userId = context.parameters["userId"]?.toUUIDOrNull()!!
+		)
 	},
 	Routes.LIBRARIES_DISPLAY_IMAGE_SIZE to { context ->
-		SettingsLibrariesDisplayImageSizeScreen(context.parameters["itemId"]?.toUUIDOrNull()!!, context.parameters["displayPreferencesId"]!!)
+		SettingsLibrariesDisplayImageSizeScreen(
+			itemId = context.parameters["itemId"]?.toUUIDOrNull()!!,
+			displayPreferencesId = context.parameters["displayPreferencesId"]!!,
+			serverId = context.parameters["serverId"]?.toUUIDOrNull()!!,
+			userId = context.parameters["userId"]?.toUUIDOrNull()!!
+		)
 	},
 	Routes.LIBRARIES_DISPLAY_IMAGE_TYPE to { context ->
-		SettingsLibrariesDisplayImageTypeScreen(context.parameters["itemId"]?.toUUIDOrNull()!!, context.parameters["displayPreferencesId"]!!)
+		SettingsLibrariesDisplayImageTypeScreen(
+			itemId = context.parameters["itemId"]?.toUUIDOrNull()!!,
+			displayPreferencesId = context.parameters["displayPreferencesId"]!!,
+			serverId = context.parameters["serverId"]?.toUUIDOrNull()!!,
+			userId = context.parameters["userId"]?.toUUIDOrNull()!!
+		)
 	},
 	Routes.LIBRARIES_DISPLAY_GRID to { context ->
-		SettingsLibrariesDisplayGridScreen(context.parameters["itemId"]?.toUUIDOrNull()!!, context.parameters["displayPreferencesId"]!!)
+		SettingsLibrariesDisplayGridScreen(
+			itemId = context.parameters["itemId"]?.toUUIDOrNull()!!,
+			displayPreferencesId = context.parameters["displayPreferencesId"]!!,
+			serverId = context.parameters["serverId"]?.toUUIDOrNull()!!,
+			userId = context.parameters["userId"]?.toUUIDOrNull()!!
+		)
 	},
 	Routes.HOME to {
 		SettingsHomeScreen()
