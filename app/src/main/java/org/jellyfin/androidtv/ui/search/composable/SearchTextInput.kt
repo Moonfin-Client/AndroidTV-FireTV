@@ -12,12 +12,22 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,6 +48,17 @@ fun SearchTextInput(
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val focused by interactionSource.collectIsFocusedAsState()
+	val keyboardController = LocalSoftwareKeyboardController.current
+	var isEditing by remember { mutableStateOf(false) }
+	var isFirstFocus by remember { mutableStateOf(true) }
+
+	// Auto-open keyboard on first focus
+	LaunchedEffect(focused) {
+		if (focused && isFirstFocus) {
+			isFirstFocus = false
+			isEditing = true
+		}
+	}
 
 	val color = when {
 		focused -> JellyfinTheme.colorScheme.inputFocused to JellyfinTheme.colorScheme.onInputFocused
@@ -51,20 +72,34 @@ fun SearchTextInput(
 		)
 	) {
 		BasicTextField(
-			modifier = modifier,
+			modifier = modifier
+				.onKeyEvent { event ->
+					if (focused && !isEditing && event.type == KeyEventType.KeyDown &&
+						(event.key == Key.Enter || event.key == Key.DirectionCenter)) {
+						isEditing = true
+						true
+					} else false
+				}
+				.onFocusChanged { 
+					if (!it.isFocused) {
+						isEditing = false
+						keyboardController?.hide()
+					}
+				},
 			value = query,
 			singleLine = true,
+			readOnly = !isEditing,
 			interactionSource = interactionSource,
 			onValueChange = { onQueryChange(it) },
-			keyboardActions = KeyboardActions { onQuerySubmit() },
+			keyboardActions = KeyboardActions {
+				isEditing = false
+				keyboardController?.hide()
+				onQuerySubmit()
+			},
 			keyboardOptions = KeyboardOptions.Default.copy(
 				keyboardType = KeyboardType.Text,
 				imeAction = ImeAction.Search,
 				autoCorrectEnabled = true,
-				// Note: Compose does not support a press to open functionality (yet?) or programmatic keyboard activation so we can only
-				// use the show on focus behavior. Unfortunately this does not work great with some vendors like Amazon.
-				// In addition, this boolean cannot be unset with the (stateless) BasicTextField implementation we're using
-				showKeyboardOnFocus = true,
 			),
 			textStyle = LocalTextStyle.current,
 			cursorBrush = SolidColor(color.first),
