@@ -1,8 +1,6 @@
 package org.jellyfin.androidtv.ui.settings
 
 import org.jellyfin.androidtv.ui.navigation.RouteComposable
-import org.jellyfin.androidtv.ui.preference.screen.JellyseerrPreferencesScreen
-import org.jellyfin.androidtv.ui.preference.screen.JellyseerrRowsConfigScreen
 import org.jellyfin.androidtv.ui.settings.screen.SettingsDeveloperScreen
 import org.jellyfin.androidtv.ui.settings.screen.SettingsMainScreen
 import org.jellyfin.androidtv.ui.settings.screen.SettingsTelemetryScreen
@@ -34,6 +32,8 @@ import org.jellyfin.androidtv.ui.settings.screen.license.SettingsLicensesScreen
 import org.jellyfin.androidtv.ui.settings.screen.livetv.SettingsLiveTvGuideChannelOrderScreen
 import org.jellyfin.androidtv.ui.settings.screen.livetv.SettingsLiveTvGuideFiltersScreen
 import org.jellyfin.androidtv.ui.settings.screen.livetv.SettingsLiveTvGuideOptionsScreen
+import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsJellyseerrRowsScreen
+import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsJellyseerrScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinBrowsingBlurScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinDetailsBlurScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinHomeRowsImageScreen
@@ -303,10 +303,10 @@ val routes = mapOf<String, RouteComposable>(
 		SettingsPlaybackAudioBehaviorScreen()
 	},
 	Routes.JELLYSEERR to {
-		JellyseerrPreferencesScreen()
+		SettingsJellyseerrScreen()
 	},
 	Routes.JELLYSEERR_ROWS to {
-		JellyseerrRowsConfigScreen()
+		SettingsJellyseerrRowsScreen()
 	},
 	Routes.MOONFIN to {
 		SettingsMoonfinScreen()

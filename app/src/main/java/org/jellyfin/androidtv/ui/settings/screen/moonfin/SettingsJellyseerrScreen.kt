@@ -1,4 +1,4 @@
-package org.jellyfin.androidtv.ui.preference.screen
+package org.jellyfin.androidtv.ui.settings.screen.moonfin
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
@@ -43,7 +43,7 @@ import org.koin.core.qualifier.named
 import timber.log.Timber
 
 @Composable
-fun JellyseerrPreferencesScreen() {
+fun SettingsJellyseerrScreen() {
 	val context = LocalContext.current
 	val router = LocalRouter.current
 	val scope = rememberCoroutineScope()

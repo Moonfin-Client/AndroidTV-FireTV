@@ -1,4 +1,4 @@
-package org.jellyfin.androidtv.ui.preference.screen
+package org.jellyfin.androidtv.ui.settings.screen.moonfin
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -39,7 +39,7 @@ import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
 
 @Composable
-fun JellyseerrRowsConfigScreen() {
+fun SettingsJellyseerrRowsScreen() {
 	val jellyseerrPreferences = koinInject<JellyseerrPreferences>(named("global"))
 	
 	var sections by remember { mutableStateOf(jellyseerrPreferences.rowsConfig) }
@@ -151,7 +151,7 @@ private fun JellyseerrRowRow(
 	var isFocused by remember { mutableStateOf(false) }
 	
 	// Request focus when this item should be focused
-	androidx.compose.runtime.LaunchedEffect(shouldRequestFocus) {
+	LaunchedEffect(shouldRequestFocus) {
 		if (shouldRequestFocus) {
 			focusRequester.requestFocus()
 		}
