@@ -222,6 +222,9 @@ class AuthenticationRepositoryImpl(
 	 * - Fresh install/reinstall (cookies cleared)
 	 * - Manual logout
 	 * - Cookie expiration (controlled by Jellyseerr server settings)
+	 * 
+	 * IMPORTANT: This method first checks if the session is already valid (using cached result)
+	 * to prevent excessive login attempts that can trigger rate limiting/lockouts on Jellyseerr.
 	 */
 	private fun tryJellyseerrAutoLogin(server: Server, username: String, password: String) {
 		// Check if Jellyseerr is enabled and configured
@@ -236,7 +239,14 @@ class AuthenticationRepositoryImpl(
 		// Launch async login attempt (non-blocking)
 		kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
 			try {
-				Timber.d("Attempting Jellyseerr auto-login for user: $username")
+				// First check if session is already valid (uses cache to prevent excessive checks)
+				val sessionAlreadyValid = jellyseerrRepository.isSessionValidCached()
+				if (sessionAlreadyValid) {
+					Timber.d("Jellyseerr auto-login skipped: session already valid for user: $username")
+					return@launch
+				}
+				
+				Timber.d("Attempting Jellyseerr auto-login for user: $username (session invalid or expired)")
 				val result = jellyseerrRepository.loginWithJellyfin(
 					username = username,
 					password = password,

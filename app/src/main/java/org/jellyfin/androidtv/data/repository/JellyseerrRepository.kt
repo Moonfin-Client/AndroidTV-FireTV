@@ -89,6 +89,11 @@ interface JellyseerrRepository {
 	suspend fun isSessionValid(): Result<Boolean>
 
 	/**
+	 * Check session validity with caching to reduce repeated network calls.
+	 */
+	suspend fun isSessionValidCached(): Boolean
+
+	/**
 	 * Get current authenticated user
 	 */
 	suspend fun getCurrentUser(): Result<JellyseerrUserDto>
@@ -306,6 +311,14 @@ class JellyseerrRepositoryImpl(
 	override val isAvailable: StateFlow<Boolean> = _isAvailable.asStateFlow()
 	private var initialized = false
 	private var lastUserId: String? = null // Track which user we're initialized for
+	
+	// Session validity cache to prevent excessive login attempts
+	private var lastSessionCheckTime: Long = 0
+	private var lastSessionValid: Boolean = false
+	private companion object {
+		// Cache session validity for 5 minutes to prevent excessive auth checks
+		private const val SESSION_CACHE_DURATION_MS = 5 * 60 * 1000L
+	}
 
 	/**
 	 * Get user-specific preferences for the current user
@@ -334,6 +347,8 @@ class JellyseerrRepositoryImpl(
 			httpClient?.close()
 			httpClient = null
 			_isAvailable.emit(false)
+			// Invalidate session cache when user changes
+			invalidateSessionCache()
 		}
 		
 		// Reset initialization if client is no longer available
@@ -377,8 +392,22 @@ class JellyseerrRepositoryImpl(
 				if (enabled && !serverUrl.isNullOrEmpty()) {
 					httpClient = JellyseerrHttpClient(context, serverUrl, storedApiKey)
 					
-					// Verify the session is actually valid by calling getCurrentUser
-					val sessionValid = httpClient?.getCurrentUser()?.isSuccess == true
+					// Check if we have a recent valid session in cache first
+					val now = System.currentTimeMillis()
+					val cacheAge = now - lastSessionCheckTime
+					val useCache = cacheAge < SESSION_CACHE_DURATION_MS && lastSessionValid
+					
+					val sessionValid = if (useCache) {
+						Timber.d("Jellyseerr: Using cached session validity during init (age: ${cacheAge / 1000}s)")
+						true
+					} else {
+						// Verify the session is actually valid by calling getCurrentUser
+						val result = httpClient?.getCurrentUser()?.isSuccess == true
+						// Update cache with result
+						lastSessionCheckTime = now
+						lastSessionValid = result
+						result
+					}
 					
 					if (!sessionValid) {
 						// Auth failed - try auto-relogin based on auth method
@@ -398,6 +427,9 @@ class JellyseerrRepositoryImpl(
 												val reloginResult = httpClient?.loginJellyfin(username, savedPassword, jellyfinUrl)
 												if (reloginResult?.isSuccess == true) {
 													Timber.i("Jellyseerr: Auto-re-login successful")
+													// Update cache on successful re-login
+													lastSessionCheckTime = System.currentTimeMillis()
+													lastSessionValid = true
 													_isAvailable.emit(true)
 													initialized = true
 													return@withContext
@@ -430,6 +462,9 @@ class JellyseerrRepositoryImpl(
 											userPrefs[JellyseerrPreferences.apiKey] = newApiKey
 											httpClient?.close()
 											httpClient = JellyseerrHttpClient(context, serverUrl, newApiKey)
+											// Update cache on successful re-login
+											lastSessionCheckTime = System.currentTimeMillis()
+											lastSessionValid = true
 											_isAvailable.emit(true)
 											initialized = true
 											return@withContext
@@ -663,7 +698,41 @@ class JellyseerrRepositoryImpl(
 
 		// Try to get current user - if successful, session is valid
 		val result = client.getCurrentUser()
-		Result.success(result.isSuccess)
+		val isValid = result.isSuccess
+		
+		// Update cache
+		lastSessionCheckTime = System.currentTimeMillis()
+		lastSessionValid = isValid
+		
+		Result.success(isValid)
+	}
+	
+	/**
+	 * Check if session is valid using cached result when available.
+	 * This prevents excessive authentication checks that can trigger rate limiting.
+	 * Cache is valid for SESSION_CACHE_DURATION_MS (5 minutes).
+	 */
+	override suspend fun isSessionValidCached(): Boolean {
+		val now = System.currentTimeMillis()
+		val cacheAge = now - lastSessionCheckTime
+		
+		if (cacheAge < SESSION_CACHE_DURATION_MS && lastSessionValid) {
+			Timber.d("Jellyseerr: Using cached session validity (age: ${cacheAge / 1000}s, valid: true)")
+			return true
+		}
+		
+		Timber.d("Jellyseerr: Session cache expired or invalid, checking fresh (age: ${cacheAge / 1000}s)")
+		return isSessionValid().getOrDefault(false)
+	}
+	
+	/**
+	 * Invalidate the session cache, forcing the next check to verify with the server.
+	 * Call this when logout occurs or session is known to be invalid.
+	 */
+	fun invalidateSessionCache() {
+		Timber.d("Jellyseerr: Session cache invalidated")
+		lastSessionCheckTime = 0
+		lastSessionValid = false
 	}
 
 	override suspend fun getCurrentUser(): Result<JellyseerrUserDto> = withContext(Dispatchers.IO) {
