@@ -147,15 +147,20 @@ val routes = mapOf<String, RouteComposable>(
 		SettingsAuthenticationScreen(true)
 	},
 	Routes.AUTHENTICATION_SERVER to { context ->
-		SettingsAuthenticationServerScreen(
-			serverId = context.parameters["serverId"]?.toUUIDOrNull()!!
-		)
+		val serverId = context.parameters["serverId"]?.toUUIDOrNull()
+		if (serverId != null) {
+			SettingsAuthenticationServerScreen(serverId = serverId)
+		}
 	},
 	Routes.AUTHENTICATION_SERVER_USER to { context ->
-		SettingsAuthenticationServerUserScreen(
-			serverId = context.parameters["serverId"]?.toUUIDOrNull()!!,
-			userId = context.parameters["userId"]?.toUUIDOrNull()!!
-		)
+		val serverId = context.parameters["serverId"]?.toUUIDOrNull()
+		val userId = context.parameters["userId"]?.toUUIDOrNull()
+		if (serverId != null && userId != null) {
+			SettingsAuthenticationServerUserScreen(
+				serverId = serverId,
+				userId = userId
+			)
+		}
 	},
 	Routes.AUTHENTICATION_SORT_BY to {
 		SettingsAuthenticationSortByScreen()
@@ -212,42 +217,73 @@ val routes = mapOf<String, RouteComposable>(
 		SettingsLibrariesScreen()
 	},
 	Routes.LIBRARIES_DISPLAY to { context ->
-		SettingsLibrariesDisplayScreen(
-			itemId = context.parameters["itemId"]?.toUUIDOrNull()!!,
-			displayPreferencesId = context.parameters["displayPreferencesId"]!!,
-			serverId = context.parameters["serverId"]?.toUUIDOrNull()!!,
-			userId = context.parameters["userId"]?.toUUIDOrNull()!!
-		)
+		val itemId = context.parameters["itemId"]?.toUUIDOrNull()
+		val displayPreferencesId = context.parameters["displayPreferencesId"]
+		val serverId = context.parameters["serverId"]?.toUUIDOrNull()
+		val userId = context.parameters["userId"]?.toUUIDOrNull()
+		
+		if (itemId != null && displayPreferencesId != null && serverId != null && userId != null) {
+			SettingsLibrariesDisplayScreen(
+				itemId = itemId,
+				displayPreferencesId = displayPreferencesId,
+				serverId = serverId,
+				userId = userId
+			)
+		}
 	},
 	Routes.LIBRARIES_DISPLAY_IMAGE_SIZE to { context ->
-		SettingsLibrariesDisplayImageSizeScreen(
-			itemId = context.parameters["itemId"]?.toUUIDOrNull()!!,
-			displayPreferencesId = context.parameters["displayPreferencesId"]!!,
-			serverId = context.parameters["serverId"]?.toUUIDOrNull()!!,
-			userId = context.parameters["userId"]?.toUUIDOrNull()!!
-		)
+		val itemId = context.parameters["itemId"]?.toUUIDOrNull()
+		val displayPreferencesId = context.parameters["displayPreferencesId"]
+		val serverId = context.parameters["serverId"]?.toUUIDOrNull()
+		val userId = context.parameters["userId"]?.toUUIDOrNull()
+		
+		if (itemId != null && displayPreferencesId != null && serverId != null && userId != null) {
+			SettingsLibrariesDisplayImageSizeScreen(
+				itemId = itemId,
+				displayPreferencesId = displayPreferencesId,
+				serverId = serverId,
+				userId = userId
+			)
+		}
 	},
 	Routes.LIBRARIES_DISPLAY_IMAGE_TYPE to { context ->
-		SettingsLibrariesDisplayImageTypeScreen(
-			itemId = context.parameters["itemId"]?.toUUIDOrNull()!!,
-			displayPreferencesId = context.parameters["displayPreferencesId"]!!,
-			serverId = context.parameters["serverId"]?.toUUIDOrNull()!!,
-			userId = context.parameters["userId"]?.toUUIDOrNull()!!
-		)
+		val itemId = context.parameters["itemId"]?.toUUIDOrNull()
+		val displayPreferencesId = context.parameters["displayPreferencesId"]
+		val serverId = context.parameters["serverId"]?.toUUIDOrNull()
+		val userId = context.parameters["userId"]?.toUUIDOrNull()
+		
+		if (itemId != null && displayPreferencesId != null && serverId != null && userId != null) {
+			SettingsLibrariesDisplayImageTypeScreen(
+				itemId = itemId,
+				displayPreferencesId = displayPreferencesId,
+				serverId = serverId,
+				userId = userId
+			)
+		}
 	},
 	Routes.LIBRARIES_DISPLAY_GRID to { context ->
-		SettingsLibrariesDisplayGridScreen(
-			itemId = context.parameters["itemId"]?.toUUIDOrNull()!!,
-			displayPreferencesId = context.parameters["displayPreferencesId"]!!,
-			serverId = context.parameters["serverId"]?.toUUIDOrNull()!!,
-			userId = context.parameters["userId"]?.toUUIDOrNull()!!
-		)
+		val itemId = context.parameters["itemId"]?.toUUIDOrNull()
+		val displayPreferencesId = context.parameters["displayPreferencesId"]
+		val serverId = context.parameters["serverId"]?.toUUIDOrNull()
+		val userId = context.parameters["userId"]?.toUUIDOrNull()
+		
+		if (itemId != null && displayPreferencesId != null && serverId != null && userId != null) {
+			SettingsLibrariesDisplayGridScreen(
+				itemId = itemId,
+				displayPreferencesId = displayPreferencesId,
+				serverId = serverId,
+				userId = userId
+			)
+		}
 	},
 	Routes.HOME to {
 		SettingsHomeScreen()
 	},
 	Routes.HOME_SECTION to { context ->
-		SettingsHomeSectionScreen(context.parameters["index"]?.toInt()!!)
+		val index = context.parameters["index"]?.toIntOrNull()
+		if (index != null) {
+			SettingsHomeSectionScreen(index)
+		}
 	},
 	Routes.LIVETV_GUIDE_FILTERS to {
 		SettingsLiveTvGuideFiltersScreen()
@@ -280,9 +316,10 @@ val routes = mapOf<String, RouteComposable>(
 		SettingsPlaybackMediaSegmentsScreen()
 	},
 	Routes.PLAYBACK_MEDIA_SEGMENT to { context ->
-		SettingsPlaybackMediaSegmentScreen(
-			segmentType = context.parameters["segmentType"]?.let(MediaSegmentType::fromNameOrNull)!!,
-		)
+		val segmentType = context.parameters["segmentType"]?.let(MediaSegmentType::fromNameOrNull)
+		if (segmentType != null) {
+			SettingsPlaybackMediaSegmentScreen(segmentType = segmentType)
+		}
 	},
 	Routes.PLAYBACK_ADVANCED to {
 		SettingsPlaybackAdvancedScreen()
@@ -357,8 +394,9 @@ val routes = mapOf<String, RouteComposable>(
 		SettingsLicensesScreen()
 	},
 	Routes.LICENSE to { context ->
-		SettingsLicenseScreen(
-			artifactId = context.parameters["artifactId"]!!
-		)
+		val artifactId = context.parameters["artifactId"]
+		if (artifactId != null) {
+			SettingsLicenseScreen(artifactId = artifactId)
+		}
 	},
 )
