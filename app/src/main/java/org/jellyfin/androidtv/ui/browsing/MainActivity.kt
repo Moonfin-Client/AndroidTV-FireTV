@@ -80,9 +80,9 @@ class MainActivity : FragmentActivity() {
 			sessionRepository.state
 				.filter { it == SessionRepositoryState.READY }
 				.first()
-			
+
 			if (!validateAuthentication()) return@launch
-			
+
 			setupActivity(savedInstanceState)
 		}
 	}
@@ -304,7 +304,19 @@ class MainActivity : FragmentActivity() {
 
 	override fun onConfigurationChanged(newConfig: Configuration) {
 		super.onConfigurationChanged(newConfig)
-		Timber.d("Configuration changed - preserving activity and playback state")
-		applyTheme()
+
+		// Check if this is just an input device change (keyboard/navigation)
+		// These changes don't require theme reapplication and can cause visual glitches during playback
+		val isInputDeviceChange = newConfig.keyboard != resources.configuration.keyboard ||
+			newConfig.keyboardHidden != resources.configuration.keyboardHidden ||
+			newConfig.navigation != resources.configuration.navigation
+
+		if (isInputDeviceChange) {
+			Timber.d("Input device configuration changed - preserving activity and playback state without theme reapplication")
+			// Don't call applyTheme() for input device changes to avoid visual glitches during playback
+		} else {
+			Timber.d("Configuration changed - applying theme")
+			applyTheme()
+		}
 	}
 }
