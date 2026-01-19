@@ -146,12 +146,6 @@ fun FullDetailsFragment.showDetailsMenu(
 	if (goToSeriesButton?.isVisible == false) {
 		item(getString(R.string.lbl_goto_series)) { gotoSeries() }
 	}
-
-	if (mPrevButton?.isVisible == false && mPrevItemId != null) {
-		item(getString(R.string.lbl_previous_episode)) {
-			gotoPreviousEpisode()
-		}
-	}
 }.showIfNotEmpty()
 
 fun FullDetailsFragment.createFakeSeriesTimerBaseItemDto(timer: SeriesTimerInfoDto) = BaseItemDto(

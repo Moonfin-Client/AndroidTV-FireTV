@@ -69,6 +69,7 @@ class BackgroundService(
 	 * Use all available backdrops from [baseItem] as background.
 	 * @param blurContext The context to determine which blur amount preference to use
 	 */
+	@JvmOverloads
 	fun setBackground(baseItem: BaseItemDto?, blurContext: BlurContext = BlurContext.DETAILS) {
 		// Check if item is set and backgrounds are enabled
 		if (baseItem == null || !userPreferences[UserPreferences.backdropEnabled])

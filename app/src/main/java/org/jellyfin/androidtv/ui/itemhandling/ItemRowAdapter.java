@@ -53,7 +53,6 @@ import org.koin.java.KoinJavaComponent;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 import kotlin.Lazy;
 import timber.log.Timber;
@@ -86,7 +85,6 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     private Instant lastFullRetrieve;
 
     private BaseItemPerson[] mPersons;
-    private UUID mPersonsServerId;
     private List<ChapterItemInfo> mChapters;
     private List<org.jellyfin.sdk.model.api.BaseItemDto> mItems;
     private MutableObjectAdapter<Row> mParent;
@@ -235,15 +233,10 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     }
 
     public ItemRowAdapter(List<BaseItemPerson> people, Context context, Presenter presenter, MutableObjectAdapter<Row> parent) {
-        this(people, null, context, presenter, parent);
-    }
-
-    public ItemRowAdapter(List<BaseItemPerson> people, UUID serverId, Context context, Presenter presenter, MutableObjectAdapter<Row> parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mPersons = people.toArray(new BaseItemPerson[people.size()]);
-        mPersonsServerId = serverId;
         staticHeight = true;
         queryType = QueryType.StaticPeople;
     }
@@ -697,7 +690,7 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     private void loadPeople() {
         if (mPersons != null) {
             for (BaseItemPerson person : mPersons) {
-                add(new BaseItemPersonBaseRowItem(person, mPersonsServerId));
+                add(new BaseItemPersonBaseRowItem(person));
             }
 
         } else {

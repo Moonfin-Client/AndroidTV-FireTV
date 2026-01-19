@@ -4,56 +4,20 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import androidx.annotation.AnyRes
-import org.jellyfin.androidtv.util.apiclient.JellyfinImage
 import org.jellyfin.androidtv.util.apiclient.albumPrimaryImage
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.itemImages
 import org.jellyfin.androidtv.util.apiclient.parentImages
-import org.jellyfin.androidtv.util.apiclient.primaryImage
 import org.jellyfin.androidtv.util.apiclient.seriesPrimaryImage
 import org.jellyfin.androidtv.util.apiclient.seriesThumbImage
-import org.jellyfin.androidtv.util.apiclient.getBannerImage
-import org.jellyfin.androidtv.util.apiclient.getPrimaryImage
-import org.jellyfin.androidtv.util.apiclient.getThumbImage
-import org.jellyfin.androidtv.util.apiclient.getThumbImageWithFallback
-import org.jellyfin.androidtv.util.sdk.ApiClientFactory
-import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.BaseItemPerson
 import org.jellyfin.sdk.model.api.ImageType
-import org.jellyfin.sdk.model.api.UserDto
 
 class ImageHelper(
 	private val api: ApiClient,
-	private val apiClientFactory: ApiClientFactory,
-	private val sessionRepository: SessionRepository,
 ) {
-	/**
-	 * Get the appropriate API client for an item, considering its serverId.
-	 * Falls back to the default API client if serverId is null or not found.
-	 */
-	private fun getApiClient(item: BaseItemDto): ApiClient {
-		val uuid = UUIDUtils.parseUUID(item.serverId)
-		if (uuid == null) {
-			timber.log.Timber.d("ImageHelper.getApiClient: Item ${item.id} has no valid serverId, using default api")
-			return api
-		}
-		
-		// Get current user ID from session for multi-user support
-		val userId = sessionRepository.currentSession.value?.userId
-		val serverApi = if (userId != null) {
-			timber.log.Timber.d("ImageHelper.getApiClient: Using apiClient for serverId=$uuid and userId=$userId")
-			apiClientFactory.getApiClient(uuid, userId) ?: apiClientFactory.getApiClientForServer(uuid) ?: api
-		} else {
-			timber.log.Timber.d("ImageHelper.getApiClient: No userId found, falling back to server-only for serverId=$uuid")
-			apiClientFactory.getApiClientForServer(uuid) ?: api
-		}
-		
-		timber.log.Timber.d("ImageHelper.getApiClient: Using apiClient with baseUrl=${serverApi.baseUrl}")
-		return serverApi
-	}
 	companion object {
 		const val ASPECT_RATIO_2_3 = 2.0 / 3.0
 		const val ASPECT_RATIO_16_9 = 16.0 / 9.0
@@ -63,29 +27,9 @@ class ImageHelper(
 		const val MAX_PRIMARY_IMAGE_HEIGHT: Int = 370
 	}
 
-	fun getImageUrl(image: JellyfinImage, item: BaseItemDto, fillWidth: Int, fillHeight: Int): String {
-		// Check if the tag is already a full URL (for external images like TMDB)
-		if (image.tag.startsWith("http")) {
-			return image.tag
-		}
-		return image.getUrl(getApiClient(item), null, null, fillWidth, fillHeight)
-	}
-
 	fun getImageAspectRatio(item: BaseItemDto, preferParentThumb: Boolean): Double {
-		// When preferParentThumb is enabled, use wide aspect for episodes, series, and movies with backdrops
-		if (preferParentThumb) {
-			if (item.type == BaseItemKind.EPISODE && (item.parentThumbItemId != null || item.seriesThumbImageTag != null)) {
-				return ASPECT_RATIO_16_9
-			}
-			if ((item.type == BaseItemKind.MOVIE || item.type == BaseItemKind.VIDEO) && 
-				(!item.backdropImageTags.isNullOrEmpty() || item.imageTags?.containsKey(ImageType.THUMB) == true)) {
-				return ASPECT_RATIO_16_9
-			}
-			// Series: use wide aspect if thumb or backdrop is available
-			if (item.type == BaseItemKind.SERIES && 
-				(!item.backdropImageTags.isNullOrEmpty() || item.imageTags?.containsKey(ImageType.THUMB) == true)) {
-				return ASPECT_RATIO_16_9
-			}
+		if (preferParentThumb && (item.parentThumbItemId != null || item.seriesThumbImageTag != null)) {
+			return ASPECT_RATIO_16_9
 		}
 
 		val primaryAspectRatio = item.primaryImageAspectRatio;
@@ -99,35 +43,10 @@ class ImageHelper(
 	}
 
 	fun getPrimaryImageUrl(
-		item: BaseItemPerson,
-		maxHeight: Int? = null,
-	): String? = item.primaryImage?.getUrl(api, maxHeight = maxHeight)
-
-	fun getPrimaryImageUrl(
-		item: BaseItemPerson,
-		serverId: java.util.UUID?,
-		maxHeight: Int? = null,
-	): String? {
-		val userId = sessionRepository.currentSession.value?.userId
-		val serverApi = if (serverId != null && userId != null) {
-			apiClientFactory.getApiClient(serverId, userId) ?: apiClientFactory.getApiClientForServer(serverId) ?: api
-		} else if (serverId != null) {
-			apiClientFactory.getApiClientForServer(serverId) ?: api
-		} else {
-			api
-		}
-		return item.primaryImage?.getUrl(serverApi, maxHeight = maxHeight)
-	}
-
-	fun getPrimaryImageUrl(
-		item: UserDto,
-	): String? = item.primaryImage?.getUrl(api)
-
-	fun getPrimaryImageUrl(
 		item: BaseItemDto,
 		width: Int? = null,
 		height: Int? = null,
-	): String? = item.itemImages[ImageType.PRIMARY]?.getUrl(getApiClient(item), maxWidth = width, maxHeight = height)
+	): String? = item.itemImages[ImageType.PRIMARY]?.getUrl(api, maxWidth = width, maxHeight = height)
 
 	fun getPrimaryImageUrl(
 		item: BaseItemDto,
@@ -135,14 +54,6 @@ class ImageHelper(
 		fillWidth: Int? = null,
 		fillHeight: Int? = null
 	): String? {
-		// Check if this is a Jellyseerr item with a direct TMDB URL
-		// (stored in imageTags as a full URL instead of just a tag)
-		val imageTag = item.imageTags?.get(ImageType.PRIMARY)
-		if (imageTag?.startsWith("http") == true) {
-			// This is an external URL (e.g., from TMDB for Jellyseerr items)
-			return imageTag
-		}
-		
 		val image = when {
 			preferParentThumb && item.type == BaseItemKind.EPISODE -> item.parentImages[ImageType.THUMB] ?: item.seriesThumbImage
 			item.type == BaseItemKind.SEASON -> item.seriesPrimaryImage
@@ -152,7 +63,7 @@ class ImageHelper(
 		} ?: item.itemImages[ImageType.PRIMARY]
 
 		return image?.getUrl(
-			api = getApiClient(item),
+			api = api,
 			fillWidth = fillWidth,
 			fillHeight = fillHeight,
 		)
@@ -162,21 +73,9 @@ class ImageHelper(
 		item: BaseItemDto?,
 		maxWidth: Int? = null
 	): String? {
-		if (item == null) return null
-		val image = item.itemImages[ImageType.LOGO] ?: item.parentImages[ImageType.LOGO]
-		return image?.getUrl(getApiClient(item), maxWidth = maxWidth)
+		val image = item?.itemImages[ImageType.LOGO] ?: item?.parentImages[ImageType.LOGO]
+		return image?.getUrl(api, maxWidth = maxWidth)
 	}
-
-	fun getThumbImageUrl(
-		item: BaseItemDto,
-		fillWidth: Int,
-		fillHeight: Int,
-	): String? = item.itemImages[ImageType.THUMB]?.getUrl(getApiClient(item), fillWidth = fillWidth, fillHeight = fillHeight)
-		?: getPrimaryImageUrl(item, true, fillWidth, fillHeight)
-
-	fun getBannerImageUrl(item: BaseItemDto, fillWidth: Int, fillHeight: Int): String? =
-		item.itemImages[ImageType.BANNER]?.getUrl(getApiClient(item), fillWidth = fillWidth, fillHeight = fillHeight)
-			?: getPrimaryImageUrl(item, true, fillWidth, fillHeight)
 
 	/**
 	 * A utility to return a URL reference to an image resource
