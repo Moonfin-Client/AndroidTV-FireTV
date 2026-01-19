@@ -11,9 +11,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.data.model.DataRefreshService
+import org.jellyfin.androidtv.data.syncplay.SyncPlayManager
 import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
@@ -36,6 +36,8 @@ import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.PlayMessage
 import org.jellyfin.sdk.model.api.PlaystateCommand
 import org.jellyfin.sdk.model.api.PlaystateMessage
+import org.jellyfin.sdk.model.api.SyncPlayCommandMessage
+import org.jellyfin.sdk.model.api.SyncPlayGroupUpdateMessage
 import org.jellyfin.sdk.model.extensions.get
 import org.jellyfin.sdk.model.extensions.getValue
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
@@ -53,6 +55,7 @@ class SocketHandler(
 	private val audioManager: AudioManager,
 	private val itemLauncher: ItemLauncher,
 	private val playbackHelper: PlaybackHelper,
+	private val syncPlayManager: SyncPlayManager,
 	private val lifecycle: Lifecycle,
 ) {
 	init {
@@ -156,6 +159,15 @@ class SocketHandler(
 				onDisplayMessage(header, text ?: string)
 			}
 			.launchIn(coroutineScope)
+
+		// SyncPlay messages
+		subscribe<SyncPlayCommandMessage>()
+			.onEach { message -> onSyncPlayCommand(message) }
+			.launchIn(coroutineScope)
+
+		subscribe<SyncPlayGroupUpdateMessage>()
+			.onEach { message -> onSyncPlayGroupUpdate(message) }
+			.launchIn(coroutineScope)
 	}
 
 	private fun onLibraryChanged(info: LibraryUpdateInfo) {
@@ -203,7 +215,7 @@ class SocketHandler(
 					PlaystateCommand.NEXT_TRACK -> playbackController?.next()
 					PlaystateCommand.PREVIOUS_TRACK -> playbackController?.prev()
 					PlaystateCommand.SEEK -> playbackController?.seek(
-						(message.data?.seekPositionTicks ?: 0) / TICKS_TO_MS
+						org.jellyfin.androidtv.data.syncplay.SyncPlayUtils.ticksToMs(message.data?.seekPositionTicks ?: 0)
 					)
 
 					PlaystateCommand.REWIND -> playbackController?.rewind()
@@ -242,12 +254,19 @@ class SocketHandler(
 			append(text)
 		}
 
-		runBlocking(Dispatchers.Main) {
+		// Use non-blocking coroutine instead of runBlocking to avoid blocking the IO thread
+		lifecycle.coroutineScope.launch(Dispatchers.Main) {
 			Toast.makeText(context, toastMessage, Toast.LENGTH_LONG).show()
 		}
 	}
 
-	companion object {
-		const val TICKS_TO_MS = 10000L
+	private fun onSyncPlayCommand(message: SyncPlayCommandMessage) {
+		val data = message.data ?: return
+		syncPlayManager.onPlaybackCommand(data)
+	}
+
+	private fun onSyncPlayGroupUpdate(message: SyncPlayGroupUpdateMessage) {
+		val data = message.data ?: return
+		syncPlayManager.onGroupUpdate(data)
 	}
 }

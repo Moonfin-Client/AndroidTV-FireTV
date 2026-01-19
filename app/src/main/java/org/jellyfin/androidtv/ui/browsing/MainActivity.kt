@@ -28,6 +28,7 @@ import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.repository.SessionRepositoryState
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.service.UpdateCheckerService
+import org.jellyfin.androidtv.data.syncplay.SyncPlayManager
 import org.jellyfin.androidtv.databinding.ActivityMainBinding
 import org.jellyfin.androidtv.integration.LeanbackChannelWorker
 import org.jellyfin.androidtv.preference.UserPreferences
@@ -35,9 +36,11 @@ import org.jellyfin.androidtv.ui.InteractionTrackerViewModel
 import org.jellyfin.androidtv.ui.background.AppBackground
 import org.jellyfin.androidtv.ui.navigation.NavigationAction
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
+import org.jellyfin.androidtv.ui.playback.PlaybackLauncher
 import org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer
 import org.jellyfin.androidtv.ui.screensaver.InAppScreensaver
 import org.jellyfin.androidtv.ui.settings.compat.MainActivitySettings
+import org.jellyfin.androidtv.ui.syncplay.MainActivitySyncPlay
 import org.jellyfin.androidtv.ui.startup.StartupActivity
 import org.jellyfin.androidtv.util.applyTheme
 import org.jellyfin.androidtv.util.isMediaSessionKeyEvent
@@ -54,6 +57,8 @@ class MainActivity : FragmentActivity() {
 	private val updateCheckerService by inject<UpdateCheckerService>()
 	private val userPreferences by inject<UserPreferences>()
 	private val themeMusicPlayer by inject<ThemeMusicPlayer>()
+	private val syncPlayManager by inject<SyncPlayManager>()
+	private val playbackLauncher by inject<PlaybackLauncher>()
 
 	private lateinit var binding: ActivityMainBinding
 	private var exitConfirmationDialog: AlertDialog? = null
@@ -83,6 +88,7 @@ class MainActivity : FragmentActivity() {
 			
 			if (!validateAuthentication()) return@launch
 			
+			setupSyncPlayQueueLauncher()
 			setupActivity(savedInstanceState)
 		}
 	}
@@ -109,11 +115,34 @@ class MainActivity : FragmentActivity() {
 		binding = ActivityMainBinding.inflate(layoutInflater)
 		binding.background.setContent { AppBackground() }
 		binding.settings.setContent { MainActivitySettings() }
+		binding.syncplay.setContent { MainActivitySyncPlay() }
 		binding.screensaver.setContent { InAppScreensaver() }
 		setContentView(binding.root)
 
 		// Check for updates on app launch
 		checkForUpdatesOnLaunch()
+	}
+	
+	private fun setupSyncPlayQueueLauncher() {
+		// Set up callback to handle queue loading when no active PlaybackController exists
+		syncPlayManager.queueLaunchCallback = { itemIds, startIndex, startPositionTicks ->
+			lifecycleScope.launch {
+				val queueResult = org.jellyfin.androidtv.data.syncplay.SyncPlayQueueHelper.fetchQueue(
+					itemIds = itemIds,
+					startIndex = startIndex,
+					startPositionTicks = startPositionTicks,
+				)
+				
+				if (queueResult != null) {
+					playbackLauncher.launch(
+						context = this@MainActivity,
+						items = queueResult.items,
+						position = queueResult.startPositionMs.toInt(),
+						itemsPosition = queueResult.startIndex
+					)
+				}
+			}
+		}
 	}
 
 	override fun onResume() {

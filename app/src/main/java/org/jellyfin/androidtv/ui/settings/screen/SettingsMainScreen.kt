@@ -111,6 +111,15 @@ fun SettingsMainScreen() {
 
 		item {
 			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_syncplay), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.syncplay)) },
+				captionContent = { Text("Watch together with synchronized playback") },
+				onClick = { router.push(Routes.SYNCPLAY) }
+			)
+		}
+
+		item {
+			ListButton(
 				leadingContent = { Icon(painterResource(R.drawable.ic_next), contentDescription = null) },
 				headingContent = { Text(stringResource(R.string.pref_playback)) },
 				onClick = { router.push(Routes.PLAYBACK) }

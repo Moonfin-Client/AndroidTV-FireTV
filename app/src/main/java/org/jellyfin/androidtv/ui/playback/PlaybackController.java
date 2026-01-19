@@ -18,6 +18,7 @@ import org.jellyfin.androidtv.data.compat.PlaybackException;
 import org.jellyfin.androidtv.data.compat.StreamInfo;
 import org.jellyfin.androidtv.data.compat.VideoOptions;
 import org.jellyfin.androidtv.data.model.DataRefreshService;
+import org.jellyfin.androidtv.data.syncplay.SyncPlayUtils;
 import org.jellyfin.androidtv.preference.UserPreferences;
 import org.jellyfin.androidtv.preference.UserSettingPreferences;
 import org.jellyfin.androidtv.preference.constant.NextUpBehavior;
@@ -75,6 +76,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     private Lazy<ReportingHelper> reportingHelper = inject(ReportingHelper.class);
     private final Lazy<InteractionTrackerViewModel> lazyInteractionTracker = inject(InteractionTrackerViewModel.class);
     private Lazy<PrePlaybackTrackSelector> trackSelector = inject(PrePlaybackTrackSelector.class);
+    private Lazy<org.jellyfin.androidtv.data.syncplay.SyncPlayManager> syncPlayManager = inject(org.jellyfin.androidtv.data.syncplay.SyncPlayManager.class);
 
     List<BaseItemDto> mItems;
     VideoManager mVideoManager;
@@ -94,6 +96,9 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     private int mDefaultAudioIndex = -1;
     protected boolean burningSubs = false;
     private float mRequestedPlaybackSpeed = -1.0f;
+    
+    // Flag to prevent echoing SyncPlay commands back to the group
+    private boolean isRespondingToSyncPlayCommand = false;
 
     private Runnable mReportLoop;
     private Handler mHandler;
@@ -134,7 +139,134 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         refreshRateSwitchingBehavior = userPreferences.getValue().get(UserPreferences.Companion.getRefreshRateSwitchingBehavior());
         if (refreshRateSwitchingBehavior != RefreshRateSwitchingBehavior.DISABLED)
             getDisplayModes();
+        
+        // Register SyncPlay callback to handle incoming commands
+        setupSyncPlayCallback();
+    }
+    
+    private void setupSyncPlayCallback() {
+        syncPlayManager.getValue().setPlaybackCallback(new org.jellyfin.androidtv.data.syncplay.SyncPlayManager.SyncPlayPlaybackCallback() {
+            @Override
+            public void onPlay(long positionMs) {
+                if (mPlaybackState == PlaybackState.PAUSED) {
+                    isRespondingToSyncPlayCommand = true;
+                    play(positionMs);
+                    isRespondingToSyncPlayCommand = false;
+                }
+            }
 
+            @Override
+            public void onPause(long positionMs) {
+                if (mPlaybackState == PlaybackState.PLAYING) {
+                    isRespondingToSyncPlayCommand = true;
+                    pause();
+                    isRespondingToSyncPlayCommand = false;
+                }
+            }
+
+            @Override
+            public void onSeek(long positionMs) {
+                isRespondingToSyncPlayCommand = true;
+                seek(positionMs);
+                isRespondingToSyncPlayCommand = false;
+            }
+
+            @Override
+            public void onStop() {
+                stop();
+            }
+
+            @Override
+            public void onLoadQueue(java.util.List<java.util.UUID> itemIds, int startIndex, long startPositionTicks) {
+                loadSyncPlayQueue(itemIds, startIndex, startPositionTicks);
+            }
+            
+            @Override
+            public long getCurrentPositionMs() {
+                return getCurrentPosition();
+            }
+            
+            @Override
+            public boolean isPlaying() {
+                return mPlaybackState == PlaybackState.PLAYING;
+            }
+            
+            @Override
+            public void setPlaybackSpeed(float speed) {
+                PlaybackController.this.setPlaybackSpeed(speed);
+            }
+            
+            @Override
+            public float getPlaybackSpeed() {
+                return PlaybackController.this.getPlaybackSpeed();
+            }
+        });
+    }
+    
+    private void executeSyncPlayCommand(Runnable command) {
+        if (isRespondingToSyncPlayCommand) return;
+        new Thread(command).start();
+    }
+    
+    private void loadSyncPlayQueue(final java.util.List<java.util.UUID> itemIds, final int startIndex, final long startPositionTicks) {
+        if (itemIds.isEmpty()) return;
+        
+        if (mFragment == null) {
+            Timber.i("Fragment is null, launching playback without lifecycle");
+            
+            org.jellyfin.androidtv.data.syncplay.SyncPlayQueueFetcher.fetchQueueAsync(
+                itemIds,
+                startIndex,
+                startPositionTicks,
+                new org.jellyfin.androidtv.data.syncplay.SyncPlayQueueHelper.QueueCallback() {
+                    @Override
+                    public void onQueueReady(java.util.List<org.jellyfin.sdk.model.api.BaseItemDto> items, int actualStartIndex, long startPositionMs) {
+                        videoQueueManager.getValue().setCurrentVideoQueue(items, null);
+                        videoQueueManager.getValue().setCurrentMediaPosition(actualStartIndex);
+                        
+                        android.content.Context context = KoinJavaComponent.<android.app.Application>get(android.app.Application.class);
+                        Lazy<org.jellyfin.androidtv.ui.playback.PlaybackLauncher> playbackLauncher = inject(org.jellyfin.androidtv.ui.playback.PlaybackLauncher.class);
+                        playbackLauncher.getValue().launch(context, items, (int) startPositionMs, false, actualStartIndex, false);
+                    }
+
+                    @Override
+                    public void onError() {
+                        Timber.e("Failed to load SyncPlay queue");
+                    }
+                }
+            );
+            return;
+        }
+        
+        org.jellyfin.androidtv.data.syncplay.SyncPlayQueueHelper.fetchQueue(
+            mFragment,
+            itemIds,
+            startIndex,
+            startPositionTicks,
+            new org.jellyfin.androidtv.data.syncplay.SyncPlayQueueHelper.QueueCallback() {
+                @Override
+                public void onQueueReady(java.util.List<org.jellyfin.sdk.model.api.BaseItemDto> items, int actualStartIndex, long startPositionMs) {
+                    if (mFragment == null || mFragment.getActivity() == null) return;
+                    
+                    mItems = items;
+                    mCurrentIndex = actualStartIndex;
+                    mStartPosition = startPositionMs;
+                    videoQueueManager.getValue().setCurrentVideoQueue(items, null);
+                    videoQueueManager.getValue().setCurrentMediaPosition(actualStartIndex);
+                    
+                    // Play the first item to initialize playback
+                    // The server will send commands to control playback state
+                    org.jellyfin.sdk.model.api.BaseItemDto firstItem = items.get(actualStartIndex);
+                    VideoOptions options = buildExoPlayerOptions(null, null, firstItem);
+                    playInternal(firstItem, mStartPosition, options);
+                }
+
+                @Override
+                public void onError() {
+                    Timber.e("Failed to load SyncPlay queue");
+                }
+            }
+        );
     }
 
     public boolean hasFragment() {
@@ -892,9 +1024,22 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         }
 
         stopReportLoop();
-        // start a slower report for pause state to keep session alive
         startPauseReportLoop();
-
+        
+        org.jellyfin.androidtv.data.syncplay.SyncPlayManager manager = syncPlayManager.getValue();
+        org.jellyfin.androidtv.data.syncplay.SyncPlayState state = manager.getState().getValue();
+        if (state.getGroupInfo() != null && state.getGroupState() == org.jellyfin.sdk.model.api.GroupStateType.PLAYING) {
+            executeSyncPlayCommand(() -> {
+                try {
+                    kotlinx.coroutines.BuildersKt.runBlocking(
+                        kotlinx.coroutines.Dispatchers.getIO(),
+                        (scope, continuation) -> manager.requestPause(continuation)
+                    );
+                } catch (Exception e) {
+                    Timber.e(e, "Failed to sync pause with SyncPlay");
+                }
+            });
+        }
     }
 
     public void playPause() {
@@ -906,6 +1051,21 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             case IDLE:
                 stopReportLoop();
                 play(getCurrentPosition());
+                
+                org.jellyfin.androidtv.data.syncplay.SyncPlayManager manager = syncPlayManager.getValue();
+                org.jellyfin.androidtv.data.syncplay.SyncPlayState state = manager.getState().getValue();
+                if (state.getGroupInfo() != null && state.getGroupState() == org.jellyfin.sdk.model.api.GroupStateType.PAUSED) {
+                    executeSyncPlayCommand(() -> {
+                        try {
+                            kotlinx.coroutines.BuildersKt.runBlocking(
+                                kotlinx.coroutines.Dispatchers.getIO(),
+                                (scope, continuation) -> manager.requestPlay(continuation)
+                            );
+                        } catch (Exception e) {
+                            Timber.e(e, "Failed to sync play with SyncPlay");
+                        }
+                    });
+                }
                 break;
         }
     }
@@ -1022,6 +1182,21 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             return;
         }
         wasSeeking = true;
+        
+        org.jellyfin.androidtv.data.syncplay.SyncPlayManager manager = syncPlayManager.getValue();
+        if (manager.getState().getValue().getGroupInfo() != null) {
+            final long positionTicks = SyncPlayUtils.msToTicks(pos);
+            executeSyncPlayCommand(() -> {
+                try {
+                    kotlinx.coroutines.BuildersKt.runBlocking(
+                        kotlinx.coroutines.Dispatchers.getIO(),
+                        (scope, continuation) -> manager.requestSeek(positionTicks, continuation)
+                    );
+                } catch (Exception e) {
+                    Timber.e(e, "Failed to sync seek with SyncPlay");
+                }
+            });
+        }
 
         // Stop playback when the requested seek position is at the end of the video
         if (skipToNext && pos >= (getDuration() - 100)) {
@@ -1090,16 +1265,26 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             // if seek succeeds call play and mirror the logic in play() for unpausing. if fails call pause()
             // stopProgressLoop() being called at the beginning of startProgressLoop keeps this from breaking. otherwise it would start twice
             // if seek() is called from skip()
+            
+            // Track if we were paused before seeking (to restore paused state after SyncPlay seek)
+            boolean wasPausedBeforeSeek = mPlaybackState == PlaybackState.PAUSED || isRespondingToSyncPlayCommand;
             mPlaybackState = PlaybackState.SEEKING;
             if (mVideoManager.seekTo(pos) < 0) {
                 if (mFragment != null)
                     Utils.showToast(mFragment.getContext(), mFragment.getString(R.string.seek_error));
                 pause();
             } else {
-                mVideoManager.play();
-                mPlaybackState = PlaybackState.PLAYING;
-                if (mFragment != null) mFragment.setFadingEnabled(true);
-                startReportLoop();
+                // Don't automatically resume playback after seek if we're responding to SyncPlay
+                // or if we were paused before the seek
+                if (!wasPausedBeforeSeek) {
+                    mVideoManager.play();
+                    mPlaybackState = PlaybackState.PLAYING;
+                    if (mFragment != null) mFragment.setFadingEnabled(true);
+                    startReportLoop();
+                } else {
+                    mPlaybackState = PlaybackState.PAUSED;
+                    if (mFragment != null) mFragment.setFadingEnabled(false);
+                }
             }
         }
     }

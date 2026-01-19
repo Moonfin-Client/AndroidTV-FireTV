@@ -67,6 +67,7 @@ import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
+import org.jellyfin.androidtv.ui.syncplay.SyncPlayViewModel
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.primaryImage
 import org.jellyfin.sdk.api.client.ApiClient
@@ -147,6 +148,7 @@ fun MainToolbar(
 	var showGenresButton by remember { mutableStateOf(true) }
 	var showFavoritesButton by remember { mutableStateOf(true) }
 	var showLibrariesInToolbar by remember { mutableStateOf(true) }
+	var syncPlayEnabled by remember { mutableStateOf(false) }
 	var enableMultiServer by remember { mutableStateOf(false) }
 	var shuffleContentType by remember { mutableStateOf("both") }
 	LaunchedEffect(Unit) {
@@ -154,6 +156,7 @@ fun MainToolbar(
 		showGenresButton = userPreferences[UserPreferences.showGenresButton] ?: true
 		showFavoritesButton = userPreferences[UserPreferences.showFavoritesButton] ?: true
 		showLibrariesInToolbar = userPreferences[UserPreferences.showLibrariesInToolbar] ?: true
+		syncPlayEnabled = userPreferences[UserPreferences.syncPlayEnabled] ?: false
 		enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries] ?: false
 		shuffleContentType = userPreferences[UserPreferences.shuffleContentType] ?: "both"
 	}
@@ -198,6 +201,7 @@ fun MainToolbar(
 		showGenresButton = showGenresButton,
 		showFavoritesButton = showFavoritesButton,
 		showLibrariesInToolbar = showLibrariesInToolbar,
+		syncPlayEnabled = syncPlayEnabled,
 		shuffleContentType = shuffleContentType,
 	)
 }
@@ -216,6 +220,7 @@ private fun MainToolbar(
 	showGenresButton: Boolean = true,
 	showFavoritesButton: Boolean = true,
 	showLibrariesInToolbar: Boolean = true,
+	syncPlayEnabled: Boolean = false,
 	shuffleContentType: String = "both",
 ) {
 	val focusRequester = remember { FocusRequester() }
@@ -226,6 +231,7 @@ private fun MainToolbar(
 	val itemLauncher = koinInject<ItemLauncher>()
 	val api = koinInject<ApiClient>()
 	val settingsViewModel = koinActivityViewModel<SettingsViewModel>()
+	val syncPlayViewModel = koinActivityViewModel<SyncPlayViewModel>()
 	val activity = LocalActivity.current
 	val context = LocalContext.current
 	val scope = rememberCoroutineScope()
@@ -462,6 +468,21 @@ private fun MainToolbar(
 			}
 		}
 			
+			// SyncPlay button (conditional) - before Settings
+			if (syncPlayEnabled) {
+				IconButton(
+					onClick = {
+						syncPlayViewModel.show()
+					},
+					colors = toolbarButtonColors,
+				) {
+					Icon(
+						imageVector = ImageVector.vectorResource(R.drawable.ic_syncplay),
+						contentDescription = stringResource(R.string.syncplay),
+					)
+				}
+			}
+
 			// Settings button
 			IconButton(
 				onClick = {

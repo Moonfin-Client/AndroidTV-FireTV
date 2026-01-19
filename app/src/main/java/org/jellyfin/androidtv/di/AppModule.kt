@@ -34,6 +34,7 @@ import org.jellyfin.androidtv.data.repository.UserViewsRepositoryImpl
 import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.data.service.UpdateCheckerService
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
+import org.jellyfin.androidtv.data.syncplay.SyncPlayManager
 import org.jellyfin.androidtv.integration.dream.DreamViewModel
 import org.jellyfin.androidtv.ui.InteractionTrackerViewModel
 import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowViewModel
@@ -51,6 +52,7 @@ import org.jellyfin.androidtv.ui.search.SearchFragmentDelegate
 import org.jellyfin.androidtv.ui.search.SearchRepository
 import org.jellyfin.androidtv.ui.search.SearchRepositoryImpl
 import org.jellyfin.androidtv.ui.search.SearchViewModel
+import org.jellyfin.androidtv.ui.syncplay.SyncPlayViewModel
 import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
 import org.jellyfin.androidtv.ui.startup.ServerAddViewModel
 import org.jellyfin.androidtv.ui.startup.StartupViewModel
@@ -106,7 +108,7 @@ val appModule = module {
 		get<JellyfinSdk>().createApi(httpClientOptions = get<HttpClientOptions>())
 	}
 
-	single { SocketHandler(get(), get(), get(), get(), get(), get(), get(), get(), get(), ProcessLifecycleOwner.get().lifecycle) }
+	single { SocketHandler(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), ProcessLifecycleOwner.get().lifecycle) }
 
 	// Coil (images)
 	single {
@@ -191,8 +193,12 @@ val appModule = module {
 	viewModel { SearchViewModel(get(), get(), get(named("global")), get()) }
 	viewModel { DreamViewModel(get(), get(), get(), get(), get()) }
 	viewModel { SettingsViewModel() }
+	viewModel { SyncPlayViewModel() }
 	viewModel { org.jellyfin.androidtv.ui.jellyseerr.JellyseerrViewModel(get(), get(named("global"))) }
 	single { MediaBarSlideshowViewModel(get(), get(), get(), get(), androidContext(), get(), get(), get()) } // Singleton so both fragments share the same instance
+
+	// SyncPlay
+	single { SyncPlayManager(androidContext(), get(), get()) }
 
 	single { BackgroundService(get(), get(), get(), get(), get(), get()) }
 	single { UpdateCheckerService(get()) }

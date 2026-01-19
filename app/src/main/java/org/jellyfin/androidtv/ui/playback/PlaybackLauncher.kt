@@ -1,6 +1,11 @@
 package org.jellyfin.androidtv.ui.playback
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import org.jellyfin.androidtv.data.syncplay.SyncPlayManager
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.navigation.ActivityDestinations
 import org.jellyfin.androidtv.ui.navigation.Destinations
@@ -19,7 +24,9 @@ class PlaybackLauncher(
 	private val videoQueueManager: VideoQueueManager,
 	private val navigationRepository: NavigationRepository,
 	private val userPreferences: UserPreferences,
+	private val syncPlayManager: SyncPlayManager,
 ) {
+	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 	private val BaseItemDto.supportsExternalPlayer
 		get() = when (type) {
 			BaseItemKind.MOVIE,
@@ -49,6 +56,9 @@ class PlaybackLauncher(
 		if (isAudio) {
 			mediaManager.playNow(context, items, itemsPosition, shuffle)
 			navigationRepository.navigate(Destinations.nowPlaying)
+			
+			// Sync with SyncPlay group if in one
+			syncPlayQueueIfNeeded(items, itemsPosition)
 		} else {
 			val items = if (shuffle) items.shuffled() else items
 
@@ -56,6 +66,9 @@ class PlaybackLauncher(
 			videoQueueManager.setCurrentMediaPosition(itemsPosition)
 
 			if (items.isEmpty()) return
+			
+			// Sync with SyncPlay group if in one
+			syncPlayQueueIfNeeded(items, itemsPosition)
 
 			if (userPreferences[UserPreferences.useExternalPlayer] && items.all { it.supportsExternalPlayer }) {
 				context.startActivity(ActivityDestinations.externalPlayer(context, position?.milliseconds ?: Duration.ZERO))
@@ -66,6 +79,24 @@ class PlaybackLauncher(
 				val destination = Destinations.videoPlayer(position)
 				navigationRepository.navigate(destination, replace)
 			}
+		}
+	}
+	
+	private fun syncPlayQueueIfNeeded(items: List<BaseItemDto>, startIndex: Int) {
+		// Only sync if user is in a SyncPlay group
+		val groupInfo = syncPlayManager.state.value.groupInfo
+		if (groupInfo == null) return
+		
+		// Get item IDs for the queue
+		val itemIds = items.mapNotNull { it.id }
+		if (itemIds.isEmpty()) return
+		
+		scope.launch {
+			syncPlayManager.setPlayQueue(
+				itemIds = itemIds,
+				startIndex = startIndex,
+				startPositionTicks = 0
+			)
 		}
 	}
 }
