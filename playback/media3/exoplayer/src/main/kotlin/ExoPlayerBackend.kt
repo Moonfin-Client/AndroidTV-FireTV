@@ -23,6 +23,8 @@ import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.ui.SubtitleView
+import io.github.peerless2012.ass.media.kt.buildWithAssSupport
+import io.github.peerless2012.ass.media.type.AssRenderType
 import org.jellyfin.playback.core.backend.BasePlayerBackend
 import org.jellyfin.playback.core.mediastream.MediaStream
 import org.jellyfin.playback.core.mediastream.PlayableMediaStream
@@ -81,7 +83,7 @@ class ExoPlayerBackend(
 			)
 		}
 
-		ExoPlayer.Builder(context)
+		val builder = ExoPlayer.Builder(context)
 			.setRenderersFactory(renderersFactory)
 			.setTrackSelector(DefaultTrackSelector(context).apply {
 				setParameters(buildUponParameters().apply {
@@ -98,14 +100,26 @@ class ExoPlayerBackend(
 				setUsage(C.USAGE_MEDIA)
 			}.build(), true)
 			.setPauseAtEndOfMediaItems(true)
-			.build()
-			.also { player ->
-				player.addListener(PlayerListener())
 
-				if (exoPlayerOptions.enableDebugLogging) {
-					player.addAnalyticsListener(EventLogger())
-				}
+		val player = if (exoPlayerOptions.enableLibAssRenderer) {
+			builder.buildWithAssSupport(
+				context = context,
+				renderType = AssRenderType.OVERLAY_OPEN_GL,
+				dataSourceFactory = dataSourceFactory,
+				extractorsFactory = extractorsFactory,
+				renderersFactory = renderersFactory
+			)
+		} else {
+			builder.build()
+		}
+
+		player.also { player ->
+			player.addListener(PlayerListener())
+
+			if (exoPlayerOptions.enableDebugLogging) {
+				player.addAnalyticsListener(EventLogger())
 			}
+		}
 	}
 
 	inner class PlayerListener : Player.Listener {

@@ -74,6 +74,7 @@ fun Scope.createPlaybackManager() = playbackManager(androidContext()) {
 	val exoPlayerOptions = ExoPlayerOptions(
 		preferFfmpeg = userPreferences[UserPreferences.preferExoPlayerFfmpeg],
 		enableDebugLogging = userPreferences[UserPreferences.debuggingEnabled],
+		enableLibAssRenderer = userPreferences[UserPreferences.assDirectPlay],
 		baseDataSourceFactory = get<HttpDataSource.Factory>(),
 	)
 	install(exoPlayerPlugin(get(), exoPlayerOptions))

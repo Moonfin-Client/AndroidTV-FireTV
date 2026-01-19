@@ -352,6 +352,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
   		 * Enable PGS subtitle direct-play.
 		 */
 		var pgsDirectPlay = booleanPreference("pgs_enabled", true)
+
+		/**
+		 * Enable ASS/SSA subtitle direct-play.
+		 */
+		var assDirectPlay = booleanPreference("ass_enabled", false)
 	}
 
 	init {
