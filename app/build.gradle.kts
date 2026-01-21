@@ -1,9 +1,8 @@
 plugins {
-	id("com.android.application")
-	kotlin("android")
-	alias(libs.plugins.kotlin.serialization)
-	alias(libs.plugins.kotlin.compose)
 	alias(libs.plugins.aboutlibraries)
+	alias(libs.plugins.android.application)
+	alias(libs.plugins.kotlin.compose)
+	alias(libs.plugins.kotlin.serialization)
 }
 
 import java.util.Properties
@@ -27,6 +26,7 @@ android {
 		buildConfig = true
 		viewBinding = true
 		compose = true
+		resValues = true
 	}
 
 	compileOptions {

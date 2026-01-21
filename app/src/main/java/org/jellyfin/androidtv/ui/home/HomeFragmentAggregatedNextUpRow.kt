@@ -10,9 +10,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
-import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.ParentalControlsRepository
+import org.jellyfin.androidtv.constant.HomeSectionType
+import org.jellyfin.androidtv.constant.ImageType
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.itemhandling.AggregatedItemRowAdapter
@@ -36,17 +37,11 @@ class HomeFragmentAggregatedNextUpRow(
 	private val parentalControlsRepository by inject<ParentalControlsRepository>()
 
 	override fun addToRowsAdapter(context: Context, cardPresenter: CardPresenter, rowsAdapter: MutableObjectAdapter<Row>) {
-		// Create presenter with correct image type from settings
-		val imageType = userSettingPreferences.getHomeRowImageType(HomeSectionType.NEXT_UP)
-		val presenter = CardPresenter(true, imageType, 150)
 		val header = HeaderItem(context.getString(R.string.lbl_next_up))
-		
-		// Create a placeholder row that will be updated
-		val placeholderAdapter = MutableObjectAdapter<Any>(presenter)
+		val placeholderAdapter = MutableObjectAdapter<Any>(cardPresenter)
 		val row = ListRow(header, placeholderAdapter)
 		rowsAdapter.add(row)
 
-		// Load items asynchronously
 		val lifecycleOwner = ProcessLifecycleOwner.get()
 		lifecycleOwner.lifecycleScope.launch {
 			try {
@@ -61,16 +56,17 @@ class HomeFragmentAggregatedNextUpRow(
 					return@launch
 				}
 
-				// Create paginating adapter with all items (filtering happens inside)
 				val preferParentThumb = userPreferences[UserPreferences.seriesThumbnailsEnabled]
+				val imageType = userSettingPreferences.getHomeRowImageType(HomeSectionType.NEXT_UP)
 				val adapter = AggregatedItemRowAdapter(
-					presenter = presenter,
+					presenter = cardPresenter,
 					allItems = items,
 					parentalControlsRepository = parentalControlsRepository,
 					userPreferences = userPreferences,
 					chunkSize = AggregatedItemRowAdapter.DEFAULT_CHUNK_SIZE,
 					preferParentThumb = preferParentThumb,
-					staticHeight = true
+					staticHeight = true,
+					imageType = imageType
 				)
 
 				if (!adapter.hasItems()) {
@@ -78,11 +74,9 @@ class HomeFragmentAggregatedNextUpRow(
 					return@launch
 				}
 
-				// Load initial chunk
 				adapter.loadInitialItems()
 				Timber.d("HomeFragmentAggregatedNextUpRow: Initial load complete, showing ${adapter.size()}/${adapter.getTotalItems()} items")
 
-				// Replace placeholder with real adapter
 				val index = rowsAdapter.indexOf(row)
 				if (index >= 0) {
 					rowsAdapter.removeAt(index, 1)

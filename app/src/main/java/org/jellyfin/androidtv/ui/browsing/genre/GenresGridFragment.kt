@@ -15,6 +15,9 @@ import androidx.leanback.widget.OnItemViewSelectedListener
 import androidx.leanback.widget.VerticalGridPresenter
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
@@ -269,14 +272,15 @@ class GenresGridFragment : Fragment() {
 
 				allGenres.clear()
 				
-				// Convert genres to JellyfinGenreItem with backdrop URLs
-				// Only add genres that have items (skip empty genres)
-				for (genre in genresResponse.items) {
-					val genreItem = createGenreItem(genre)
-					if (genreItem != null) {
-						allGenres.add(genreItem)
-					}
+				val genreItems = coroutineScope {
+					genresResponse.items.map { genre ->
+						async(Dispatchers.IO) {
+							createGenreItem(genre)
+						}
+					}.awaitAll().filterNotNull()
 				}
+				
+				allGenres.addAll(genreItems)
 				
 				Timber.d("Loaded ${allGenres.size} genres")
 				
@@ -294,53 +298,49 @@ class GenresGridFragment : Fragment() {
 	 * Creates a JellyfinGenreItem with backdrop URL and item count.
 	 * Returns null if the genre has no items (empty genres are hidden).
 	 * Uses a single API call to get both count and backdrop image.
+	 * Note: This should be called from a coroutine context (IO dispatcher).
 	 */
 	private suspend fun createGenreItem(genre: BaseItemDto): JellyfinGenreItem? {
 		return try {
-			withContext(Dispatchers.IO) {
-				// Single API call: get count + 1 random item for backdrop
-				val itemsResponse = apiClient.ioCallContent {
-					itemsApi.getItems(
-						parentId = selectedLibraryId,
-						genres = setOf(genre.name.orEmpty()),
-						includeItemTypes = setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
-						recursive = true,
-						sortBy = setOf(ItemSortBy.RANDOM),
-						limit = 1,
-						imageTypes = setOf(ImageType.BACKDROP),
-						enableTotalRecordCount = true,
-						fields = ItemRepository.itemFields,
-					)
-				}
-
-				val itemCount = itemsResponse.totalRecordCount ?: 0
-				
-				// Skip empty genres
-				if (itemCount == 0) {
-					return@withContext null
-				}
-
-				// Get backdrop URL from the random item if available
-				val backdropUrl = itemsResponse.items.firstOrNull()?.let { item ->
-					if (!item.backdropImageTags.isNullOrEmpty()) {
-						apiClient.imageApi.getItemImageUrl(
-							itemId = item.id,
-							imageType = ImageType.BACKDROP,
-							tag = item.backdropImageTags!!.first(),
-							maxWidth = 780,
-							quality = 80
-						)
-					} else null
-				}
-
-				JellyfinGenreItem(
-					id = genre.id,
-					name = genre.name.orEmpty(),
-					backdropUrl = backdropUrl,
-					itemCount = itemCount,
+			val itemsResponse = apiClient.ioCallContent {
+				itemsApi.getItems(
 					parentId = selectedLibraryId,
+					genres = setOf(genre.name.orEmpty()),
+					includeItemTypes = setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+					recursive = true,
+					sortBy = setOf(ItemSortBy.RANDOM),
+					limit = 1,
+					imageTypes = setOf(ImageType.BACKDROP),
+					enableTotalRecordCount = true,
+					fields = ItemRepository.itemFields,
 				)
 			}
+
+			val itemCount = itemsResponse.totalRecordCount ?: 0
+			
+			if (itemCount == 0) {
+				return null
+			}
+
+			val backdropUrl = itemsResponse.items.firstOrNull()?.let { item ->
+				if (!item.backdropImageTags.isNullOrEmpty()) {
+					apiClient.imageApi.getItemImageUrl(
+						itemId = item.id,
+						imageType = ImageType.BACKDROP,
+						tag = item.backdropImageTags!!.first(),
+						maxWidth = 780,
+						quality = 80
+					)
+				} else null
+			}
+
+			JellyfinGenreItem(
+				id = genre.id,
+				name = genre.name.orEmpty(),
+				backdropUrl = backdropUrl,
+				itemCount = itemCount,
+				parentId = selectedLibraryId,
+			)
 		} catch (e: Exception) {
 			Timber.w(e, "Failed to get info for genre ${genre.name}")
 			null
@@ -351,7 +351,6 @@ class GenresGridFragment : Fragment() {
 		filteredGenres.clear()
 		filteredGenres.addAll(allGenres)
 		
-		// Apply sorting
 		when (currentSortOption) {
 			GenreSortOption.NAME_ASC -> filteredGenres.sortBy { it.name.lowercase() }
 			GenreSortOption.NAME_DESC -> filteredGenres.sortByDescending { it.name.lowercase() }
@@ -360,17 +359,13 @@ class GenresGridFragment : Fragment() {
 			GenreSortOption.RANDOM -> filteredGenres.shuffle()
 		}
 		
-		// Update grid
 		gridAdapter.clear()
 		gridAdapter.addAll(0, filteredGenres)
-		
-		// Update counter
 		updateCounter(0)
 		
 		showLoading(false)
 		showEmpty(filteredGenres.isEmpty())
 		
-		// Request focus on the grid after items are loaded
 		if (filteredGenres.isNotEmpty()) {
 			gridViewHolder?.view?.requestFocus()
 		}

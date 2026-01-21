@@ -297,6 +297,35 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
 
         }
 
+        // Remove from playlist option (only show if user has permission to edit the playlist)
+        if (mBaseItem != null && mBaseItem.getType() == BaseItemKind.PLAYLIST && row.getItem().getPlaylistItemId() != null
+                && mBaseItem.getCanDelete() != null && mBaseItem.getCanDelete()) {
+            MenuItem removeFromPlaylist = menu.getMenu().add(0, 3, order++, R.string.lbl_remove_from_playlist);
+            removeFromPlaylist.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+                @Override
+                public boolean onMenuItemClick(MenuItem item) {
+                    ItemListFragmentHelperKt.removeFromPlaylist(ItemListFragment.this, mBaseItem.getId(), row.getItem().getPlaylistItemId(), () -> {
+                        // Refresh the playlist after removal
+                        mItems.remove(row.getIndex());
+                        
+                        // If playlist is now empty, go back
+                        if (mItems.isEmpty()) {
+                            navigationRepository.getValue().goBack();
+                        } else {
+                            // Otherwise refresh the list
+                            mItemList.clear();
+                            int i = 0;
+                            for (BaseItemDto listItem : mItems) {
+                                mItemList.addItem(listItem, i++);
+                            }
+                        }
+                        return null;
+                    });
+                    return true;
+                }
+            });
+        }
+
         menu.show();
     }
 

@@ -270,6 +270,18 @@ fun SettingsMoonfinScreen() {
 				onClick = { router.push(Routes.MOONFIN_PARENTAL_CONTROLS) }
 			)
 		}
+
+		// SyncPlay Section
+		item { ListSection(headingContent = { Text(stringResource(R.string.syncplay)) }) }
+
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_syncplay), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_syncplay_settings)) },
+				captionContent = { Text(stringResource(R.string.pref_syncplay_description)) },
+				onClick = { router.push(Routes.MOONFIN_SYNCPLAY) }
+			)
+		}
 	}
 }
 

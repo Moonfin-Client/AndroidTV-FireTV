@@ -23,6 +23,8 @@ import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.ui.SubtitleView
+import io.github.peerless2012.ass.media.kt.buildWithAssSupport
+import io.github.peerless2012.ass.media.type.AssRenderType
 import org.jellyfin.playback.core.backend.BasePlayerBackend
 import org.jellyfin.playback.core.mediastream.MediaStream
 import org.jellyfin.playback.core.mediastream.PlayableMediaStream
@@ -48,6 +50,7 @@ class ExoPlayerBackend(
 	companion object {
 		const val TS_SEARCH_BYTES_LM = TsExtractor.TS_PACKET_SIZE * 1800
 		const val TS_SEARCH_BYTES_HM = TsExtractor.DEFAULT_TIMESTAMP_SEARCH_BYTES
+		const val MEDIA_ITEM_COUNT_MAX = 10
 	}
 
 	private var currentStream: PlayableMediaStream? = null
@@ -81,7 +84,7 @@ class ExoPlayerBackend(
 			)
 		}
 
-		ExoPlayer.Builder(context)
+		val builder = ExoPlayer.Builder(context)
 			.setRenderersFactory(renderersFactory)
 			.setTrackSelector(DefaultTrackSelector(context).apply {
 				setParameters(buildUponParameters().apply {
@@ -98,14 +101,26 @@ class ExoPlayerBackend(
 				setUsage(C.USAGE_MEDIA)
 			}.build(), true)
 			.setPauseAtEndOfMediaItems(true)
-			.build()
-			.also { player ->
-				player.addListener(PlayerListener())
 
-				if (exoPlayerOptions.enableDebugLogging) {
-					player.addAnalyticsListener(EventLogger())
-				}
+		val player = if (exoPlayerOptions.enableLibAssRenderer) {
+			builder.buildWithAssSupport(
+				context = context,
+				renderType = AssRenderType.OVERLAY_OPEN_GL,
+				dataSourceFactory = dataSourceFactory,
+				extractorsFactory = extractorsFactory,
+				renderersFactory = renderersFactory
+			)
+		} else {
+			builder.build()
+		}
+
+		player.also { player ->
+			player.addListener(PlayerListener())
+
+			if (exoPlayerOptions.enableDebugLogging) {
+				player.addAnalyticsListener(EventLogger())
 			}
+		}
 	}
 
 	inner class PlayerListener : Player.Listener {
@@ -181,11 +196,13 @@ class ExoPlayerBackend(
 			setUri(stream.url)
 		}.build()
 
-		// Remove any old preloaded items (skips the first which is the playing item)
-		while (exoPlayer.mediaItemCount > 1) exoPlayer.removeMediaItem(0)
-		// Add new item
+		// Remove any excessive items from the start
+		while (exoPlayer.mediaItemCount > MEDIA_ITEM_COUNT_MAX - 1) exoPlayer.removeMediaItem(0)
+
+		// Add new item to the end of the media item list
 		exoPlayer.addMediaItem(mediaItem)
 
+		// Instruct exoplayer to prepare
 		exoPlayer.prepare()
 	}
 
@@ -195,14 +212,29 @@ class ExoPlayerBackend(
 
 		currentStream = stream
 
-		val streamIsPrepared = (0 until exoPlayer.mediaItemCount).any { index ->
+		var preparedItemIndex = (0 until exoPlayer.mediaItemCount).firstOrNull { index ->
 			exoPlayer.getMediaItemAt(index).mediaId == stream.hashCode().toString()
 		}
 
-		if (!streamIsPrepared) prepareItem(item)
+		// Prepare the item now if it doesn't exist yet
+		if (preparedItemIndex == null) {
+			prepareItem(item)
+			preparedItemIndex = exoPlayer.mediaItemCount - 1
+		}
+
+		// Determine how to play item
+		if (preparedItemIndex == exoPlayer.currentMediaItemIndex) return
 
 		Timber.i("Playing ${item.mediaStream?.url}")
-		exoPlayer.seekToNextMediaItem()
+
+		// Seek to prepared media item
+		when (preparedItemIndex) {
+			exoPlayer.currentMediaItemIndex - 1 -> exoPlayer.seekToPreviousMediaItem()
+			exoPlayer.currentMediaItemIndex + 1 -> exoPlayer.seekToNextMediaItem()
+			else -> exoPlayer.seekTo(preparedItemIndex, 0)
+		}
+
+		// Enjoy!
 		exoPlayer.play()
 	}
 

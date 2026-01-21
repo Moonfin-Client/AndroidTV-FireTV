@@ -10,9 +10,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
-import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.ParentalControlsRepository
+import org.jellyfin.androidtv.constant.HomeSectionType
+import org.jellyfin.androidtv.constant.ImageType
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.itemhandling.AggregatedItemRowAdapter
@@ -39,20 +40,15 @@ class HomeFragmentAggregatedLatestRow : HomeFragmentRow, KoinComponent {
 	}
 
 	override fun addToRowsAdapter(context: Context, cardPresenter: CardPresenter, rowsAdapter: MutableObjectAdapter<Row>) {
-		val imageType = userSettingPreferences.getHomeRowImageType(HomeSectionType.LATEST_MEDIA)
-		val presenter = CardPresenter(true, imageType, 150)
-		
 		val lifecycleOwner = ProcessLifecycleOwner.get()
 		lifecycleOwner.lifecycleScope.launch {
 			try {
-				// Get all libraries from all servers
 				val libraries = withContext(Dispatchers.IO) {
 					multiServerRepository.getAggregatedLibraries()
 				}
 
 				Timber.d("HomeFragmentAggregatedLatestRow: Got ${libraries.size} libraries from multiple servers")
 
-				// For each library, create a Recently Added row
 				val preferParentThumb = userPreferences[UserPreferences.seriesThumbnailsEnabled]
 
 				libraries.forEach { aggLib ->
@@ -61,27 +57,27 @@ class HomeFragmentAggregatedLatestRow : HomeFragmentRow, KoinComponent {
 							multiServerRepository.getAggregatedLatestItems(
 								parentId = aggLib.library.id,
 								limit = MAX_ITEMS,
-								serverId = aggLib.server.id // Only query this specific server
+								serverId = aggLib.server.id
 							)
 						}
 
 						if (items.isEmpty()) return@forEach
 
-						// Create paginating adapter (filtering happens inside)
+						val imageType = userSettingPreferences.getHomeRowImageType(HomeSectionType.LATEST_MEDIA)
 						val adapter = AggregatedItemRowAdapter(
-						presenter = presenter,
-						allItems = items,
-						parentalControlsRepository = parentalControlsRepository,
-						userPreferences = userPreferences,
-						chunkSize = CHUNK_SIZE,
-						preferParentThumb = preferParentThumb,
-						staticHeight = true
-					)
+							presenter = cardPresenter,
+							allItems = items,
+							parentalControlsRepository = parentalControlsRepository,
+							userPreferences = userPreferences,
+							chunkSize = CHUNK_SIZE,
+							preferParentThumb = preferParentThumb,
+							staticHeight = true,
+							imageType = imageType
+						)
 
-					if (!adapter.hasItems()) return@forEach
+						if (!adapter.hasItems()) return@forEach
 
-					// Load initial chunk
-					adapter.loadInitialItems()
+						adapter.loadInitialItems()
 
 						val header = HeaderItem(context.getString(R.string.lbl_latest_in, aggLib.displayName))
 						rowsAdapter.add(ListRow(header, adapter))

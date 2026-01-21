@@ -21,16 +21,14 @@ class AggregatedItemRowAdapter(
 	private val chunkSize: Int = DEFAULT_CHUNK_SIZE,
 	private val preferParentThumb: Boolean = false,
 	private val staticHeight: Boolean = true,
+	private val imageType: org.jellyfin.androidtv.constant.ImageType = org.jellyfin.androidtv.constant.ImageType.POSTER,
 ) : MutableObjectAdapter<BaseRowItem>(presenter) {
 
 	private var itemsLoaded = 0
 	private var fullyLoaded = false
 	private var currentlyRetrieving = false
-	
-	// Handler to post adapter modifications after RecyclerView layout pass
 	private val handler = Handler(Looper.getMainLooper())
 
-	// Filtered items (parental controls applied)
 	private val filteredItems: List<AggregatedItem> by lazy {
 		allItems.filter { aggItem ->
 			!parentalControlsRepository.shouldFilterItem(aggItem.item)
@@ -41,7 +39,7 @@ class AggregatedItemRowAdapter(
 	 * Load initial chunk of items
 	 */
 	fun loadInitialItems() {
-		if (itemsLoaded > 0) return // Already loaded
+		if (itemsLoaded > 0) return
 		loadNextChunkInternal()
 	}
 
@@ -55,11 +53,9 @@ class AggregatedItemRowAdapter(
 		
 		if (fullyLoaded || currentlyRetrieving) return
 
-		// Load more when approaching end of loaded items (matching ItemRowAdapter formula)
 		val threshold = (itemsLoaded - (chunkSize / 1.7)).toInt()
 		if (pos >= threshold) {
 			Timber.d("AggregatedItemRowAdapter: Scheduling load more items (pos=$pos >= threshold=$threshold)")
-			// Post to handler to run after RecyclerView finishes its layout/scroll
 			handler.post { loadNextChunkInternal() }
 		}
 	}
@@ -82,7 +78,8 @@ class AggregatedItemRowAdapter(
 			add(AggregatedItemBaseRowItem(
 				aggregatedItem = aggItem,
 				preferParentThumb = preferParentThumb,
-				staticHeight = staticHeight
+				staticHeight = staticHeight,
+				preferSeriesPoster = imageType == org.jellyfin.androidtv.constant.ImageType.POSTER
 			))
 		}
 

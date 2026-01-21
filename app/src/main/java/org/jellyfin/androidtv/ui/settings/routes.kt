@@ -1,6 +1,9 @@
 package org.jellyfin.androidtv.ui.settings
 
+import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.navigation.RouteComposable
+import org.jellyfin.androidtv.ui.settings.composable.SettingsNumericScreen
 import org.jellyfin.androidtv.ui.settings.screen.SettingsDeveloperScreen
 import org.jellyfin.androidtv.ui.settings.screen.SettingsMainScreen
 import org.jellyfin.androidtv.ui.settings.screen.SettingsTelemetryScreen
@@ -45,6 +48,7 @@ import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinParental
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinSeasonalSurpriseScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinShuffleContentTypeScreen
+import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinSyncPlayScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinThemeMusicVolumeScreen
 import org.jellyfin.androidtv.ui.settings.screen.playback.SettingsPlaybackAdvancedScreen
 import org.jellyfin.androidtv.ui.settings.screen.playback.SettingsPlaybackAudioBehaviorScreen
@@ -129,6 +133,13 @@ object Routes {
 	const val MOONFIN_DETAILS_BLUR = "/moonfin/details-blur"
 	const val MOONFIN_BROWSING_BLUR = "/moonfin/browsing-blur"
 	const val MOONFIN_PARENTAL_CONTROLS = "/moonfin/parental-controls"
+	const val MOONFIN_SYNCPLAY = "/moonfin/syncplay"
+	const val MOONFIN_SYNCPLAY_MIN_DELAY = "/moonfin/syncplay/min-delay-speed-to-sync"
+	const val MOONFIN_SYNCPLAY_MAX_DELAY = "/moonfin/syncplay/max-delay-speed-to-sync"
+	const val MOONFIN_SYNCPLAY_DURATION = "/moonfin/syncplay/speed-to-sync-duration"
+	const val MOONFIN_SYNCPLAY_MIN_DELAY_SKIP = "/moonfin/syncplay/min-delay-skip-to-sync"
+	const val MOONFIN_SYNCPLAY_EXTRA_OFFSET = "/moonfin/syncplay/extra-time-offset"
+	const val SYNCPLAY = "/syncplay"
 	const val TELEMETRY = "/telemetry"
 	const val DEVELOPER = "/developer"
 	const val ABOUT = "/about"
@@ -380,6 +391,67 @@ val routes = mapOf<String, RouteComposable>(
 	},
 	Routes.MOONFIN_PARENTAL_CONTROLS to {
 		SettingsMoonfinParentalControlsScreen()
+	},
+	Routes.MOONFIN_SYNCPLAY to {
+		SettingsMoonfinSyncPlayScreen()
+	},
+	Routes.MOONFIN_SYNCPLAY_MIN_DELAY to {
+		SettingsNumericScreen(
+			route = Routes.MOONFIN_SYNCPLAY_MIN_DELAY,
+			preference = UserPreferences.syncPlayMinDelaySpeedToSync,
+			titleRes = R.string.pref_syncplay_min_delay_speed_to_sync,
+			valueTemplate = R.string.pref_syncplay_min_delay_speed_to_sync_description,
+			minValue = 10.0,
+			maxValue = 1000.0,
+			stepSize = 10.0,
+		)
+	},
+	Routes.MOONFIN_SYNCPLAY_MAX_DELAY to {
+		SettingsNumericScreen(
+			route = Routes.MOONFIN_SYNCPLAY_MAX_DELAY,
+			preference = UserPreferences.syncPlayMaxDelaySpeedToSync,
+			titleRes = R.string.pref_syncplay_max_delay_speed_to_sync,
+			valueTemplate = R.string.pref_syncplay_max_delay_speed_to_sync_description,
+			minValue = 10.0,
+			maxValue = 1000.0,
+			stepSize = 10.0,
+		)
+	},
+	Routes.MOONFIN_SYNCPLAY_DURATION to {
+		SettingsNumericScreen(
+			route = Routes.MOONFIN_SYNCPLAY_DURATION,
+			preference = UserPreferences.syncPlaySpeedToSyncDuration,
+			titleRes = R.string.pref_syncplay_speed_to_sync_duration,
+			valueTemplate = R.string.pref_syncplay_speed_to_sync_duration_description,
+			minValue = 500.0,
+			maxValue = 5000.0,
+			stepSize = 100.0,
+		)
+	},
+	Routes.MOONFIN_SYNCPLAY_MIN_DELAY_SKIP to {
+		SettingsNumericScreen(
+			route = Routes.MOONFIN_SYNCPLAY_MIN_DELAY_SKIP,
+			preference = UserPreferences.syncPlayMinDelaySkipToSync,
+			titleRes = R.string.pref_syncplay_min_delay_skip_to_sync,
+			valueTemplate = R.string.pref_syncplay_min_delay_skip_to_sync_description,
+			minValue = 10.0,
+			maxValue = 5000.0,
+			stepSize = 10.0,
+		)
+	},
+	Routes.MOONFIN_SYNCPLAY_EXTRA_OFFSET to {
+		SettingsNumericScreen(
+			route = Routes.MOONFIN_SYNCPLAY_EXTRA_OFFSET,
+			preference = UserPreferences.syncPlayExtraTimeOffset,
+			titleRes = R.string.pref_syncplay_extra_time_offset,
+			valueTemplate = R.string.pref_syncplay_extra_time_offset_description,
+			minValue = -1000.0,
+			maxValue = 1000.0,
+			stepSize = 10.0,
+		)
+	},
+	Routes.SYNCPLAY to {
+		SettingsMoonfinSyncPlayScreen()
 	},
 	Routes.TELEMETRY to {
 		SettingsTelemetryScreen()

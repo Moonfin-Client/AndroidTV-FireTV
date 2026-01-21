@@ -56,6 +56,8 @@ import org.koin.compose.koinInject
 fun NowPlayingComposable(
 	modifier: Modifier = Modifier,
 	onFocusableChange: (focusable: Boolean) -> Unit,
+	overlayColor: Color = Color.Gray,
+	overlayOpacity: Float = 0.6f,
 ) {
 	val api = koinInject<ApiClient>()
 	val playbackManager = koinInject<PlaybackManager>()
@@ -105,8 +107,8 @@ fun NowPlayingComposable(
 									// Background
 									drawCircle(
 										style = Stroke(width = 3.dp.toPx()),
-										color = Color.Black,
-										alpha = 0.4f,
+									color = overlayColor,
+									alpha = overlayOpacity * 0.7f,
 									)
 									// Foreground
 									drawArc(

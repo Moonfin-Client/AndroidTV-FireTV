@@ -283,6 +283,8 @@ object BrowsingUtils {
 			return when (parent.collectionType) {
 				CollectionType.MOVIES -> baseRequest.copy(
 					includeItemTypes = setOf(BaseItemKind.MOVIE),
+					excludeItemTypes = setOf(BaseItemKind.BOX_SET),
+					collapseBoxSetItems = false,
 					recursive = true,
 				)
 

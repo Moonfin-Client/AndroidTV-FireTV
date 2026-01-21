@@ -305,7 +305,7 @@ private fun MediaInfoOverlay(
 				Text(
 					text = year.toString(),
 					fontSize = 16.sp,
-					color = Color.White.copy(alpha = 0.9f)
+					color = Color.White
 				)
 			}
 
@@ -313,7 +313,7 @@ private fun MediaInfoOverlay(
 				Text(
 					text = rating,
 					fontSize = 16.sp,
-					color = Color.White.copy(alpha = 0.9f)
+					color = Color.White
 				)
 			}
 
@@ -321,7 +321,7 @@ private fun MediaInfoOverlay(
 				Text(
 					text = TimeUtils.formatRuntimeHoursMinutes(LocalContext.current, runtime),
 					fontSize = 16.sp,
-					color = Color.White.copy(alpha = 0.9f)
+					color = Color.White
 				)
 			}
 
@@ -337,7 +337,7 @@ private fun MediaInfoOverlay(
 					Text(
 						text = String.format("%.1f", rating),
 						fontSize = 16.sp,
-						color = Color.White.copy(alpha = 0.9f)
+						color = Color.White
 					)
 				}
 			}
@@ -348,7 +348,7 @@ private fun MediaInfoOverlay(
 			Text(
 				text = item.genres.joinToString(" • "),
 				fontSize = 14.sp,
-				color = Color.White.copy(alpha = 0.8f)
+				color = Color.White
 			)
 		}
 
@@ -357,7 +357,7 @@ private fun MediaInfoOverlay(
 			Text(
 				text = overview,
 				fontSize = 14.sp,
-				color = Color.White.copy(alpha = 0.85f),
+				color = Color.White,
 				maxLines = 3,
 				overflow = TextOverflow.Ellipsis,
 				lineHeight = 20.sp
@@ -392,9 +392,9 @@ private fun CarouselIndicatorDots(
 					.size(if (index == currentIndex) 10.dp else 8.dp)
 					.background(
 						color = if (index == currentIndex)
-							Color.White.copy(alpha = 0.9f)
+							Color.White
 						else
-							Color.White.copy(alpha = 0.4f),
+							Color.White.copy(alpha = 0.5f),
 						shape = CircleShape
 					)
 			)

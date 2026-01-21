@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,9 +44,10 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.Session
 import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.repository.UserRepository
-import org.jellyfin.androidtv.constant.ShuffleContentType
+import org.jellyfin.androidtv.data.model.AggregatedLibrary
 import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.androidtv.ui.NowPlayingComposable
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
@@ -61,21 +61,19 @@ import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
 import org.jellyfin.androidtv.ui.navigation.ActivityDestinations
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
-import org.jellyfin.preference.store.PreferenceStore
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
+import org.jellyfin.androidtv.ui.shuffle.ShuffleOptionsDialog
+import org.jellyfin.androidtv.ui.shuffle.executeShuffle
+import org.jellyfin.androidtv.ui.syncplay.SyncPlayViewModel
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.primaryImage
 import org.jellyfin.sdk.api.client.ApiClient
-import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
-import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CollectionType
-import org.jellyfin.sdk.model.api.ItemFilter
-import org.jellyfin.sdk.model.api.ItemSortBy
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinActivityViewModel
 import org.koin.core.qualifier.named
@@ -147,6 +145,7 @@ fun MainToolbar(
 	var showGenresButton by remember { mutableStateOf(true) }
 	var showFavoritesButton by remember { mutableStateOf(true) }
 	var showLibrariesInToolbar by remember { mutableStateOf(true) }
+	var syncPlayEnabled by remember { mutableStateOf(false) }
 	var enableMultiServer by remember { mutableStateOf(false) }
 	var shuffleContentType by remember { mutableStateOf("both") }
 	LaunchedEffect(Unit) {
@@ -154,6 +153,7 @@ fun MainToolbar(
 		showGenresButton = userPreferences[UserPreferences.showGenresButton] ?: true
 		showFavoritesButton = userPreferences[UserPreferences.showFavoritesButton] ?: true
 		showLibrariesInToolbar = userPreferences[UserPreferences.showLibrariesInToolbar] ?: true
+		syncPlayEnabled = userPreferences[UserPreferences.syncPlayEnabled] ?: false
 		enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries] ?: false
 		shuffleContentType = userPreferences[UserPreferences.shuffleContentType] ?: "both"
 	}
@@ -162,8 +162,7 @@ fun MainToolbar(
 	var userViews by remember { mutableStateOf<List<BaseItemDto>>(emptyList()) }
 	LaunchedEffect(Unit) {
 		userViewsRepository.views.collect { views ->
-			// Filter out playlists from toolbar
-			userViews = views.filter { it.collectionType != CollectionType.PLAYLISTS }.toList()
+			userViews = views.toList()
 		}
 	}
 	
@@ -175,7 +174,6 @@ fun MainToolbar(
 			aggregationScope.launch(Dispatchers.IO) {
 				try {
 					aggregatedLibraries = multiServerRepository.getAggregatedLibraries()
-						.filter { it.library.collectionType != CollectionType.PLAYLISTS }
 				} catch (e: Exception) {
 				}
 			}
@@ -198,6 +196,7 @@ fun MainToolbar(
 		showGenresButton = showGenresButton,
 		showFavoritesButton = showFavoritesButton,
 		showLibrariesInToolbar = showLibrariesInToolbar,
+		syncPlayEnabled = syncPlayEnabled,
 		shuffleContentType = shuffleContentType,
 	)
 }
@@ -216,6 +215,7 @@ private fun MainToolbar(
 	showGenresButton: Boolean = true,
 	showFavoritesButton: Boolean = true,
 	showLibrariesInToolbar: Boolean = true,
+	syncPlayEnabled: Boolean = false,
 	shuffleContentType: String = "both",
 ) {
 	val focusRequester = remember { FocusRequester() }
@@ -225,10 +225,14 @@ private fun MainToolbar(
 	val sessionRepository = koinInject<SessionRepository>()
 	val itemLauncher = koinInject<ItemLauncher>()
 	val api = koinInject<ApiClient>()
+	val apiClientFactory = koinInject<ApiClientFactory>()
 	val settingsViewModel = koinActivityViewModel<SettingsViewModel>()
+	val syncPlayViewModel = koinActivityViewModel<SyncPlayViewModel>()
 	val activity = LocalActivity.current
 	val context = LocalContext.current
 	val scope = rememberCoroutineScope()
+
+	var showShuffleDialog by remember { mutableStateOf(false) }
 
 	val activeButtonColors = ButtonDefaults.colors(
 		containerColor = JellyfinTheme.colorScheme.buttonActive,
@@ -341,191 +345,146 @@ private fun MainToolbar(
 				backgroundColor = overlayColor,
 				alpha = overlayOpacity
 			) {
-				IconButton(
+				ExpandableIconButton(
+					icon = ImageVector.vectorResource(R.drawable.ic_house),
+					label = stringResource(R.string.lbl_home),
 					onClick = {
-						if (activeButton != MainToolbarActiveButton.Home) {
-							navigationRepository.reset(Destinations.home)
-						}
+						navigationRepository.reset(Destinations.home)
 					},
-					colors = if (activeButton == MainToolbarActiveButton.Home) activeButtonColors else toolbarButtonColors,
-				) {
-					Icon(
-						imageVector = ImageVector.vectorResource(R.drawable.ic_house),
-						contentDescription = stringResource(R.string.lbl_home),
-					)
-				}
+					colors = toolbarButtonColors,
+				)
 
-				IconButton(
+				ExpandableIconButton(
+					icon = ImageVector.vectorResource(R.drawable.ic_search),
+					label = stringResource(R.string.lbl_search),
 					onClick = {
-						if (activeButton != MainToolbarActiveButton.Search) {
-							navigationRepository.navigate(Destinations.search())
-						}
+						navigationRepository.navigate(Destinations.search())
 					},
-					colors = if (activeButton == MainToolbarActiveButton.Search) activeButtonColors else toolbarButtonColors,
-				) {
-					Icon(
-						imageVector = ImageVector.vectorResource(R.drawable.ic_search),
-						contentDescription = stringResource(R.string.lbl_search),
-					)
-				}
+					colors = toolbarButtonColors,
+				)
 
-			// Shuffle button (conditional)
-			if (showShuffleButton) {
-				IconButton(
-					onClick = {
-						scope.launch {
-							try {
-								// Fetch random movie or TV show based on preference
-								// Note: We explicitly include only MOVIE and/or SERIES to exclude collections (BOX_SET)
-								val includeTypes = when (shuffleContentType) {
-									"movies" -> setOf(BaseItemKind.MOVIE)
-									"tv" -> setOf(BaseItemKind.SERIES)
-									else -> setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES)
-								}
-
-								val randomItem = withContext(Dispatchers.IO) {
-									val response = api.itemsApi.getItems(
-										includeItemTypes = includeTypes,
-										recursive = true,
-										sortBy = setOf(ItemSortBy.RANDOM),
-										filters = setOf(ItemFilter.IS_NOT_FOLDER),
-										limit = 1,
-									)
-									response.content.items?.firstOrNull()
-								}
-
-								if (randomItem != null) {
-									navigationRepository.navigate(Destinations.itemDetails(randomItem.id))
-								} else {
-									Timber.w("No random item found")
-								}
-							} catch (e: Exception) {
-								Timber.e(e, "Failed to fetch random item")
+				if (showShuffleButton) {
+					ExpandableIconButton(
+						icon = ImageVector.vectorResource(R.drawable.ic_shuffle),
+						label = "Shuffle",
+						onClick = {
+							scope.launch {
+								executeShuffle(
+									libraryId = null,
+									serverId = null,
+									genreName = null,
+									contentType = shuffleContentType,
+									libraryCollectionType = null,
+									api = api,
+									apiClientFactory = apiClientFactory,
+									navigationRepository = navigationRepository
+								)
 							}
-						}
-					},
-					colors = toolbarButtonColors,
-				) {
-					Icon(
-						imageVector = ImageVector.vectorResource(R.drawable.ic_shuffle),
-						contentDescription = stringResource(R.string.lbl_shuffle_all),
+						},
+						colors = toolbarButtonColors,
 					)
 				}
-			}
 
-			// Genres button (conditional)
-			if (showGenresButton) {
-				IconButton(
-					onClick = {
-						navigationRepository.navigate(Destinations.allGenres)
-					},
-					colors = toolbarButtonColors,
-				) {
-					Icon(
-						imageVector = ImageVector.vectorResource(R.drawable.ic_masks),
-						contentDescription = stringResource(R.string.lbl_genres),
+				// Genres button (conditional)
+				if (showGenresButton) {
+					ExpandableIconButton(
+						icon = ImageVector.vectorResource(R.drawable.ic_masks),
+						label = stringResource(R.string.lbl_genres),
+						onClick = {
+							navigationRepository.navigate(Destinations.allGenres)
+						},
+						colors = toolbarButtonColors,
 					)
-				}
 			}
 
-			// Favorites button (conditional)
 			if (showFavoritesButton) {
-				IconButton(
+					ExpandableIconButton(
+						icon = ImageVector.vectorResource(R.drawable.ic_heart),
+						label = stringResource(R.string.lbl_favorites),
+						onClick = {
+							navigationRepository.navigate(Destinations.allFavorites)
+						},
+						colors = toolbarButtonColors,
+					)
+				}
+
+				if (jellyseerrEnabled) {
+					ExpandableIconButton(
+						icon = ImageVector.vectorResource(R.drawable.ic_jellyseerr_jellyfish),
+						label = "Jellyseerr",
+						onClick = {
+							navigationRepository.navigate(Destinations.jellyseerrDiscover)
+						},
+						colors = toolbarButtonColors,
+					)
+				}
+				
+				if (syncPlayEnabled) {
+					ExpandableIconButton(
+						icon = ImageVector.vectorResource(R.drawable.ic_syncplay),
+						label = stringResource(R.string.syncplay),
+						onClick = {
+							syncPlayViewModel.show()
+						},
+						colors = toolbarButtonColors,
+					)
+				}
+
+				ExpandableIconButton(
+					icon = ImageVector.vectorResource(R.drawable.ic_settings),
+					label = "Settings",
 					onClick = {
-						navigationRepository.navigate(Destinations.allFavorites)
+						settingsViewModel.show()
 					},
 					colors = toolbarButtonColors,
-				) {
-					Icon(
-						imageVector = ImageVector.vectorResource(R.drawable.ic_heart),
-						contentDescription = stringResource(R.string.lbl_favorites),
+				)
+				
+				if (showLibrariesInToolbar) {
+					ExpandableLibrariesButton(
+						activeLibraryId = activeLibraryId,
+						userViews = userViews,
+						aggregatedLibraries = aggregatedLibraries,
+						enableMultiServer = enableMultiServer,
+						currentSession = currentSession,
+						colors = toolbarButtonColors,
+						activeColors = activeButtonColors,
+						navigationRepository = navigationRepository,
+						itemLauncher = itemLauncher,
 					)
 				}
 			}
-
-		if (jellyseerrEnabled) {
-			IconButton(
-				onClick = {
-					if (activeButton != MainToolbarActiveButton.Jellyseerr) {
-						navigationRepository.navigate(Destinations.jellyseerrDiscover)
-					} else {
-						val fragmentActivity = activity as? androidx.fragment.app.FragmentActivity
-						fragmentActivity?.supportFragmentManager?.popBackStack()
-					}
-				},
-				colors = if (activeButton == MainToolbarActiveButton.Jellyseerr) activeButtonColors else toolbarButtonColors,
-			) {
-				Icon(
-					imageVector = ImageVector.vectorResource(R.drawable.ic_jellyseerr_jellyfish),
-					contentDescription = "Jellyseerr Discover",
-				)
-			}
-		}
-			
-			// Settings button
-			IconButton(
-				onClick = {
-					settingsViewModel.show()
-				},
-				colors = toolbarButtonColors,
-			) {
-				Icon(
-					imageVector = ImageVector.vectorResource(R.drawable.ic_settings),
-					contentDescription = stringResource(R.string.lbl_settings),
-				)
-			}
-			
-			// Dynamic library buttons (conditional)
-			if (showLibrariesInToolbar) {
-				ProvideTextStyle(JellyfinTheme.typography.default.copy(fontWeight = FontWeight.Bold)) {
-					if (enableMultiServer && aggregatedLibraries.isNotEmpty()) {
-						// Show aggregated libraries from all servers
-						aggregatedLibraries.forEach { aggLib ->
-							val isActiveLibrary = activeButton == MainToolbarActiveButton.Library &&
-								activeLibraryId == aggLib.library.id
-							
-							Button(
-								onClick = {
-									if (!isActiveLibrary) {
-										scope.launch {
-											// Navigate to library - no session switching needed
-										// Pass serverId so the library view can fetch content from the correct server
-										val destination = Destinations.libraryBrowser(aggLib.library, aggLib.server.id)
-											navigationRepository.navigate(destination)
-										}
-									}
-								},
-								colors = if (isActiveLibrary) activeButtonColors else toolbarButtonColors,
-								content = { Text(aggLib.displayName) }
-							)
-						}
-					} else {
-						// Show libraries from current server only
-						userViews.forEach { library ->
-							val isActiveLibrary = activeButton == MainToolbarActiveButton.Library &&
-								activeLibraryId == library.id
-							
-							Button(
-								onClick = {
-									if (!isActiveLibrary) {
-										val destination = itemLauncher.getUserViewDestination(library)
-										navigationRepository.navigate(destination)
-									}
-								},
-								colors = if (isActiveLibrary) activeButtonColors else toolbarButtonColors,
-								content = { Text(library.name ?: "") }
-							)
-						}
-					}
-				}
-			}
-		}
 		},
 		end = {
 			// Clock only - settings icon is already in the navbar
 			ToolbarClock()
 		}
 	)
+
+	if (showShuffleDialog) {
+		ShuffleOptionsDialog(
+			userViews = userViews,
+			aggregatedLibraries = aggregatedLibraries,
+			enableMultiServer = enableMultiServer,
+			shuffleContentType = shuffleContentType,
+			api = api,
+			onDismiss = { showShuffleDialog = false },
+			onShuffle = { libraryId, serverId, genreName, contentType, libraryCollectionType ->
+				showShuffleDialog = false
+				scope.launch {
+					executeShuffle(
+						libraryId = libraryId,
+						serverId = serverId,
+						genreName = genreName,
+						contentType = contentType,
+						libraryCollectionType = libraryCollectionType,
+						api = api,
+						apiClientFactory = apiClientFactory,
+						navigationRepository = navigationRepository
+					)
+				}
+			}
+		)
+	}
 }
 
 fun setupMainToolbarComposeView(

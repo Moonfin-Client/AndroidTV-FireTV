@@ -1,6 +1,5 @@
 plugins {
-	id("com.android.library")
-	kotlin("android")
+	alias(libs.plugins.android.library)
 }
 
 android {
@@ -38,6 +37,9 @@ dependencies {
 	implementation(libs.androidx.media3.exoplayer.hls)
 	implementation(libs.jellyfin.androidx.media3.ffmpeg.decoder)
 	implementation(libs.androidx.media3.ui)
+	
+	// libass for ASS/SSA subtitle rendering
+	implementation("io.github.peerless2012:ass-media:0.4.0-beta01")
 
 	// Logging
 	implementation(libs.timber)

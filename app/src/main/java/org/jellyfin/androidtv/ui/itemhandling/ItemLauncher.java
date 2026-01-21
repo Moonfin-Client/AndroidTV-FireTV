@@ -80,9 +80,6 @@ public class ItemLauncher {
         if (rowItem instanceof AggregatedItemBaseRowItem) {
             serverId = ((AggregatedItemBaseRowItem) rowItem).getServer().getId();
             Timber.d("ItemLauncher: Item is from server %s", serverId);
-        } else if (rowItem instanceof BaseItemPersonBaseRowItem) {
-            serverId = ((BaseItemPersonBaseRowItem) rowItem).getServerId();
-            Timber.d("ItemLauncher: Person item has serverId=%s", serverId);
         } else {
             BaseItemDto item = rowItem.getBaseItem();
             if (item != null && item.getServerId() != null) {

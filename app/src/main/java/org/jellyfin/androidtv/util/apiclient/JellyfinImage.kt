@@ -27,22 +27,29 @@ fun JellyfinImage.getUrl(
 	maxHeight: Int? = null,
 	fillWidth: Int? = null,
 	fillHeight: Int? = null,
-): String = when (source) {
-	JellyfinImageSource.USER -> api.imageApi.getUserImageUrl(
-		userId = item,
-		tag = tag,
-	)
+): String {
+	// Check if tag is already a full URL (for external images like TMDB from Jellyseerr)
+	if (tag.startsWith("http")) {
+		return tag
+	}
+	
+	return when (source) {
+		JellyfinImageSource.USER -> api.imageApi.getUserImageUrl(
+			userId = item,
+			tag = tag,
+		)
 
-	else -> api.imageApi.getItemImageUrl(
-		itemId = item,
-		imageType = type,
-		tag = tag,
-		imageIndex = index,
-		maxWidth = maxWidth,
-		maxHeight = maxHeight,
-		fillWidth = fillWidth,
-		fillHeight = fillHeight,
-	)
+		else -> api.imageApi.getItemImageUrl(
+			itemId = item,
+			imageType = type,
+			tag = tag,
+			imageIndex = index,
+			maxWidth = maxWidth,
+			maxHeight = maxHeight,
+			fillWidth = fillWidth,
+			fillHeight = fillHeight,
+		)
+	}
 }
 
 enum class JellyfinImageSource {
@@ -52,6 +59,7 @@ enum class JellyfinImageSource {
 	SERIES,
 	CHANNEL,
 	USER,
+	CHAPTER,
 }
 
 // UserDto
@@ -193,6 +201,19 @@ val BaseItemDto.seriesThumbImage
 		}
 	}
 
+val BaseItemDto.chapterImages
+	get() = chapters?.mapIndexed { index, chapter ->
+		JellyfinImage(
+			item = id,
+			source = JellyfinImageSource.CHAPTER,
+			type = ImageType.CHAPTER,
+			tag = chapter.imageTag.orEmpty(),
+			blurHash = null,
+			aspectRatio = null,
+			index = index,
+		)
+	}.orEmpty()
+
 val BaseItemDto.images
 	get() = listOfNotNull(
 		itemImages.values,
@@ -203,6 +224,7 @@ val BaseItemDto.images
 		listOfNotNull(channelPrimaryImage),
 		listOfNotNull(seriesPrimaryImage),
 		listOfNotNull(seriesThumbImage),
+		chapterImages,
 	).flatten()
 
 // BaseItemPerson

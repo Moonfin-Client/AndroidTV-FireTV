@@ -746,13 +746,9 @@ class MediaDetailsFragment : Fragment() {
 			else -> tvDetails?.name ?: item.name ?: item.title ?: "Unknown"
 		}
 		
-		// Check if we need to show quality selection
 		lifecycleScope.launch {
-			// Get user permissions and server availability
-			val (userCan4k, has4kServer) = check4kAvailability(mediaType)
-			
-			// Final determination of what's available
-			val hdAvailable = canRequestHd
+			val (userCan4k, has4kServer, hasHdServer) = checkQualityAvailability(mediaType)
+			val hdAvailable = canRequestHd && hasHdServer
 			val fourKAvailable = canRequest4k && userCan4k && has4kServer
 			
 			if (hdAvailable && fourKAvailable) {
@@ -772,17 +768,24 @@ class MediaDetailsFragment : Fragment() {
 				// Only 4K available
 				requestContent(true)
 			} else if (hdAvailable) {
-				// Only HD available
 				requestContent(false)
+			} else {
+				if (!isAdded) return@launch
+				val mediaTypeName = if (mediaType == "movie") "movies" else "TV shows"
+				Toast.makeText(
+					requireContext(),
+					"No Radarr/Sonarr server configured for $mediaTypeName in Jellyseerr",
+					Toast.LENGTH_LONG
+				).show()
 			}
 		}
 	}
 	
 	/**
 	 * Check if 4K requests are possible for the given media type
-	 * Returns (userHas4kPermission, server4kAvailable)
+	 * Returns (userHas4kPermission, server4kAvailable, serverHdAvailable)
 	 */
-	private suspend fun check4kAvailability(mediaType: String): Pair<Boolean, Boolean> {
+	private suspend fun checkQualityAvailability(mediaType: String): Triple<Boolean, Boolean, Boolean> {
 		return try {
 			// Check user permissions
 			val userResult = viewModel.getCurrentUser()
@@ -793,24 +796,25 @@ class MediaDetailsFragment : Fragment() {
 				else -> user?.canRequest4k() ?: false
 			}
 			
-			// Check if 4K server is configured using service endpoints (available to all users)
-			val has4kServer = when (mediaType) {
+			val (has4kServer, hasHdServer) = when (mediaType) {
 				"movie" -> {
 					val radarrResult = viewModel.getRadarrServers()
-					radarrResult.getOrNull()?.any { it.is4k } ?: false
+					val servers = radarrResult.getOrNull() ?: emptyList()
+					Pair(servers.any { it.is4k }, servers.any { !it.is4k })
 				}
 				"tv" -> {
 					val sonarrResult = viewModel.getSonarrServers()
-					sonarrResult.getOrNull()?.any { it.is4k } ?: false
+					val servers = sonarrResult.getOrNull() ?: emptyList()
+					Pair(servers.any { it.is4k }, servers.any { !it.is4k })
 				}
-				else -> false
+				else -> Pair(false, false)
 			}
 			
-			Pair(userCan4k, has4kServer)
+			Triple(userCan4k, has4kServer, hasHdServer)
 		} catch (e: Exception) {
-			Timber.e(e, "Failed to check 4K availability")
-			// Default to allowing 4K if check fails (let server reject if not allowed)
-			Pair(true, true)
+			Timber.e(e, "Failed to check quality availability")
+			// Default to allowing both if check fails (let server reject if not allowed)
+			Triple(true, true, true)
 		}
 	}
 
@@ -1655,23 +1659,50 @@ class MediaDetailsFragment : Fragment() {
 			else -> tvDetails?.name ?: item.name ?: item.title ?: "Unknown"
 		}
 		
-		val dialog = AdvancedRequestOptionsDialog(
-			context = requireContext(),
-			title = title,
-			is4k = is4k,
-			isMovie = isMovie,
-			coroutineScope = lifecycleScope,
-			onLoadData = {
-				loadServerDetailsForAdvancedOptions(isMovie, is4k)
-			},
-			onConfirm = { options ->
-				proceedWithRequest(item, is4k, options)
-			},
-			onCancel = {
-				// User cancelled, do nothing
+		lifecycleScope.launch {
+			val serverExists = try {
+				if (isMovie) {
+					val serversResult = viewModel.getRadarrServers()
+					serversResult.getOrNull()?.any { it.is4k == is4k } ?: false
+				} else {
+					val serversResult = viewModel.getSonarrServers()
+					serversResult.getOrNull()?.any { it.is4k == is4k } ?: false
+				}
+			} catch (e: Exception) {
+				Timber.e(e, "Failed to check server availability")
+				false
 			}
-		)
-		dialog.show()
+			
+			if (!serverExists) {
+				if (!isAdded) return@launch
+				val quality = if (is4k) "4K" else "HD (1080p)"
+				val mediaType = if (isMovie) "movies" else "TV shows"
+				Toast.makeText(
+					requireContext(),
+					"No $quality server configured for $mediaType in Jellyseerr. Please contact your administrator.",
+					Toast.LENGTH_LONG
+				).show()
+				return@launch
+			}
+			
+			val dialog = AdvancedRequestOptionsDialog(
+				context = requireContext(),
+				title = title,
+				is4k = is4k,
+				isMovie = isMovie,
+				coroutineScope = lifecycleScope,
+				onLoadData = {
+					loadServerDetailsForAdvancedOptions(isMovie, is4k)
+				},
+				onConfirm = { options ->
+					proceedWithRequest(item, is4k, options)
+				},
+				onCancel = {
+					// User cancelled, do nothing
+				}
+			)
+			dialog.show()
+		}
 	}
 	
 	/**
@@ -1683,12 +1714,12 @@ class MediaDetailsFragment : Fragment() {
 	): AdvancedRequestOptionsDialog.ServerDetailsData? {
 		return try {
 			if (isMovie) {
-				// Get Radarr servers
 				val serversResult = viewModel.getRadarrServers()
 				val servers = serversResult.getOrNull() ?: return null
-				// Find server matching 4K preference
-				val server = servers.find { it.is4k == is4k } ?: servers.firstOrNull() ?: return null
-				// Get detailed info
+				val server = servers.find { it.is4k == is4k } ?: run {
+					Timber.w("No Radarr server configured for ${if (is4k) "4K" else "HD"} requests")
+					return null
+				}
 				val detailsResult = viewModel.getRadarrServerDetails(server.id)
 				val details = detailsResult.getOrNull() ?: return null
 				
@@ -1700,12 +1731,12 @@ class MediaDetailsFragment : Fragment() {
 					defaultRootFolder = server.activeDirectory
 				)
 			} else {
-				// Get Sonarr servers
 				val serversResult = viewModel.getSonarrServers()
 				val servers = serversResult.getOrNull() ?: return null
-				// Find server matching 4K preference
-				val server = servers.find { it.is4k == is4k } ?: servers.firstOrNull() ?: return null
-				// Get detailed info
+				val server = servers.find { it.is4k == is4k } ?: run {
+					Timber.w("No Sonarr server configured for ${if (is4k) "4K" else "HD"} requests")
+					return null
+				}
 				val detailsResult = viewModel.getSonarrServerDetails(server.id)
 				val details = detailsResult.getOrNull() ?: return null
 				

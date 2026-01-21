@@ -17,6 +17,16 @@
         android:contentDescription="@string/lbl_home"
         android:src="@drawable/ic_house" />
 
+    <ImageButton
+        android:id="@+id/shuffle"
+        style="@style/Button.Icon"
+        android:layout_width="41dp"
+        android:layout_height="41dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/lbl_shuffle_all"
+        android:src="@drawable/ic_shuffle"
+        android:visibility="gone" />
+
     <TextClock
         android:id="@+id/clock"
         android:layout_width="wrap_content"

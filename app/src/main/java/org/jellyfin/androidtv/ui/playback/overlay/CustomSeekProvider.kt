@@ -2,7 +2,9 @@ package org.jellyfin.androidtv.ui.playback.overlay
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.core.content.ContextCompat
 import androidx.leanback.widget.PlaybackSeekDataProvider
+import org.jellyfin.androidtv.R
 import coil3.ImageLoader
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
@@ -316,6 +318,8 @@ class CustomSeekProvider(
 			mediaSourceId = mediaSourceId,
 		)
 
+		val placeholderThumbnail = getPlaceholderThumbnail(trickPlayInfo.width, trickPlayInfo.height)
+
 		imageRequests[index] = imageLoader.enqueue(ImageRequest.Builder(context).apply {
 			data(url)
 			size(Size.ORIGINAL)
@@ -336,8 +340,8 @@ class CustomSeekProvider(
 			transformations(SubsetTransformation(offsetX, offsetY, trickPlayInfo.width, trickPlayInfo.height))
 
 			target(
-				onStart = { _ -> callback.onThumbnailLoaded(null, index) },
-				onError = { _ -> callback.onThumbnailLoaded(null, index) },
+				onStart = { _ -> callback.onThumbnailLoaded(placeholderThumbnail, index) },
+				onError = { _ -> callback.onThumbnailLoaded(placeholderThumbnail, index) },
 				onSuccess = { image ->
 					val bitmap = image.toBitmap()
 					preloadedThumbnails[index] = bitmap
@@ -358,5 +362,18 @@ class CustomSeekProvider(
 		pendingPreloads.clear()
 		lastPreloadCenter = -1
 		lastSeekDirection = 1
+	}
+
+	private var cachedPlaceholderThumbnail: Bitmap? = null
+
+	private fun getPlaceholderThumbnail(width: Int, height: Int): Bitmap {
+		if (cachedPlaceholderThumbnail?.width == width && cachedPlaceholderThumbnail?.height == height) {
+			return cachedPlaceholderThumbnail!!
+		}
+		val color = ContextCompat.getColor(context, R.color.black_transparent_light)
+		val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+		result.eraseColor(color)
+		cachedPlaceholderThumbnail = result
+		return result
 	}
 }

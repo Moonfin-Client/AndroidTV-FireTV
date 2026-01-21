@@ -35,12 +35,8 @@ import androidx.leanback.widget.RowPresenter;
 import androidx.lifecycle.Lifecycle;
 
 import org.jellyfin.androidtv.R;
-import org.jellyfin.androidtv.auth.repository.ServerRepository;
-import org.jellyfin.androidtv.auth.repository.Session;
-import org.jellyfin.androidtv.auth.repository.SessionRepository;
 import org.jellyfin.androidtv.auth.repository.UserRepository;
 import org.jellyfin.androidtv.constant.CustomMessage;
-import org.jellyfin.androidtv.constant.ImageType;
 import org.jellyfin.androidtv.constant.QueryType;
 import org.jellyfin.androidtv.data.model.ChapterItemInfo;
 import org.jellyfin.androidtv.data.model.DataRefreshService;
@@ -49,15 +45,14 @@ import org.jellyfin.androidtv.data.querying.GetAdditionalPartsRequest;
 import org.jellyfin.androidtv.data.querying.GetSpecialsRequest;
 import org.jellyfin.androidtv.data.querying.GetTrailersRequest;
 import org.jellyfin.androidtv.data.repository.CustomMessageRepository;
-import org.jellyfin.androidtv.data.repository.LocalWatchlistRepository;
 import org.jellyfin.androidtv.data.service.BackgroundService;
-import org.jellyfin.androidtv.data.service.BlurContext;
 import org.jellyfin.androidtv.databinding.FragmentFullDetailsBinding;
 import org.jellyfin.androidtv.preference.UserPreferences;
 import org.jellyfin.androidtv.preference.constant.ClockBehavior;
 import org.jellyfin.androidtv.ui.InteractionTrackerViewModel;
 import org.jellyfin.androidtv.ui.RecordPopup;
 import org.jellyfin.androidtv.ui.RecordingIndicatorView;
+import org.jellyfin.androidtv.constant.ImageType;
 import org.jellyfin.androidtv.ui.TextUnderButton;
 import org.jellyfin.androidtv.ui.browsing.BrowsingUtils;
 import org.jellyfin.androidtv.ui.itemhandling.BaseRowItem;
@@ -68,7 +63,6 @@ import org.jellyfin.androidtv.ui.navigation.Destinations;
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository;
 import org.jellyfin.androidtv.ui.playback.MediaManager;
 import org.jellyfin.androidtv.ui.playback.PlaybackLauncher;
-import org.jellyfin.androidtv.ui.playback.PrePlaybackTrackSelector;
 import org.jellyfin.androidtv.ui.presentation.CardPresenter;
 import org.jellyfin.androidtv.ui.presentation.CustomListRowPresenter;
 import org.jellyfin.androidtv.ui.presentation.InfoCardPresenter;
@@ -82,13 +76,11 @@ import org.jellyfin.androidtv.util.MarkdownRenderer;
 import org.jellyfin.androidtv.util.PlaybackHelper;
 import org.jellyfin.androidtv.util.TimeUtils;
 import org.jellyfin.androidtv.util.Utils;
-import org.jellyfin.androidtv.util.UUIDUtils;
 import org.jellyfin.androidtv.util.apiclient.BaseItemUtils;
 import org.jellyfin.androidtv.util.apiclient.Response;
 import org.jellyfin.androidtv.util.sdk.BaseItemExtensionsKt;
 import org.jellyfin.androidtv.util.sdk.TrailerUtils;
 import org.jellyfin.androidtv.util.sdk.compat.JavaCompat;
-import org.jellyfin.sdk.api.client.ApiClient;
 import org.jellyfin.sdk.model.api.BaseItemDto;
 import org.jellyfin.sdk.model.api.BaseItemKind;
 import org.jellyfin.sdk.model.api.BaseItemPerson;
@@ -124,7 +116,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     private TextUnderButton mRecSeriesButton;
     private TextUnderButton mSeriesSettingsButton;
     TextUnderButton mWatchedToggleButton;
-    private TextUnderButton mAddToPlaylistButton;
 
     private DisplayMetrics mMetrics;
 
@@ -150,8 +141,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
     private ArrayList<MediaSourceInfo> versions;
     private final Lazy<org.jellyfin.sdk.api.client.ApiClient> api = inject(org.jellyfin.sdk.api.client.ApiClient.class);
-    private final Lazy<org.jellyfin.androidtv.util.sdk.ApiClientFactory> apiClientFactory = inject(org.jellyfin.androidtv.util.sdk.ApiClientFactory.class);
-    private org.jellyfin.sdk.api.client.ApiClient serverSpecificApi = null;
     private final Lazy<UserPreferences> userPreferences = inject(UserPreferences.class);
     private final Lazy<DataRefreshService> dataRefreshService = inject(DataRefreshService.class);
     private final Lazy<BackgroundService> backgroundService = inject(BackgroundService.class);
@@ -164,10 +153,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     final Lazy<PlaybackHelper> playbackHelper = inject(PlaybackHelper.class);
     private final Lazy<ImageHelper> imageHelper = inject(ImageHelper.class);
     private final Lazy<InteractionTrackerViewModel> interactionTracker = inject(InteractionTrackerViewModel.class);
-    private final Lazy<org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer> themeMusicPlayer = inject(org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer.class);
-    private final Lazy<LocalWatchlistRepository> watchlistRepository = inject(LocalWatchlistRepository.class);
-    private final Lazy<ServerRepository> serverRepository = inject(ServerRepository.class);
-    private final Lazy<SessionRepository> sessionRepository = inject(SessionRepository.class);
 
     @Nullable
     @Override
@@ -189,35 +174,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
         mItemId = Utils.uuidOrNull(getArguments().getString("ItemId"));
         mChannelId = Utils.uuidOrNull(getArguments().getString("ChannelId"));
-        
-        // Get current session for the current user context
-        Session currentSession = sessionRepository.getValue().getCurrentSession().getValue();
-        
-        // Check if a specific serverId was provided (for multi-server items)
-        UUID serverId = Utils.uuidOrNull(getArguments().getString("ServerId"));
-        
-        // If no serverId provided, use current session's serverId
-        if (serverId == null && currentSession != null) {
-            serverId = currentSession.getServerId();
-        }
-        
-        // Get userId from current session - critical for multi-user on same server
-        UUID userId = currentSession != null ? currentSession.getUserId() : null;
-        
-        if (serverId != null && userId != null) {
-            // Use API client for specific server AND user (correct for multi-user)
-            serverSpecificApi = apiClientFactory.getValue().getApiClient(serverId, userId);
-            if (serverSpecificApi == null) {
-                Timber.w("Failed to create API client for server %s user %s, using current session", serverId, userId);
-            }
-        } else if (serverId != null) {
-            // Fallback: server only (picks first user - not ideal)
-            serverSpecificApi = apiClientFactory.getValue().getApiClientForServer(serverId);
-            if (serverSpecificApi == null) {
-                Timber.w("Failed to create API client for server %s, using current session", serverId);
-            }
-        }
-        
         String programJson = getArguments().getString("ProgramInfo");
         if (programJson != null) {
             mProgramInfo = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), programJson);
@@ -257,35 +213,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         loadItem(mItemId);
 
         return binding.getRoot();
-    }
-
-    private ApiClient getApiClient() {
-        return serverSpecificApi != null ? serverSpecificApi : api.getValue();
-    }
-
-    private void setAdapterApiClient(ItemRowAdapter adapter) {
-        if (serverSpecificApi != null) {
-            adapter.setApiClient(serverSpecificApi);
-            String serverIdString = getArguments() != null ? getArguments().getString("ServerId") : null;
-            if (serverIdString == null && mBaseItem != null && mBaseItem.getServerId() != null) {
-                serverIdString = mBaseItem.getServerId();
-            }
-            if (serverIdString != null) {
-                adapter.setServerId(serverIdString);
-            }
-        }
-    }
-
-    private UUID getItemServerId() {
-        String serverIdString = getArguments() != null ? getArguments().getString("ServerId") : null;
-        if (serverIdString != null) {
-            UUID serverId = UUIDUtils.parseUUID(serverIdString);
-            if (serverId != null) return serverId;
-        }
-        if (mBaseItem != null && mBaseItem.getServerId() != null) {
-            return UUIDUtils.parseUUID(mBaseItem.getServerId());
-        }
-        return null;
     }
 
     int getResumePreroll() {
@@ -356,7 +283,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     public void onPause() {
         super.onPause();
         stopClock();
-        themeMusicPlayer.getValue().fadeOutAndStop();
     }
 
     @Override
@@ -563,7 +489,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         if (!getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) return;
 
         mBaseItem = item;
-        backgroundService.getValue().setBackground(item, BlurContext.DETAILS);
+        backgroundService.getValue().setBackground(item);
         if (mBaseItem != null) {
             if (mChannelId != null) {
                 mBaseItem = JavaCompat.copyWithParentId(mBaseItem, mChannelId);
@@ -576,7 +502,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 );
             }
             new BuildDorTask().execute(item);
-            themeMusicPlayer.getValue().playThemeMusicForItem(mBaseItem);
         }
     }
 
@@ -602,41 +527,34 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 //Additional Parts
                 if (mBaseItem.getPartCount() != null && mBaseItem.getPartCount() > 0) {
                     ItemRowAdapter additionalPartsAdapter = new ItemRowAdapter(requireContext(), new GetAdditionalPartsRequest(mBaseItem.getId()), new CardPresenter(), adapter);
-                    setAdapterApiClient(additionalPartsAdapter);
                     addItemRow(adapter, additionalPartsAdapter, 0, getString(R.string.lbl_additional_parts));
                 }
 
                 //Cast/Crew
                 if (mBaseItem.getPeople() != null && !mBaseItem.getPeople().isEmpty()) {
-                    UUID castServerId = getItemServerId();
-                    ItemRowAdapter castAdapter = new ItemRowAdapter(mBaseItem.getPeople(), castServerId, requireContext(), new CardPresenter(true, 130), adapter);
+                    ItemRowAdapter castAdapter = new ItemRowAdapter(mBaseItem.getPeople(), requireContext(), new CardPresenter(true, 130), adapter);
                     addItemRow(adapter, castAdapter, 1, getString(R.string.lbl_cast_crew));
                 }
 
                 //Specials
                 if (mBaseItem.getSpecialFeatureCount() != null && mBaseItem.getSpecialFeatureCount() > 0) {
-                    ItemRowAdapter specialsAdapter = new ItemRowAdapter(requireContext(), new GetSpecialsRequest(mBaseItem.getId()), new CardPresenter(), adapter);
-                    setAdapterApiClient(specialsAdapter);
-                    addItemRow(adapter, specialsAdapter, 3, getString(R.string.lbl_specials));
+                    addItemRow(adapter, new ItemRowAdapter(requireContext(), new GetSpecialsRequest(mBaseItem.getId()), new CardPresenter(), adapter), 3, getString(R.string.lbl_specials));
                 }
 
                 //Trailers
                 if (mBaseItem.getLocalTrailerCount() != null && mBaseItem.getLocalTrailerCount() > 1) {
-                    ItemRowAdapter trailersAdapter = new ItemRowAdapter(requireContext(), new GetTrailersRequest(mBaseItem.getId()), new CardPresenter(), adapter);
-                    setAdapterApiClient(trailersAdapter);
-                    addItemRow(adapter, trailersAdapter, 4, getString(R.string.lbl_trailers));
+                    addItemRow(adapter, new ItemRowAdapter(requireContext(), new GetTrailersRequest(mBaseItem.getId()), new CardPresenter(), adapter), 4, getString(R.string.lbl_trailers));
                 }
 
                 //Chapters
                 if (mBaseItem.getChapters() != null && !mBaseItem.getChapters().isEmpty()) {
-                    List<ChapterItemInfo> chapters = BaseItemExtensionsKt.buildChapterItems(mBaseItem, getApiClient());
+                    List<ChapterItemInfo> chapters = BaseItemExtensionsKt.buildChapterItems(mBaseItem);
                     ItemRowAdapter chapterAdapter = new ItemRowAdapter(requireContext(), chapters, new CardPresenter(true, 120), adapter);
                     addItemRow(adapter, chapterAdapter, 2, getString(R.string.lbl_chapters));
                 }
 
                 //Similar
                 ItemRowAdapter similarMoviesAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSimilarItemsRequest(mBaseItem.getId()), QueryType.SimilarMovies, new CardPresenter(), adapter);
-                setAdapterApiClient(similarMoviesAdapter);
                 addItemRow(adapter, similarMoviesAdapter, 5, getString(R.string.lbl_more_like_this));
 
                 addInfoRows(adapter);
@@ -645,73 +563,59 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
                 //Cast/Crew
                 if (mBaseItem.getPeople() != null && !mBaseItem.getPeople().isEmpty()) {
-                    UUID trailerCastServerId = getItemServerId();
-                    ItemRowAdapter castAdapter = new ItemRowAdapter(mBaseItem.getPeople(), trailerCastServerId, requireContext(), new CardPresenter(true, 130), adapter);
+                    ItemRowAdapter castAdapter = new ItemRowAdapter(mBaseItem.getPeople(), requireContext(), new CardPresenter(true, 130), adapter);
                     addItemRow(adapter, castAdapter, 0, getString(R.string.lbl_cast_crew));
                 }
 
                 //Similar
                 ItemRowAdapter similarTrailerAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSimilarItemsRequest(mBaseItem.getId()), QueryType.SimilarMovies, new CardPresenter(), adapter);
-                setAdapterApiClient(similarTrailerAdapter);
                 addItemRow(adapter, similarTrailerAdapter, 4, getString(R.string.lbl_more_like_this));
                 addInfoRows(adapter);
                 break;
             case PERSON:
                 ItemRowAdapter personMoviesAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createPersonItemsRequest(mBaseItem.getId(), BaseItemKind.MOVIE), 100, false, new CardPresenter(), adapter);
-                setAdapterApiClient(personMoviesAdapter);
                 addItemRow(adapter, personMoviesAdapter, 0, getString(R.string.lbl_movies));
 
                 ItemRowAdapter personSeriesAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createPersonItemsRequest(mBaseItem.getId(), BaseItemKind.SERIES), 100, false, new CardPresenter(), adapter);
-                setAdapterApiClient(personSeriesAdapter);
                 addItemRow(adapter, personSeriesAdapter, 1, getString(R.string.lbl_tv_series));
 
-                ItemRowAdapter personEpisodesAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createPersonItemsRequest(mBaseItem.getId(), BaseItemKind.EPISODE), 100, false, new CardPresenter(true, ImageType.THUMB, 120), adapter);
-                setAdapterApiClient(personEpisodesAdapter);
+                ItemRowAdapter personEpisodesAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createPersonItemsRequest(mBaseItem.getId(), BaseItemKind.EPISODE), 100, false, new CardPresenter(), adapter);
                 addItemRow(adapter, personEpisodesAdapter, 2, getString(R.string.lbl_episodes));
 
                 break;
             case MUSIC_ARTIST:
                 ItemRowAdapter artistAlbumsAdapter = new ItemRowAdapter(requireContext(),  BrowsingUtils.createArtistItemsRequest(mBaseItem.getId(), BaseItemKind.MUSIC_ALBUM), 100, false, new CardPresenter(), adapter);
-                setAdapterApiClient(artistAlbumsAdapter);
                 addItemRow(adapter, artistAlbumsAdapter, 0, getString(R.string.lbl_albums));
 
                 break;
             case SERIES:
-                ItemRowAdapter nextUpAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSeriesGetNextUpRequest(mBaseItem.getId()), false, new CardPresenter(true, ImageType.THUMB, 120), adapter);
-                setAdapterApiClient(nextUpAdapter);
+                ItemRowAdapter nextUpAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSeriesGetNextUpRequest(mBaseItem.getId()), false, new CardPresenter(true, ImageType.THUMB, 130), adapter);
                 addItemRow(adapter, nextUpAdapter, 0, getString(R.string.lbl_next_up));
 
-                ItemRowAdapter seasonsAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSeasonsRequest(mBaseItem.getId()), new CardPresenter(true, ImageType.POSTER, 150), adapter);
-                setAdapterApiClient(seasonsAdapter);
+                ItemRowAdapter seasonsAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSeasonsRequest(mBaseItem.getId()), new CardPresenter(), adapter);
                 addItemRow(adapter, seasonsAdapter, 1, getString(R.string.lbl_seasons));
 
                 //Specials
                 if (mBaseItem.getSpecialFeatureCount() != null && mBaseItem.getSpecialFeatureCount() > 0) {
-                    ItemRowAdapter specialsAdapter = new ItemRowAdapter(requireContext(), new GetSpecialsRequest(mBaseItem.getId()), false, new CardPresenter(true, ImageType.THUMB, 120), adapter);
-                    setAdapterApiClient(specialsAdapter);
-                    addItemRow(adapter, specialsAdapter, 3, getString(R.string.lbl_specials));
+                    addItemRow(adapter, new ItemRowAdapter(requireContext(), new GetSpecialsRequest(mBaseItem.getId()), new CardPresenter(), adapter), 3, getString(R.string.lbl_specials));
                 }
 
-                ItemRowAdapter upcomingAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createUpcomingEpisodesRequest(mBaseItem.getId()), false, new CardPresenter(true, ImageType.THUMB, 120), adapter);
-                setAdapterApiClient(upcomingAdapter);
+                ItemRowAdapter upcomingAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createUpcomingEpisodesRequest(mBaseItem.getId()), new CardPresenter(), adapter);
                 addItemRow(adapter, upcomingAdapter, 2, getString(R.string.lbl_upcoming));
 
                 if (mBaseItem.getPeople() != null && !mBaseItem.getPeople().isEmpty()) {
-                    UUID seriesCastServerId = getItemServerId();
-                    ItemRowAdapter seriesCastAdapter = new ItemRowAdapter(mBaseItem.getPeople(), seriesCastServerId, requireContext(), new CardPresenter(true, 130), adapter);
+                    ItemRowAdapter seriesCastAdapter = new ItemRowAdapter(mBaseItem.getPeople(), requireContext(), new CardPresenter(true, 130), adapter);
                     addItemRow(adapter, seriesCastAdapter, 3, getString(R.string.lbl_cast_crew));
                 }
 
                 ItemRowAdapter similarAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSimilarItemsRequest(mBaseItem.getId()), QueryType.SimilarSeries, new CardPresenter(), adapter);
-                setAdapterApiClient(similarAdapter);
                 addItemRow(adapter, similarAdapter, 4, getString(R.string.lbl_more_like_this));
                 break;
 
             case EPISODE:
                 if (mBaseItem.getSeasonId() != null && mBaseItem.getIndexNumber() != null) {
                     // query index is zero-based but episode no is not
-                    ItemRowAdapter nextAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createNextEpisodesRequest(mBaseItem.getSeasonId(), mBaseItem.getIndexNumber()), 0, false, false, new CardPresenter(true, ImageType.THUMB, 120), adapter);
-                    setAdapterApiClient(nextAdapter);
+                    ItemRowAdapter nextAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createNextEpisodesRequest(mBaseItem.getSeasonId(), mBaseItem.getIndexNumber()), 0, false, true, new CardPresenter(true, 120), adapter);
                     addItemRow(adapter, nextAdapter, 5, getString(R.string.lbl_next_episode));
                 }
 
@@ -729,7 +633,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
                 //Chapters
                 if (mBaseItem.getChapters() != null && !mBaseItem.getChapters().isEmpty()) {
-                    List<ChapterItemInfo> chapters = BaseItemExtensionsKt.buildChapterItems(mBaseItem, getApiClient());
+                    List<ChapterItemInfo> chapters = BaseItemExtensionsKt.buildChapterItems(mBaseItem);
                     ItemRowAdapter chapterAdapter = new ItemRowAdapter(requireContext(), chapters, new CardPresenter(true, 120), adapter);
                     addItemRow(adapter, chapterAdapter, 1, getString(R.string.lbl_chapters));
                 }
@@ -823,85 +727,8 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         }
     }
 
-    void addToWatchlist(UUID itemId) {
-        org.jellyfin.androidtv.auth.model.Server server = serverRepository.getValue().getCurrentServer().getValue();
-        if (server == null) {
-            Utils.showToast(requireContext(), getString(R.string.msg_failed_to_add_to_watch_list));
-            return;
-        }
-        
-        boolean success = watchlistRepository.getValue().addToWatchlist(itemId, server.getId());
-        
-        if (success) {
-            Utils.showToast(requireContext(), getString(R.string.msg_added_to_watch_list));
-            // Update button to remove state
-            mAddToPlaylistButton.setIcon(R.drawable.ic_decrease, null);
-            mAddToPlaylistButton.setLabel(getString(R.string.lbl_remove_from_watch_list));
-            mAddToPlaylistButton.setActivated(false);
-            mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    removeFromWatchlist(itemId);
-                }
-            });
-        } else {
-            // Item already in watchlist - just update button to remove state
-            mAddToPlaylistButton.setIcon(R.drawable.ic_decrease, null);
-            mAddToPlaylistButton.setLabel(getString(R.string.lbl_remove_from_watch_list));
-            mAddToPlaylistButton.setActivated(false);
-            mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    removeFromWatchlist(itemId);
-                }
-            });
-        }
-    }
-
-    void removeFromWatchlist(UUID itemId) {
-        org.jellyfin.androidtv.auth.model.Server server = serverRepository.getValue().getCurrentServer().getValue();
-        if (server == null) {
-            Utils.showToast(requireContext(), getString(R.string.msg_failed_to_remove_from_watch_list));
-            return;
-        }
-        
-        boolean success = watchlistRepository.getValue().removeFromWatchlist(itemId, server.getId());
-        
-        if (success) {
-            Utils.showToast(requireContext(), getString(R.string.msg_removed_from_watch_list));
-        }
-        // Always update button to add state after removal
-        mAddToPlaylistButton.setIcon(R.drawable.ic_add, null);
-        mAddToPlaylistButton.setLabel(getString(R.string.lbl_add_to_watch_list));
-        mAddToPlaylistButton.setActivated(false);
-        mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                addToWatchlist(itemId);
-            }
-        });
-    }
-
     void gotoSeries() {
-        // Pass serverId to preserve multi-server context when navigating to series
-        String serverId = getArguments() != null ? getArguments().getString("ServerId") : null;
-        if (serverId == null && mBaseItem.getServerId() != null) {
-            serverId = mBaseItem.getServerId().toString();
-        }
-        UUID serverIdUUID = serverId != null ? Utils.uuidOrNull(serverId) : null;
-        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mBaseItem.getSeriesId(), serverIdUUID));
-    }
-
-    void gotoPreviousEpisode() {
-        if (mPrevItemId != null) {
-            // Pass serverId to preserve multi-server context when navigating to previous episode
-            String serverId = getArguments() != null ? getArguments().getString("ServerId") : null;
-            if (serverId == null && mBaseItem.getServerId() != null) {
-                serverId = mBaseItem.getServerId().toString();
-            }
-            UUID serverIdUUID = serverId != null ? Utils.uuidOrNull(serverId) : null;
-            navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mPrevItemId, serverIdUUID));
-        }
+        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mBaseItem.getSeriesId()));
     }
 
     private void deleteItem() {
@@ -913,7 +740,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 .setPositiveButton(R.string.lbl_delete, (dialog, which) -> {
                     FullDetailsFragmentHelperKt.deleteItem(
                             this,
-                            getApiClient(),
+                            api.getValue(),
                             mBaseItem,
                             dataRefreshService.getValue(),
                             navigationRepository.getValue()
@@ -987,7 +814,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 mDetailsOverviewRow.addAction(queueButton);
             }
 
-            if ((Utils.getSafeValue(mBaseItem.isFolder(), false) && baseItem.getType() != BaseItemKind.BOX_SET) || baseItem.getType() == BaseItemKind.MUSIC_ARTIST) {
+            if (Utils.getSafeValue(mBaseItem.isFolder(), false) || baseItem.getType() == BaseItemKind.MUSIC_ARTIST) {
                 shuffleButton = TextUnderButton.create(requireContext(), R.drawable.ic_shuffle, buttonSize, 2, getString(R.string.lbl_shuffle_all), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -1005,71 +832,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                     }
                 });
                 mDetailsOverviewRow.addAction(imix);
-            }
-            
-            // Add audio track selector button for video content (only if multiple audio tracks)
-            if (baseItem.getType() == BaseItemKind.MOVIE 
-                    || baseItem.getType() == BaseItemKind.EPISODE 
-                    || baseItem.getType() == BaseItemKind.VIDEO) {
-                
-                PrePlaybackTrackSelector trackSelector = KoinJavaComponent.get(PrePlaybackTrackSelector.class);
-                int audioTrackCount = trackSelector.getAudioTracks(mBaseItem).size();
-                int subtitleTrackCount = trackSelector.getSubtitleTracks(mBaseItem).size();
-                
-                // Only show audio button if there are multiple audio tracks
-                if (audioTrackCount > 1) {
-                    TextUnderButton audioButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_audio, buttonSize, 0, getString(R.string.lbl_audio_track), new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            FullDetailsFragmentHelperKt.showAudioTrackSelector(FullDetailsFragment.this, v, mBaseItem);
-                        }
-                    });
-                    mDetailsOverviewRow.addAction(audioButton);
-                }
-                
-                // Only show subtitle button if there are multiple subtitle tracks
-                if (subtitleTrackCount > 1) {
-                    TextUnderButton subtitleButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_subtitle, buttonSize, 0, getString(R.string.lbl_subtitle_track), new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            FullDetailsFragmentHelperKt.showSubtitleTrackSelector(FullDetailsFragment.this, v, mBaseItem);
-                        }
-                    });
-                    mDetailsOverviewRow.addAction(subtitleButton);
-                }
-                
-                // Add to Watch List button
-                org.jellyfin.androidtv.preference.UserSettingPreferences userSettingPreferences = 
-                    org.koin.java.KoinJavaComponent.get(org.jellyfin.androidtv.preference.UserSettingPreferences.class);
-                java.util.List<org.jellyfin.androidtv.constant.HomeSectionType> activeHomeSections = 
-                    userSettingPreferences.getActiveHomesections();
-                
-                if (activeHomeSections.contains(org.jellyfin.androidtv.constant.HomeSectionType.WATCHLIST)) {
-                    timber.log.Timber.d("Creating watch list button for item: " + mBaseItem.getId());
-                    
-                    org.jellyfin.androidtv.auth.model.Server server = serverRepository.getValue().getCurrentServer().getValue();
-                    boolean isInWatchlist = server != null && 
-                        watchlistRepository.getValue().isInWatchlist(mBaseItem.getId(), server.getId());
-                    
-                    if (isInWatchlist) {
-                        mAddToPlaylistButton = TextUnderButton.create(requireContext(), R.drawable.ic_decrease, buttonSize, 0, getString(R.string.lbl_remove_from_watch_list), new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                removeFromWatchlist(mBaseItem.getId());
-                            }
-                        });
-                    } else {
-                        mAddToPlaylistButton = TextUnderButton.create(requireContext(), R.drawable.ic_add, buttonSize, 0, getString(R.string.lbl_add_to_watch_list), new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                addToWatchlist(mBaseItem.getId());
-                            }
-                        });
-                    }
-                    mDetailsOverviewRow.addAction(mAddToPlaylistButton);
-                } else {
-                    timber.log.Timber.d("Watch List section not active, skipping button");
-                }
             }
         }
         //Video versions button
@@ -1211,34 +973,27 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         }
 
         if (mBaseItem.getType() == BaseItemKind.EPISODE && mBaseItem.getSeriesId() != null) {
-            //add the prev button but don't show it in main row - it will be in Other Options menu
+            //add the prev button first so it will be there in proper position - we'll show it later if needed
             mPrevButton = TextUnderButton.create(requireContext(), R.drawable.ic_previous_episode, buttonSize, 3, getString(R.string.lbl_previous_episode), new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (mPrevItemId != null) {
-                        // Pass serverId to preserve multi-server context when navigating to previous episode
-                        String serverId = getArguments() != null ? getArguments().getString("ServerId") : null;
-                        if (serverId == null && mBaseItem.getServerId() != null) {
-                            serverId = mBaseItem.getServerId().toString();
-                        }
-                        UUID serverIdUUID = serverId != null ? Utils.uuidOrNull(serverId) : null;
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mPrevItemId, serverIdUUID));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mPrevItemId));
                     }
                 }
             });
-            mPrevButton.setVisibility(View.GONE);
+
+            mDetailsOverviewRow.addAction(mPrevButton);
 
             //now go get our prev episode id
             FullDetailsFragmentHelperKt.populatePreviousButton(FullDetailsFragment.this);
 
-            // Add Go to Series button in the main button row
             goToSeriesButton = TextUnderButton.create(requireContext(), R.drawable.ic_tv, buttonSize, 0, getString(R.string.lbl_goto_series), new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     gotoSeries();
                 }
             });
-            goToSeriesButton.setVisibility(View.VISIBLE);
             mDetailsOverviewRow.addAction(goToSeriesButton);
         }
 
@@ -1323,12 +1078,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         boolean resumeButtonVisible = (isSeries && isStarted && !isFinished) || (JavaCompat.getCanResume(mBaseItem));
         mResumeButton.setVisibility(resumeButtonVisible ? View.VISIBLE : View.GONE);
 
-        // Update play button to show restart when resume button is visible
-        if (resumeButtonVisible && playButton != null) {
-            playButton.setIcon(R.drawable.ic_loop, null);
-            playButton.setLabel(getString(R.string.lbl_from_beginning));
-        }
-
         if (resumeButtonVisible) {
             mResumeButton.requestFocus();
         } else {
@@ -1375,6 +1124,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         if (trailerButton != null) actionsList.add(trailerButton);
         if (shuffleButton != null) actionsList.add(shuffleButton);
         if (favButton != null) actionsList.add(favButton);
+        if (goToSeriesButton != null) actionsList.add(goToSeriesButton);
 
         // reverse the list so the less important actions are hidden first
         Collections.reverse(actionsList);
@@ -1463,8 +1213,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     }
 
     void play(final BaseItemDto item, final int pos, final boolean shuffle) {
-        themeMusicPlayer.getValue().stop();
-        
         playbackHelper.getValue().getItemsToPlay(getContext(), item, pos == 0 && item.getType() == BaseItemKind.MOVIE, shuffle, new Response<List<BaseItemDto>>(getLifecycle()) {
             @Override
             public void onResponse(List<BaseItemDto> response) {
@@ -1474,52 +1222,15 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                     return;
                 }
 
-                // Annotate items with serverId if this is a cross-server item
-                List<BaseItemDto> itemsToPlay = response;
-                String serverIdString = getArguments() != null ? getArguments().getString("ServerId") : null;
-                if (serverIdString == null && mBaseItem != null && mBaseItem.getServerId() != null) {
-                    serverIdString = mBaseItem.getServerId();
-                }
-                if (serverIdString != null) {
-                    itemsToPlay = new ArrayList<>(response.size());
-                    for (BaseItemDto playItem : response) {
-                        if (playItem.getServerId() == null) {
-                            playItem = JavaCompat.copyWithServerId(playItem, serverIdString);
-                        }
-                        itemsToPlay.add(playItem);
-                    }
-                    Timber.d("FullDetailsFragment: Annotated %d items with serverId %s for playback", itemsToPlay.size(), serverIdString);
-                }
-
-                interactionTracker.getValue().notifyStartSession(item, itemsToPlay);
-                KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class).launch(getContext(), itemsToPlay, pos, false, 0, shuffle);
+                interactionTracker.getValue().notifyStartSession(item, response);
+                KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class).launch(getContext(), response, pos, false, 0, shuffle);
             }
         });
     }
 
     void play(final List<BaseItemDto> items, final int pos, final boolean shuffle) {
-        themeMusicPlayer.getValue().stop();
-        
         if (items.isEmpty()) return;
         if (shuffle) Collections.shuffle(items);
-        
-        // Annotate items with serverId if this is a cross-server item
-        List<BaseItemDto> itemsToPlay = items;
-        String serverIdString = getArguments() != null ? getArguments().getString("ServerId") : null;
-        if (serverIdString == null && mBaseItem != null && mBaseItem.getServerId() != null) {
-            serverIdString = mBaseItem.getServerId();
-        }
-        if (serverIdString != null) {
-            itemsToPlay = new ArrayList<>(items.size());
-            for (BaseItemDto item : items) {
-                if (item.getServerId() == null) {
-                    item = JavaCompat.copyWithServerId(item, serverIdString);
-                }
-                itemsToPlay.add(item);
-            }
-            Timber.d("FullDetailsFragment: Annotated %d items with serverId %s for playback", itemsToPlay.size(), serverIdString);
-        }
-        
-        KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class).launch(getContext(), itemsToPlay, pos);
+        KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class).launch(getContext(), items, pos);
     }
 }

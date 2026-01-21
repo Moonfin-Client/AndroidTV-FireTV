@@ -1,21 +1,28 @@
 package org.jellyfin.androidtv.ui.itemhandling
 
 import android.content.Context
-import android.graphics.drawable.Drawable
-import org.jellyfin.androidtv.constant.ImageType
-import org.jellyfin.androidtv.util.ImageHelper
-import org.jellyfin.androidtv.util.TimeUtils
+import org.jellyfin.androidtv.util.apiclient.JellyfinImage
+import org.jellyfin.androidtv.util.apiclient.albumPrimaryImage
+import org.jellyfin.androidtv.util.apiclient.itemImages
+import org.jellyfin.androidtv.util.apiclient.parentImages
+import org.jellyfin.androidtv.util.apiclient.seriesPrimaryImage
+import org.jellyfin.androidtv.util.apiclient.seriesThumbImage
+import org.jellyfin.androidtv.util.getTimeFormatter
+import org.jellyfin.androidtv.util.locale
 import org.jellyfin.androidtv.util.sdk.getFullName
+import org.jellyfin.androidtv.util.sdk.getSubName
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.extensions.ticks
+import org.jellyfin.sdk.model.api.ImageType
+import java.time.format.DateTimeFormatter
+import org.jellyfin.androidtv.constant.ImageType as BaseRowImageType
 
 open class BaseItemDtoBaseRowItem @JvmOverloads constructor(
 	item: BaseItemDto,
 	preferParentThumb: Boolean = false,
 	staticHeight: Boolean = false,
 	selectAction: BaseRowItemSelectAction = BaseRowItemSelectAction.ShowDetails,
-	useOwnPrimaryImage: Boolean = false,
+	val preferSeriesPoster: Boolean = false,
 ) : BaseRowItem(
 	baseRowType = when (item.type) {
 		BaseItemKind.TV_CHANNEL,
@@ -32,7 +39,6 @@ open class BaseItemDtoBaseRowItem @JvmOverloads constructor(
 	preferParentThumb = preferParentThumb,
 	selectAction = selectAction,
 	baseItem = item,
-	useOwnPrimaryImage = useOwnPrimaryImage,
 ) {
 	override val showCardInfoOverlay
 		get() = when (baseItem?.type) {
@@ -54,41 +60,11 @@ open class BaseItemDtoBaseRowItem @JvmOverloads constructor(
 	override val isFavorite get() = baseItem?.userData?.isFavorite == true
 	override val isPlayed get() = baseItem?.userData?.played == true
 
-	val childCountStr: String?
-		get() {
-			// Playlist
-			if (baseItem?.type == BaseItemKind.PLAYLIST) {
-				val childCount = baseItem.cumulativeRunTimeTicks?.ticks?.let { duration ->
-					TimeUtils.formatMillis(duration.inWholeMilliseconds)
-				}
-				if (childCount != null) return childCount
-			}
-
-			// Folder
-			if (baseItem?.isFolder == true && baseItem.type != BaseItemKind.MUSIC_ARTIST) {
-				val childCount = baseItem.childCount
-				if (childCount != null && childCount > 0) return childCount.toString()
-			}
-
-			// Default
-			return null
-		}
-
 	override fun getCardName(context: Context) = when {
 		baseItem?.type == BaseItemKind.AUDIO && baseItem.artists != null -> baseItem.artists?.joinToString(", ")
 		baseItem?.type == BaseItemKind.AUDIO && baseItem.albumArtists != null -> baseItem.albumArtists?.joinToString(", ")
 		baseItem?.type == BaseItemKind.AUDIO && baseItem.albumArtist != null -> baseItem.albumArtist
 		baseItem?.type == BaseItemKind.AUDIO && baseItem.album != null -> baseItem.album
-		baseItem?.type == BaseItemKind.EPISODE -> {
-			val episodeName = baseItem.name
-			val seasonNum = baseItem.parentIndexNumber
-			val episodeNum = baseItem.indexNumber
-			if (seasonNum != null && episodeNum != null) {
-				"$episodeName - S$seasonNum:E$episodeNum"
-			} else {
-				episodeName
-			}
-		}
 		else -> baseItem?.getFullName(context)
 	}
 
@@ -100,35 +76,60 @@ open class BaseItemDtoBaseRowItem @JvmOverloads constructor(
 
 	override fun getSummary(context: Context) = baseItem?.overview
 
-	override fun getSubText(context: Context): String? = null
+	override fun getSubText(context: Context) = when (baseItem?.type) {
+		BaseItemKind.TV_CHANNEL -> baseItem.number
+		BaseItemKind.TV_PROGRAM,
+		BaseItemKind.PROGRAM -> baseItem.episodeTitle ?: baseItem.channelName
 
-	override fun getImageUrl(
-		context: Context,
-		imageHelper: ImageHelper,
-		imageType: ImageType,
-		fillWidth: Int,
-		fillHeight: Int
-	): String? {
-		return when {
-			imageType == ImageType.BANNER -> imageHelper.getBannerImageUrl(
-				requireNotNull(baseItem), fillWidth, fillHeight
-			)
+		BaseItemKind.RECORDING -> {
+			val title = listOfNotNull(
+				baseItem.channelName,
+				baseItem.episodeTitle
+			).joinToString(" - ")
 
-			imageType == ImageType.THUMB -> imageHelper.getThumbImageUrl(
-				requireNotNull(baseItem), fillWidth, fillHeight
-			)
+			val timestamp = buildString {
+				append(DateTimeFormatter.ofPattern("d MMM", context.locale).format(baseItem.startDate))
+				append(" ")
+				append(context.getTimeFormatter().format(baseItem.startDate))
+				append(" - ")
+				append(context.getTimeFormatter().format(baseItem.endDate))
+			}
 
-			else -> imageHelper.getPrimaryImageUrl(
-				baseItem!!,
-				preferParentThumb,
-				null,
-				fillHeight
-			)
+			"$title $timestamp"
+		}
+
+		else -> baseItem?.getSubName(context)
+	}
+
+	override fun getImage(imageType: BaseRowImageType): JellyfinImage? {
+		if (useOwnPrimaryImage) {
+			return baseItem?.itemImages[ImageType.PRIMARY]
+		}
+
+		val primaryImage = when {
+			preferSeriesPoster && baseItem?.type == BaseItemKind.EPISODE -> baseItem.parentImages[ImageType.PRIMARY]
+				?: baseItem.seriesPrimaryImage
+
+			preferParentThumb && baseItem?.type == BaseItemKind.EPISODE -> baseItem.parentImages[ImageType.THUMB]
+				?: baseItem.seriesThumbImage
+
+			baseItem?.type == BaseItemKind.SEASON -> baseItem.itemImages[ImageType.PRIMARY]
+				?: baseItem.seriesPrimaryImage
+
+			baseItem?.type == BaseItemKind.PROGRAM -> baseItem.itemImages[ImageType.THUMB]
+			baseItem?.type == BaseItemKind.AUDIO -> baseItem.albumPrimaryImage
+			else -> null
+		} ?: baseItem?.itemImages[ImageType.PRIMARY]
+
+		return when (imageType) {
+			BaseRowImageType.BANNER -> baseItem?.itemImages[ImageType.BANNER] ?: primaryImage
+			BaseRowImageType.THUMB -> baseItem?.itemImages[ImageType.THUMB] ?: primaryImage
+			else -> primaryImage
 		}
 	}
 
-	override fun getBadgeImage(
-		context: Context,
-		imageHelper: ImageHelper,
-	): Drawable? = null
+	override fun equals(other: Any?): Boolean {
+		if (other is BaseItemDtoBaseRowItem) return other.baseItem == baseItem
+		return super.equals(other)
+	}
 }

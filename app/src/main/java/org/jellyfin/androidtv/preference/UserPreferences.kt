@@ -66,10 +66,53 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var showLibrariesInToolbar = booleanPreference("pref_show_libraries_in_toolbar", true)
 
+		var syncPlayEnabled = booleanPreference("pref_syncplay_enabled", true)
+
 		/**
 		 * Content type for shuffle button (movies, tv, or both)
 		 */
 		var shuffleContentType = stringPreference("pref_shuffle_content_type", "both")
+
+		/* SyncPlay Settings */
+		/**
+		 * Enable sync correction during playback
+		 */
+		var syncPlayEnableSyncCorrection = booleanPreference("syncplay_enable_sync_correction", false)
+
+		/**
+		 * Use SpeedToSync method to catch up with group
+		 */
+		var syncPlayUseSpeedToSync = booleanPreference("syncplay_use_speed_to_sync", true)
+
+		/**
+		 * Use SkipToSync method to catch up with group
+		 */
+		var syncPlayUseSkipToSync = booleanPreference("syncplay_use_skip_to_sync", true)
+
+		/**
+		 * Minimum delay for SpeedToSync to kick in (ms)
+		 */
+		var syncPlayMinDelaySpeedToSync = floatPreference("syncplay_min_delay_speed_to_sync", 60f)
+
+		/**
+		 * Maximum delay after which SkipToSync is used instead of SpeedToSync (ms)
+		 */
+		var syncPlayMaxDelaySpeedToSync = floatPreference("syncplay_max_delay_speed_to_sync", 3000f)
+
+		/**
+		 * Duration for which playback is sped up (ms)
+		 */
+		var syncPlaySpeedToSyncDuration = floatPreference("syncplay_speed_to_sync_duration", 1000f)
+
+		/**
+		 * Minimum delay for SkipToSync to kick in (ms)
+		 */
+		var syncPlayMinDelaySkipToSync = floatPreference("syncplay_min_delay_skip_to_sync", 400f)
+
+		/**
+		 * Extra time offset for fine-tuning sync (ms)
+		 */
+		var syncPlayExtraTimeOffset = floatPreference("syncplay_extra_time_offset", 0f)
 
 		/**
 		 * Show confirmation dialog when exiting the app
@@ -309,6 +352,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
   		 * Enable PGS subtitle direct-play.
 		 */
 		var pgsDirectPlay = booleanPreference("pgs_enabled", true)
+
+		/**
+		 * Enable ASS/SSA subtitle direct-play.
+		 */
+		var assDirectPlay = booleanPreference("ass_enabled", false)
 	}
 
 	init {

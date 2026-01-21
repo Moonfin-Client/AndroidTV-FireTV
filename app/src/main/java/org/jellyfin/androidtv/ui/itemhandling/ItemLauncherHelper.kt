@@ -17,6 +17,25 @@ import timber.log.Timber
 import java.util.UUID
 
 object ItemLauncherHelper {
+	private fun resolveApiClient(serverId: UUID?, userId: UUID?): ApiClient {
+		val defaultApi by KoinJavaComponent.inject<ApiClient>(ApiClient::class.java)
+		
+		return when {
+			serverId != null && userId != null -> {
+				val apiClientFactory by KoinJavaComponent.inject<ApiClientFactory>(ApiClientFactory::class.java)
+				apiClientFactory.getApiClient(serverId, userId) ?: run {
+					Timber.w("ItemLauncherHelper: Could not get API client for server $serverId user $userId, using default")
+					defaultApi
+				}
+			}
+			serverId != null -> {
+				val apiClientFactory by KoinJavaComponent.inject<ApiClientFactory>(ApiClientFactory::class.java)
+				apiClientFactory.getApiClientForServer(serverId) ?: defaultApi
+			}
+			else -> defaultApi
+		}
+	}
+	
 	@JvmStatic
 	fun getItem(itemId: UUID, callback: Response<BaseItemDto>) {
 		getItem(itemId, null, callback)
@@ -25,30 +44,9 @@ object ItemLauncherHelper {
 	@JvmStatic
 	fun getItem(itemId: UUID, serverId: UUID?, callback: Response<BaseItemDto>) {
 		ProcessLifecycleOwner.get().lifecycleScope.launch {
-			val defaultApi by KoinJavaComponent.inject<ApiClient>(ApiClient::class.java)
 			val sessionRepository by KoinJavaComponent.inject<SessionRepository>(SessionRepository::class.java)
-			
-			// Get current userId for multi-user support
-			val currentSession = sessionRepository.currentSession.value
-			val userId = currentSession?.userId
-			
-			// If serverId is provided, try to get the API client for that server AND user
-			val api = if (serverId != null && userId != null) {
-				val apiClientFactory by KoinJavaComponent.inject<ApiClientFactory>(ApiClientFactory::class.java)
-				val serverApi = apiClientFactory.getApiClient(serverId, userId)
-				if (serverApi != null) {
-					Timber.d("ItemLauncherHelper: Using API client for server $serverId user $userId")
-					serverApi
-				} else {
-					Timber.w("ItemLauncherHelper: Could not get API client for server $serverId user $userId, using default")
-					defaultApi
-				}
-			} else if (serverId != null) {
-				val apiClientFactory by KoinJavaComponent.inject<ApiClientFactory>(ApiClientFactory::class.java)
-				apiClientFactory.getApiClientForServer(serverId) ?: defaultApi
-			} else {
-				defaultApi
-			}
+			val userId = sessionRepository.currentSession.value?.userId
+			val api = resolveApiClient(serverId, userId)
 
 			try {
 				val response = withContext(Dispatchers.IO) {
@@ -58,6 +56,21 @@ object ItemLauncherHelper {
 			} catch (error: ApiClientException) {
 				callback.onError(error)
 			}
+		}
+	}
+	
+	suspend fun getItemBlocking(itemId: UUID, serverId: UUID? = null): BaseItemDto? {
+		val sessionRepository by KoinJavaComponent.inject<SessionRepository>(SessionRepository::class.java)
+		val userId = sessionRepository.currentSession.value?.userId
+		val api = resolveApiClient(serverId, userId)
+
+		return try {
+			withContext(Dispatchers.IO) {
+				api.userLibraryApi.getItem(itemId = itemId).content
+			}
+		} catch (error: ApiClientException) {
+			Timber.e(error, "Error fetching item $itemId")
+			null
 		}
 	}
 }

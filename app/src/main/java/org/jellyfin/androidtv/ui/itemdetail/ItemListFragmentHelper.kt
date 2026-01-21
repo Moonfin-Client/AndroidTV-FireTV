@@ -2,7 +2,6 @@ package org.jellyfin.androidtv.ui.itemdetail
 
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.data.repository.ItemMutationRepository
@@ -24,7 +23,7 @@ fun ItemListFragment.loadItem(itemId: UUID) {
 		val item = withContext(Dispatchers.IO) {
 			api.userLibraryApi.getItem(itemId).content
 		}
-		if (isActive) setBaseItem(item)
+		setBaseItem(item)
 	}
 }
 
@@ -90,5 +89,27 @@ fun ItemListFragment.toggleFavorite(item: BaseItemDto, callback: (item: BaseItem
 			favorite = !(item.userData?.isFavorite ?: false)
 		)
 		callback(item.copy(userData = userData))
+	}
+}
+
+fun ItemListFragment.removeFromPlaylist(
+	playlistId: UUID,
+	playlistItemId: String,
+	callback: () -> Unit
+) {
+	val api by inject<ApiClient>()
+
+	lifecycleScope.launch {
+		try {
+			withContext(Dispatchers.IO) {
+				api.playlistsApi.removeItemFromPlaylist(
+					playlistId = playlistId.toString(),
+					entryIds = listOf(playlistItemId)
+				)
+			}
+			callback()
+		} catch (e: Exception) {
+			timber.log.Timber.e(e, "Failed to remove item from playlist")
+		}
 	}
 }

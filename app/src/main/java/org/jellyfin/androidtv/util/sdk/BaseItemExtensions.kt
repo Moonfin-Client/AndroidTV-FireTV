@@ -5,13 +5,11 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.model.ChapterItemInfo
 import org.jellyfin.androidtv.ui.composable.getResolutionName
 import org.jellyfin.androidtv.util.TimeUtils
+import org.jellyfin.androidtv.util.apiclient.chapterImages
 import org.jellyfin.androidtv.util.getQuantityString
 import org.jellyfin.androidtv.util.getTimeFormatter
-import org.jellyfin.sdk.api.client.ApiClient
-import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.LocationType
 import org.jellyfin.sdk.model.api.PersonKind
 import java.time.LocalDateTime
@@ -195,20 +193,15 @@ fun BaseItemDto.getSubName(context: Context): String? = when (type) {
 	else -> officialRating
 }
 
-fun BaseItemDto.buildChapterItems(api: ApiClient): List<ChapterItemInfo> = chapters?.mapIndexed { i, dto ->
-	ChapterItemInfo(
-		itemId = id,
-		name = dto.name,
-		startPositionTicks = dto.startPositionTicks,
-		imagePath = when {
-			dto.imageTag != null -> api.imageApi.getItemImageUrl(
-				itemId = id,
-				imageType = ImageType.CHAPTER,
-				tag = dto.imageTag,
-				imageIndex = i,
-			)
-
-			else -> null
-		},
-	)
-}.orEmpty()
+fun BaseItemDto.buildChapterItems(): List<ChapterItemInfo> {
+	val images = chapterImages
+	return chapters?.mapIndexed { i, dto ->
+		ChapterItemInfo(
+			itemId = id,
+			serverId = serverId,
+			name = dto.name,
+			startPositionTicks = dto.startPositionTicks,
+			image = images[i].takeIf { it.tag.isNotEmpty() },
+		)
+	}.orEmpty()
+}

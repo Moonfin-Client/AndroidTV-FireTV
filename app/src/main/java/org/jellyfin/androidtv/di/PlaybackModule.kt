@@ -39,7 +39,7 @@ val playbackModule = module {
 	single { VideoQueueManager() }
 	single<MediaManager> { RewriteMediaManager(get(), get()) }
 
-	single { PlaybackLauncher(get(), get(), get(), get()) }
+	single { PlaybackLauncher(get(), get(), get(), get(), get()) }
 	single { PrePlaybackTrackSelector(androidContext()) }
 
 	single<HttpDataSource.Factory> {
@@ -74,6 +74,7 @@ fun Scope.createPlaybackManager() = playbackManager(androidContext()) {
 	val exoPlayerOptions = ExoPlayerOptions(
 		preferFfmpeg = userPreferences[UserPreferences.preferExoPlayerFfmpeg],
 		enableDebugLogging = userPreferences[UserPreferences.debuggingEnabled],
+		enableLibAssRenderer = userPreferences[UserPreferences.assDirectPlay],
 		baseDataSourceFactory = get<HttpDataSource.Factory>(),
 	)
 	install(exoPlayerPlugin(get(), exoPlayerOptions))
@@ -90,8 +91,26 @@ fun Scope.createPlaybackManager() = playbackManager(androidContext()) {
 	
 	// Create API client resolver for cross-server support
 	val apiClientFactory = get<org.jellyfin.androidtv.util.sdk.ApiClientFactory>()
+	val sessionRepository = get<org.jellyfin.androidtv.auth.repository.SessionRepository>()
+	val authenticationStore = get<org.jellyfin.androidtv.auth.store.AuthenticationStore>()
 	val apiClientResolver: (java.util.UUID?) -> org.jellyfin.sdk.api.client.ApiClient? = { serverId ->
-		serverId?.let { apiClientFactory.getApiClientForServer(it) }
+		serverId?.let { 
+			val currentSession = sessionRepository.currentSession.value
+			
+			val userId = if (currentSession?.serverId == it) {
+				currentSession.userId
+			} else {
+				authenticationStore.getServer(it)?.users?.entries
+					?.firstOrNull { (_, user) -> !user.accessToken.isNullOrBlank() }
+					?.key
+			}
+			
+			if (userId != null) {
+				apiClientFactory.getApiClient(it, userId) ?: apiClientFactory.getApiClientForServer(it)
+			} else {
+				apiClientFactory.getApiClientForServer(it)
+			}
+		}
 	}
 	
 	install(jellyfinPlugin(get(), deviceProfileBuilder, ProcessLifecycleOwner.get().lifecycle, apiClientResolver))

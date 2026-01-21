@@ -185,19 +185,17 @@ fun SettingsPlaybackAdvancedScreen() {
 			)
 		}
 
-		item { ListSection(headingContent = { Text(stringResource(R.string.pref_live_tv_cat)) }) }
-
 		item {
-			var liveTvDirectPlayEnabled by rememberPreference(userPreferences, UserPreferences.liveTvDirectPlayEnabled)
+			var assDirectPlay by rememberPreference(userPreferences, UserPreferences.assDirectPlay)
 
 			ListButton(
-				headingContent = { Text(stringResource(R.string.lbl_direct_stream_live)) },
-				trailingContent = { Checkbox(checked = liveTvDirectPlayEnabled) },
-				onClick = { liveTvDirectPlayEnabled = !liveTvDirectPlayEnabled }
+				headingContent = { Text(stringResource(R.string.preference_enable_libass)) },
+				trailingContent = { Checkbox(checked = assDirectPlay) },
+				onClick = { assDirectPlay = !assDirectPlay }
 			)
 		}
 
-		item { ListSection(headingContent = { Text(stringResource(R.string.pref_audio)) }) }
+		item { ListSection(headingContent = { Text(stringResource(R.string.pref_live_tv_cat)) }) }
 
 		item {
 			var audioBehaviour by rememberPreference(userPreferences, UserPreferences.audioBehaviour)
@@ -213,9 +211,19 @@ fun SettingsPlaybackAdvancedScreen() {
 			var audioNightMode by rememberPreference(userPreferences, UserPreferences.audioNightMode)
 
 			ListButton(
-				headingContent = { Text(stringResource(R.string.lbl_direct_stream_live)) },
+				headingContent = { Text(stringResource(R.string.pref_audio_night_mode)) },
 				trailingContent = { Checkbox(checked = audioNightMode) },
 				onClick = { audioNightMode = !audioNightMode }
+			)
+		}
+
+		item {
+			var liveTvDirectPlayEnabled by rememberPreference(userPreferences, UserPreferences.liveTvDirectPlayEnabled)
+
+			ListButton(
+				headingContent = { Text(stringResource(R.string.lbl_direct_stream_live)) },
+				trailingContent = { Checkbox(checked = liveTvDirectPlayEnabled) },
+				onClick = { liveTvDirectPlayEnabled = !liveTvDirectPlayEnabled }
 			)
 		}
 
