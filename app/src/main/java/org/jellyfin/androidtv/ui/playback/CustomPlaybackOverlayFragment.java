@@ -1272,6 +1272,14 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
                 binding.itemSubtitle.setText(BaseItemExtensionsKt.getDisplayName(current, requireContext()));
             } else {
                 binding.itemTitle.setText(current.getName());
+                binding.itemSubtitle.setText(current.getName());
+            }
+            String overview = current.getOverview();
+            if (overview != null && !overview.isEmpty()) {
+                binding.itemDescription.setText(overview);
+                binding.itemDescription.setVisibility(View.VISIBLE);
+            } else {
+                binding.itemDescription.setVisibility(View.GONE);
             }
             // Update the logo
             String imageUrl = imageHelper.getValue().getLogoImageUrl(current, 440);

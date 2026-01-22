@@ -60,7 +60,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/topPanel"
         android:layout_width="fill_parent"
-        android:layout_height="155dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal|top"
         android:layout_marginHorizontal="40dp"
         android:layout_marginTop="20dp"
@@ -107,6 +107,19 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/item_title"
             tools:text="Subtitle" />
+
+        <TextView
+            android:id="@+id/item_description"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#B3FFFFFF"
+            android:textSize="18sp"
+            app:layout_constraintEnd_toStartOf="@id/textClock"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/item_subtitle"
+            tools:text="Description text goes here" />
 
         <org.jellyfin.androidtv.ui.ClockUserView
             android:id="@+id/textClock"
