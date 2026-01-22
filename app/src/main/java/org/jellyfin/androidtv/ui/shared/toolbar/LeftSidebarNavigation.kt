@@ -9,6 +9,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -97,6 +98,8 @@ fun LeftSidebarNavigation(
 	val mediaManager = koinInject<MediaManager>()
 	val api = koinInject<ApiClient>()
 	val apiClientFactory = koinInject<ApiClientFactory>()
+	val settingsViewModel = koinActivityViewModel<SettingsViewModel>()
+	val settingsClosedCounter by settingsViewModel.settingsClosedCounter.collectAsState()
 	val jellyseerrPreferences = koinInject<JellyseerrPreferences>(named("global"))
 	
 	// User image - same pattern as MainToolbar
@@ -113,7 +116,7 @@ fun LeftSidebarNavigation(
 	var syncPlayEnabled by remember { mutableStateOf(false) }
 	var jellyseerrEnabled by remember { mutableStateOf(false) }
 	
-	LaunchedEffect(Unit) {
+	LaunchedEffect(settingsClosedCounter) {
 		showShuffleButton = userPreferences[UserPreferences.showShuffleButton]
 		showGenresButton = userPreferences[UserPreferences.showGenresButton]
 		showFavoritesButton = userPreferences[UserPreferences.showFavoritesButton]
@@ -340,7 +343,8 @@ private fun CollapsibleSidebarContent(
 									navigationRepository = navigationRepository
 								)
 							}
-						}
+						},
+						onLongClick = { showShuffleDialog = true }
 					)
 					Spacer(modifier = Modifier.height(2.dp))
 				}
@@ -496,7 +500,8 @@ private fun SidebarIconItem(
 	isExpanded: Boolean,
 	focusRequester: FocusRequester? = null,
 	onFocusChanged: ((Boolean) -> Unit)? = null,
-	onClick: () -> Unit
+	onClick: () -> Unit,
+	onLongClick: (() -> Unit)? = null
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
@@ -522,10 +527,11 @@ private fun SidebarIconItem(
 					Modifier.padding(horizontal = 4.dp)
 				}
 			)
-			.clickable(
+			.combinedClickable(
 				interactionSource = interactionSource,
 				indication = null,
-				onClick = onClick
+				onClick = onClick,
+				onLongClick = onLongClick
 			)
 			.padding(vertical = 6.dp, horizontal = 4.dp),
 		verticalAlignment = Alignment.CenterVertically
@@ -563,8 +569,7 @@ private fun SidebarIconItem(
 				Text(
 					text = label,
 					color = textColor,
-					fontSize = 16.sp,
-					fontWeight = if (isFocused) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+					fontSize = 16.sp
 				)
 				Spacer(modifier = Modifier.width(8.dp))
 			}
@@ -612,8 +617,7 @@ private fun SidebarTextItem(
 		Text(
 			text = label,
 			color = textColor,
-			fontSize = 16.sp,
-			fontWeight = if (isFocused) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+			fontSize = 16.sp
 		)
 		Spacer(modifier = Modifier.width(8.dp))
 	}

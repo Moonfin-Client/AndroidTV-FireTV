@@ -71,7 +71,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var navbarPosition = enumPreference("pref_navbar_position", org.jellyfin.androidtv.preference.constant.NavbarPosition.TOP)
 
-		var syncPlayEnabled = booleanPreference("pref_syncplay_enabled", true)
+		var syncPlayEnabled = booleanPreference("pref_syncplay_enabled", false)
 
 		/**
 		 * Content type for shuffle button (movies, tv, or both)

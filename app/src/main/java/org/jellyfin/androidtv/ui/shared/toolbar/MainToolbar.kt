@@ -98,6 +98,8 @@ fun MainToolbar(
 ) {
 	val context = LocalContext.current
 	val userRepository = koinInject<UserRepository>()
+	val settingsViewModel = koinActivityViewModel<SettingsViewModel>()
+	val settingsClosedCounter by settingsViewModel.settingsClosedCounter.collectAsState()
 	val api = koinInject<ApiClient>()
 	val userViewsRepository = koinInject<UserViewsRepository>()
 	val multiServerRepository = koinInject<org.jellyfin.androidtv.data.repository.MultiServerRepository>()
@@ -148,7 +150,7 @@ fun MainToolbar(
 	var syncPlayEnabled by remember { mutableStateOf(false) }
 	var enableMultiServer by remember { mutableStateOf(false) }
 	var shuffleContentType by remember { mutableStateOf("both") }
-	LaunchedEffect(Unit) {
+	LaunchedEffect(settingsClosedCounter) {
 		showShuffleButton = userPreferences[UserPreferences.showShuffleButton] ?: true
 		showGenresButton = userPreferences[UserPreferences.showGenresButton] ?: true
 		showFavoritesButton = userPreferences[UserPreferences.showFavoritesButton] ?: true
@@ -269,7 +271,7 @@ private fun MainToolbar(
 			.focusGroup(),
 		start = {
 			Row(
-				horizontalArrangement = Arrangement.spacedBy(8.dp),
+				horizontalArrangement = Arrangement.spacedBy(4.dp),
 				verticalAlignment = Alignment.CenterVertically,
 			) {
 				val userImagePainter = userImage?.let { rememberAsyncImagePainter(it) }
@@ -381,6 +383,7 @@ private fun MainToolbar(
 								)
 							}
 						},
+						onLongClick = { showShuffleDialog = true },
 						colors = toolbarButtonColors,
 					)
 				}
@@ -430,15 +433,6 @@ private fun MainToolbar(
 					)
 				}
 
-				ExpandableIconButton(
-					icon = ImageVector.vectorResource(R.drawable.ic_settings),
-					label = "Settings",
-					onClick = {
-						settingsViewModel.show()
-					},
-					colors = toolbarButtonColors,
-				)
-				
 				if (showLibrariesInToolbar) {
 					ExpandableLibrariesButton(
 						activeLibraryId = activeLibraryId,
@@ -452,6 +446,15 @@ private fun MainToolbar(
 						itemLauncher = itemLauncher,
 					)
 				}
+
+				ExpandableIconButton(
+					icon = ImageVector.vectorResource(R.drawable.ic_settings),
+					label = "Settings",
+					onClick = {
+						settingsViewModel.show()
+					},
+					colors = toolbarButtonColors,
+				)
 			}
 		},
 		end = {
