@@ -44,6 +44,7 @@ import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMediaBar
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMediaBarContentTypeScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMediaBarItemCountScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMediaBarOpacityScreen
+import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinNavbarPositionScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinParentalControlsScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinSeasonalSurpriseScreen
@@ -122,6 +123,7 @@ object Routes {
 	const val JELLYSEERR = "/jellyseerr"
 	const val JELLYSEERR_ROWS = "/jellyseerr/rows"
 	const val MOONFIN = "/moonfin"
+	const val MOONFIN_NAVBAR_POSITION = "/moonfin/navbar-position"
 	const val MOONFIN_SHUFFLE_CONTENT_TYPE = "/moonfin/shuffle-content-type"
 	const val MOONFIN_MEDIA_BAR_CONTENT_TYPE = "/moonfin/media-bar-content-type"
 	const val MOONFIN_MEDIA_BAR_ITEM_COUNT = "/moonfin/media-bar-item-count"
@@ -358,6 +360,9 @@ val routes = mapOf<String, RouteComposable>(
 	},
 	Routes.MOONFIN to {
 		SettingsMoonfinScreen()
+	},
+	Routes.MOONFIN_NAVBAR_POSITION to {
+		SettingsMoonfinNavbarPositionScreen()
 	},
 	Routes.MOONFIN_SHUFFLE_CONTENT_TYPE to {
 		SettingsMoonfinShuffleContentTypeScreen()

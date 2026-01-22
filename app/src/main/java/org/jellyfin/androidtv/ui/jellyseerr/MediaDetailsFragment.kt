@@ -37,8 +37,8 @@ import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrTvDetailsDto
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.TextUnderButton
-import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
+import org.jellyfin.androidtv.ui.shared.toolbar.NavigationOverlay
 import org.jellyfin.androidtv.util.dp
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -68,6 +68,7 @@ class MediaDetailsFragment : Fragment() {
 	private var playInMoonfinButton: View? = null
 	private var castSection: View? = null
 	private var toolbarContainer: View? = null
+	private var sidebarId: Int = View.NO_ID
 
 	// Items per section (cast/recommendations/similar)
 	private val ITEMS_PER_SECTION = 45  // 3 pages * ~15 items per page
@@ -98,6 +99,8 @@ class MediaDetailsFragment : Fragment() {
 		container: ViewGroup?,
 		savedInstanceState: Bundle?
 	): View {
+		sidebarId = View.generateViewId()
+		
 		val mainContainer = FrameLayout(requireContext()).apply {
 			layoutParams = ViewGroup.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
@@ -105,22 +108,6 @@ class MediaDetailsFragment : Fragment() {
 			)
 			setBackgroundColor(Color.parseColor("#111827"))
 		}
-
-		// Add toolbar on top of everything (fixed position)
-		val toolbar = ComposeView(requireContext()).apply {
-			layoutParams = FrameLayout.LayoutParams(
-				FrameLayout.LayoutParams.MATCH_PARENT,
-				FrameLayout.LayoutParams.WRAP_CONTENT
-			)
-			id = View.generateViewId()
-			elevation = 8.dp(context).toFloat()
-			setContent {
-				MainToolbar(
-					activeButton = MainToolbarActiveButton.Jellyseerr
-				)
-			}
-		}
-		toolbarContainer = toolbar
 
 		val scrollView = ScrollView(requireContext()).apply {
 			layoutParams = FrameLayout.LayoutParams(
@@ -131,7 +118,7 @@ class MediaDetailsFragment : Fragment() {
 			isFocusable = true
 			isFocusableInTouchMode = true
 			isScrollbarFadingEnabled = false
-			// Add top padding to account for toolbar height (approximately 80dp)
+			nextFocusLeftId = sidebarId
 			setPadding(0, 80.dp(context), 0, 0)
 			clipToPadding = false
 		}
@@ -148,7 +135,32 @@ class MediaDetailsFragment : Fragment() {
 		rootLayout.addView(createBackdropWithHeaderSection())
 		
 		mainContainer.addView(scrollView)
-		mainContainer.addView(toolbar)
+		
+		val sidebarContainer = FrameLayout(requireContext()).apply {
+			layoutParams = FrameLayout.LayoutParams(
+				FrameLayout.LayoutParams.WRAP_CONTENT,
+				FrameLayout.LayoutParams.MATCH_PARENT
+			).apply {
+				gravity = Gravity.START
+			}
+			elevation = 8f * resources.displayMetrics.density
+		}
+		
+		val sidebarOverlay = ComposeView(requireContext()).apply {
+			id = sidebarId
+			layoutParams = FrameLayout.LayoutParams(
+				FrameLayout.LayoutParams.WRAP_CONTENT,
+				FrameLayout.LayoutParams.MATCH_PARENT
+			)
+			setContent {
+				NavigationOverlay(
+					activeButton = MainToolbarActiveButton.Jellyseerr
+				)
+			}
+		}
+		toolbarContainer = sidebarOverlay
+		sidebarContainer.addView(sidebarOverlay)
+		mainContainer.addView(sidebarContainer)
 		
 		return mainContainer
 	}
@@ -168,7 +180,7 @@ class MediaDetailsFragment : Fragment() {
 				FrameLayout.LayoutParams.WRAP_CONTENT,
 				FrameLayout.LayoutParams.WRAP_CONTENT
 			).apply {
-				leftMargin = 24.dp(context)
+				leftMargin = 50.dp(context)
 				topMargin = 24.dp(context)
 			}
 			elevation = 8.dp(context).toFloat()
@@ -207,7 +219,7 @@ class MediaDetailsFragment : Fragment() {
 				LinearLayout.LayoutParams.WRAP_CONTENT
 			)
 			setBackgroundColor(Color.parseColor("#111827"))
-			setPadding(24.dp(context), 0, 24.dp(context), 8.dp(context))
+			setPadding(50.dp(context), 0, 50.dp(context), 8.dp(context))
 		}
 		
 		headerWrapper.addView(headerContent)
@@ -222,6 +234,7 @@ class MediaDetailsFragment : Fragment() {
 				topMargin = 316.dp(context)
 			}
 			setBackgroundColor(Color.parseColor("#111827"))
+			setPadding(50.dp(context), 0, 50.dp(context), 0)
 		}
 		contentWrapper.addView(createOverviewSection())
 		contentWrapper.addView(createCastSection())
@@ -236,7 +249,7 @@ class MediaDetailsFragment : Fragment() {
 				FrameLayout.LayoutParams.WRAP_CONTENT
 			).apply {
 				topMargin = 230.dp(context)
-				leftMargin = 248.dp(context)
+				leftMargin = 270.dp(context)
 			}
 			elevation = 4.dp(context).toFloat()
 		}
@@ -641,7 +654,7 @@ class MediaDetailsFragment : Fragment() {
 				}
 			}
 			id = View.generateViewId()
-			nextFocusLeftId = id
+			nextFocusLeftId = sidebarId
 			layoutParams = LinearLayout.LayoutParams(
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
@@ -662,6 +675,7 @@ class MediaDetailsFragment : Fragment() {
 					showCancelRequestDialog(pendingRequests)
 				}
 				id = View.generateViewId()
+				nextFocusLeftId = sidebarId
 				layoutParams = LinearLayout.LayoutParams(
 					LinearLayout.LayoutParams.WRAP_CONTENT,
 					LinearLayout.LayoutParams.WRAP_CONTENT
@@ -681,6 +695,7 @@ class MediaDetailsFragment : Fragment() {
 				playTrailer()
 			}
 			id = View.generateViewId()
+			nextFocusLeftId = sidebarId
 			layoutParams = LinearLayout.LayoutParams(
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
@@ -700,6 +715,7 @@ class MediaDetailsFragment : Fragment() {
 					playInMoonfin()
 				}
 				id = View.generateViewId()
+				nextFocusLeftId = sidebarId
 				layoutParams = LinearLayout.LayoutParams(
 					LinearLayout.LayoutParams.WRAP_CONTENT,
 					LinearLayout.LayoutParams.WRAP_CONTENT
@@ -825,7 +841,7 @@ class MediaDetailsFragment : Fragment() {
 				LinearLayout.LayoutParams.MATCH_PARENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
 			)
-			setPadding(24.dp(context), 0, 24.dp(context), 24.dp(context)) // No top padding to touch headerWrapper
+			setPadding(16.dp(context), 0, 24.dp(context), 24.dp(context)) // No top padding to touch headerWrapper
 			gravity = Gravity.TOP
 		}
 
@@ -1156,6 +1172,7 @@ class MediaDetailsFragment : Fragment() {
 			gravity = Gravity.CENTER_HORIZONTAL
 			isFocusable = true
 			isFocusableInTouchMode = true
+			nextFocusLeftId = sidebarId
 			setPadding(8.dp(context), 8.dp(context), 8.dp(context), 8.dp(context))
 			
 			setOnFocusChangeListener { view, hasFocus ->
@@ -1510,6 +1527,7 @@ class MediaDetailsFragment : Fragment() {
 				}
 				isFocusable = true
 				isFocusableInTouchMode = true
+				nextFocusLeftId = sidebarId
 
 				setOnClickListener {
 					// Navigate to browse-by with keyword filter
@@ -1563,6 +1581,7 @@ class MediaDetailsFragment : Fragment() {
 			setPadding(0, 0, 0, 16.dp(context))
 			isFocusable = true
 			isFocusableInTouchMode = true
+			nextFocusLeftId = sidebarId
 
 			setOnFocusChangeListener { view, hasFocus ->
 				if (hasFocus) {

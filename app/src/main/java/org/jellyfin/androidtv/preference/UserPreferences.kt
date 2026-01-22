@@ -66,7 +66,12 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var showLibrariesInToolbar = booleanPreference("pref_show_libraries_in_toolbar", true)
 
-		var syncPlayEnabled = booleanPreference("pref_syncplay_enabled", true)
+		/**
+		 * Navbar position (top or left)
+		 */
+		var navbarPosition = enumPreference("pref_navbar_position", org.jellyfin.androidtv.preference.constant.NavbarPosition.TOP)
+
+		var syncPlayEnabled = booleanPreference("pref_syncplay_enabled", false)
 
 		/**
 		 * Content type for shuffle button (movies, tv, or both)
@@ -77,7 +82,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Enable sync correction during playback
 		 */
-		var syncPlayEnableSyncCorrection = booleanPreference("syncplay_enable_sync_correction", false)
+		var syncPlayEnableSyncCorrection = booleanPreference("syncplay_enable_sync_correction", true)
 
 		/**
 		 * Use SpeedToSync method to catch up with group
@@ -92,12 +97,12 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Minimum delay for SpeedToSync to kick in (ms)
 		 */
-		var syncPlayMinDelaySpeedToSync = floatPreference("syncplay_min_delay_speed_to_sync", 60f)
+		var syncPlayMinDelaySpeedToSync = floatPreference("syncplay_min_delay_speed_to_sync", 100f)
 
 		/**
 		 * Maximum delay after which SkipToSync is used instead of SpeedToSync (ms)
 		 */
-		var syncPlayMaxDelaySpeedToSync = floatPreference("syncplay_max_delay_speed_to_sync", 3000f)
+		var syncPlayMaxDelaySpeedToSync = floatPreference("syncplay_max_delay_speed_to_sync", 5000f)
 
 		/**
 		 * Duration for which playback is sped up (ms)
@@ -107,7 +112,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Minimum delay for SkipToSync to kick in (ms)
 		 */
-		var syncPlayMinDelaySkipToSync = floatPreference("syncplay_min_delay_skip_to_sync", 400f)
+		var syncPlayMinDelaySkipToSync = floatPreference("syncplay_min_delay_skip_to_sync", 2000f)
 
 		/**
 		 * Extra time offset for fine-tuning sync (ms)

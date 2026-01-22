@@ -148,19 +148,32 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         syncPlayManager.getValue().setPlaybackCallback(new org.jellyfin.androidtv.data.syncplay.SyncPlayManager.SyncPlayPlaybackCallback() {
             @Override
             public void onPlay(long positionMs) {
-                if (mPlaybackState == PlaybackState.PAUSED) {
+                Timber.i("SyncPlay onPlay callback: positionMs=%d, currentState=%s", positionMs, mPlaybackState);
+                if (mPlaybackState == PlaybackState.PAUSED || mPlaybackState == PlaybackState.BUFFERING || mPlaybackState == PlaybackState.IDLE) {
                     isRespondingToSyncPlayCommand = true;
-                    play(positionMs);
+                    // If position is 0 and we're paused, resume from current position instead of seeking to start
+                    if (positionMs <= 0 && mPlaybackState == PlaybackState.PAUSED && hasInitializedVideoManager()) {
+                        Timber.i("SyncPlay: Resuming from current position");
+                        mVideoManager.play();
+                        mPlaybackState = PlaybackState.PLAYING;
+                    } else {
+                        play(positionMs);
+                    }
                     isRespondingToSyncPlayCommand = false;
+                } else {
+                    Timber.w("SyncPlay onPlay ignored: state=%s", mPlaybackState);
                 }
             }
 
             @Override
             public void onPause(long positionMs) {
-                if (mPlaybackState == PlaybackState.PLAYING) {
+                Timber.i("SyncPlay onPause callback: positionMs=%d, currentState=%s", positionMs, mPlaybackState);
+                if (mPlaybackState == PlaybackState.PLAYING || mPlaybackState == PlaybackState.BUFFERING) {
                     isRespondingToSyncPlayCommand = true;
                     pause();
                     isRespondingToSyncPlayCommand = false;
+                } else {
+                    Timber.w("SyncPlay onPause ignored: state=%s", mPlaybackState);
                 }
             }
 
@@ -1109,6 +1122,14 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     public void endPlayback() {
         endPlayback(false);
     }
+    
+    public void onResume() {
+        syncPlayManager.getValue().onAppResume();
+    }
+    
+    public void onPause() {
+        syncPlayManager.getValue().onAppPause();
+    }
 
     private void resetPlayerErrors() {
         playbackRetries = 0;
@@ -1183,8 +1204,10 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         }
         wasSeeking = true;
         
+        // If in SyncPlay group and not responding to a SyncPlay command, send seek request to server
         org.jellyfin.androidtv.data.syncplay.SyncPlayManager manager = syncPlayManager.getValue();
-        if (manager.getState().getValue().getGroupInfo() != null) {
+        if (manager.getState().getValue().getGroupInfo() != null && !isRespondingToSyncPlayCommand) {
+            Timber.i("SyncPlay: Sending seek request to server for position %d", pos);
             final long positionTicks = SyncPlayUtils.msToTicks(pos);
             executeSyncPlayCommand(() -> {
                 try {
@@ -1196,6 +1219,8 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                     Timber.e(e, "Failed to sync seek with SyncPlay");
                 }
             });
+            wasSeeking = false;
+            return; // Server will send seek command back to all clients
         }
 
         // Stop playback when the requested seek position is at the end of the video

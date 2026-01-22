@@ -1,0 +1,624 @@
+package org.jellyfin.androidtv.ui.shared.toolbar
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.activity.compose.LocalActivity
+import coil3.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.auth.repository.SessionRepository
+import org.jellyfin.androidtv.auth.repository.UserRepository
+import org.jellyfin.androidtv.data.model.AggregatedLibrary
+import org.jellyfin.androidtv.data.repository.MultiServerRepository
+import org.jellyfin.androidtv.data.repository.UserViewsRepository
+import org.jellyfin.androidtv.preference.JellyseerrPreferences
+import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.ui.base.Icon
+import org.jellyfin.androidtv.ui.base.Text
+import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
+import org.jellyfin.androidtv.ui.navigation.ActivityDestinations
+import org.jellyfin.androidtv.ui.navigation.Destinations
+import org.jellyfin.androidtv.ui.navigation.NavigationRepository
+import org.jellyfin.androidtv.ui.playback.MediaManager
+import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
+import org.jellyfin.androidtv.ui.shuffle.ShuffleOptionsDialog
+import org.jellyfin.androidtv.ui.shuffle.executeShuffle
+import org.jellyfin.androidtv.ui.syncplay.SyncPlayViewModel
+import org.jellyfin.androidtv.util.apiclient.getUrl
+import org.jellyfin.androidtv.util.apiclient.primaryImage
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
+import org.jellyfin.sdk.api.client.ApiClient
+import org.jellyfin.sdk.model.api.BaseItemDto
+import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinActivityViewModel
+import org.koin.core.qualifier.named
+import java.util.UUID
+
+@Composable
+fun LeftSidebarNavigation(
+	activeButton: MainToolbarActiveButton = MainToolbarActiveButton.None,
+	activeLibraryId: UUID? = null,
+) {
+	val activity = LocalActivity.current
+	val context = LocalContext.current
+	val scope = rememberCoroutineScope()
+	val userPreferences = koinInject<UserPreferences>()
+	val userRepository = koinInject<UserRepository>()
+	val sessionRepository = koinInject<SessionRepository>()
+	val mediaManager = koinInject<MediaManager>()
+	val api = koinInject<ApiClient>()
+	val apiClientFactory = koinInject<ApiClientFactory>()
+	val settingsViewModel = koinActivityViewModel<SettingsViewModel>()
+	val settingsClosedCounter by settingsViewModel.settingsClosedCounter.collectAsState()
+	val jellyseerrPreferences = koinInject<JellyseerrPreferences>(named("global"))
+	
+	// User image - same pattern as MainToolbar
+	val currentUser by remember { userRepository.currentUser.filterNotNull() }.collectAsState(null)
+	val userImageUrl = remember(currentUser) { currentUser?.primaryImage?.getUrl(api) }
+	
+	// User preferences
+	var showShuffleButton by remember { mutableStateOf(true) }
+	var showGenresButton by remember { mutableStateOf(true) }
+	var showFavoritesButton by remember { mutableStateOf(true) }
+	var showLibrariesInToolbar by remember { mutableStateOf(true) }
+	var shuffleContentType by remember { mutableStateOf("both") }
+	var enableMultiServer by remember { mutableStateOf(false) }
+	var syncPlayEnabled by remember { mutableStateOf(false) }
+	var jellyseerrEnabled by remember { mutableStateOf(false) }
+	
+	LaunchedEffect(settingsClosedCounter) {
+		showShuffleButton = userPreferences[UserPreferences.showShuffleButton]
+		showGenresButton = userPreferences[UserPreferences.showGenresButton]
+		showFavoritesButton = userPreferences[UserPreferences.showFavoritesButton]
+		showLibrariesInToolbar = userPreferences[UserPreferences.showLibrariesInToolbar]
+		enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
+		shuffleContentType = userPreferences[UserPreferences.shuffleContentType]
+		syncPlayEnabled = userPreferences[UserPreferences.syncPlayEnabled]
+	}
+	
+	// Check Jellyseerr settings
+	LaunchedEffect(currentUser) {
+		val globalEnabled = jellyseerrPreferences[JellyseerrPreferences.enabled]
+		if (globalEnabled && currentUser != null) {
+			val userJellyseerrPrefs = JellyseerrPreferences(context = context, userId = currentUser!!.id.toString())
+			val showInToolbar = userJellyseerrPrefs[JellyseerrPreferences.showInToolbar]
+			jellyseerrEnabled = showInToolbar
+		} else {
+			jellyseerrEnabled = false
+		}
+	}
+	
+	// Load user views/libraries
+	val userViewsRepository = koinInject<UserViewsRepository>()
+	var userViews by remember { mutableStateOf<List<BaseItemDto>>(emptyList()) }
+	
+	LaunchedEffect(Unit) {
+		userViewsRepository.views.collect { views ->
+			userViews = views.toList()
+		}
+	}
+	
+	// Load aggregated libraries
+	val multiServerRepository = koinInject<MultiServerRepository>()
+	var aggregatedLibraries by remember { mutableStateOf<List<AggregatedLibrary>>(emptyList()) }
+	
+	LaunchedEffect(Unit) {
+		if (enableMultiServer) {
+			withContext(Dispatchers.IO) {
+				aggregatedLibraries = multiServerRepository.getAggregatedLibraries()
+			}
+		}
+	}
+	
+	// Track if sidebar is expanded (has focus)
+	var isExpanded by remember { mutableStateOf(false) }
+	
+	CollapsibleSidebarContent(
+		isExpanded = isExpanded,
+		onExpandedChange = { isExpanded = it },
+		activeButton = activeButton,
+		activeLibraryId = activeLibraryId,
+		userImageUrl = userImageUrl,
+		userName = currentUser?.name ?: "User",
+		activity = activity,
+		sessionRepository = sessionRepository,
+		mediaManager = mediaManager,
+		userViews = userViews,
+		aggregatedLibraries = aggregatedLibraries,
+		enableMultiServer = enableMultiServer,
+		shuffleContentType = shuffleContentType,
+		showShuffleButton = showShuffleButton,
+		showGenresButton = showGenresButton,
+		showFavoritesButton = showFavoritesButton,
+		showLibrariesInToolbar = showLibrariesInToolbar,
+		jellyseerrEnabled = jellyseerrEnabled,
+		syncPlayEnabled = syncPlayEnabled
+	)
+}
+
+@Composable
+private fun CollapsibleSidebarContent(
+	isExpanded: Boolean,
+	onExpandedChange: (Boolean) -> Unit,
+	activeButton: MainToolbarActiveButton,
+	activeLibraryId: UUID?,
+	userImageUrl: String?,
+	userName: String,
+	activity: android.app.Activity?,
+	sessionRepository: SessionRepository,
+	mediaManager: MediaManager,
+	userViews: List<BaseItemDto> = emptyList(),
+	aggregatedLibraries: List<AggregatedLibrary> = emptyList(),
+	enableMultiServer: Boolean = false,
+	shuffleContentType: String = "both",
+	showShuffleButton: Boolean = true,
+	showGenresButton: Boolean = true,
+	showFavoritesButton: Boolean = true,
+	showLibrariesInToolbar: Boolean = true,
+	jellyseerrEnabled: Boolean = false,
+	syncPlayEnabled: Boolean = false
+) {
+	val context = LocalContext.current
+	val scope = rememberCoroutineScope()
+	val navigationRepository = koinInject<NavigationRepository>()
+	val itemLauncher = koinInject<ItemLauncher>()
+	val settingsViewModel = koinActivityViewModel<SettingsViewModel>()
+	val syncPlayViewModel = koinActivityViewModel<SyncPlayViewModel>()
+	val apiClient = koinInject<ApiClient>()
+	val apiClientFactory = koinInject<ApiClientFactory>()
+	
+	var showShuffleDialog by remember { mutableStateOf(false) }
+	val showShuffle = shuffleContentType != "disabled" && showShuffleButton
+	
+	val homeIcon = ImageVector.vectorResource(R.drawable.ic_house)
+	val searchIcon = ImageVector.vectorResource(R.drawable.ic_search)
+	val shuffleIcon = ImageVector.vectorResource(R.drawable.ic_shuffle)
+	val genresIcon = ImageVector.vectorResource(R.drawable.ic_masks)
+	val favoritesIcon = ImageVector.vectorResource(R.drawable.ic_heart)
+	val jellyseerrIcon = ImageVector.vectorResource(R.drawable.ic_jellyseerr_jellyfish)
+	val syncplayIcon = ImageVector.vectorResource(R.drawable.ic_syncplay)
+	val librariesIcon = ImageVector.vectorResource(R.drawable.ic_clapperboard)
+	val settingsIcon = ImageVector.vectorResource(R.drawable.ic_settings)
+	
+	val sidebarWidth by animateDpAsState(
+		targetValue = if (isExpanded) 280.dp else 56.dp,
+		label = "sidebarWidth"
+	)
+	
+	val expandedBackground = Brush.horizontalGradient(
+		colors = listOf(
+			Color.Black.copy(alpha = 0.9f),
+			Color.Black.copy(alpha = 0.7f),
+			Color.Transparent
+		)
+	)
+	
+	val scrollState = rememberScrollState()
+	
+	val homeFocusRequester = remember { FocusRequester() }
+	
+	var librariesHasFocus by remember { mutableStateOf(false) }
+	
+	LaunchedEffect(isExpanded) {
+		if (isExpanded) {
+			scrollState.animateScrollTo(0)
+			homeFocusRequester.requestFocus()
+		}
+	}
+
+	Box(
+		modifier = Modifier
+			.fillMaxHeight()
+			.width(sidebarWidth)
+			.then(
+				if (isExpanded) {
+					Modifier.background(expandedBackground)
+				} else {
+					Modifier
+				}
+			)
+			.onFocusChanged { focusState ->
+				onExpandedChange(focusState.hasFocus)
+			}
+	) {
+		Column(
+			modifier = Modifier
+				.fillMaxHeight()
+				.verticalScroll(scrollState)
+				.padding(vertical = 16.dp, horizontal = 8.dp),
+			verticalArrangement = Arrangement.SpaceBetween
+		) {
+			Column {
+				SidebarIconItem(
+					icon = null,
+					imageUrl = userImageUrl,
+					label = userName,
+					showLabel = isExpanded,
+					isExpanded = isExpanded,
+					onClick = {
+						if (activeButton != MainToolbarActiveButton.User) {
+							mediaManager.clearAudioQueue()
+							sessionRepository.destroyCurrentSession()
+							activity?.startActivity(ActivityDestinations.startup(activity))
+							activity?.finishAfterTransition()
+						}
+					}
+				)
+			}
+
+			Column(
+				horizontalAlignment = Alignment.Start
+			) {
+				SidebarIconItem(
+					icon = homeIcon,
+					label = context.getString(R.string.lbl_home),
+					showLabel = isExpanded,
+					isExpanded = isExpanded,
+					focusRequester = homeFocusRequester,
+					onClick = {
+						navigationRepository.navigate(Destinations.home)
+					}
+				)
+
+				Spacer(modifier = Modifier.height(2.dp))
+
+				SidebarIconItem(
+					icon = searchIcon,
+					label = context.getString(R.string.lbl_search),
+					showLabel = isExpanded,
+					isExpanded = isExpanded,
+					onClick = {
+						navigationRepository.navigate(Destinations.search())
+					}
+				)
+
+				Spacer(modifier = Modifier.height(2.dp))
+
+				if (showShuffle) {
+					SidebarIconItem(
+						icon = shuffleIcon,
+						label = "Shuffle",
+						showLabel = isExpanded,
+						isExpanded = isExpanded,
+						onClick = {
+							scope.launch {
+								executeShuffle(
+									libraryId = null,
+									serverId = null,
+									genreName = null,
+									contentType = shuffleContentType,
+									libraryCollectionType = null,
+									api = apiClient,
+									apiClientFactory = apiClientFactory,
+									navigationRepository = navigationRepository
+								)
+							}
+						},
+						onLongClick = { showShuffleDialog = true }
+					)
+					Spacer(modifier = Modifier.height(2.dp))
+				}
+
+				if (showGenresButton) {
+					SidebarIconItem(
+						icon = genresIcon,
+						label = context.getString(R.string.lbl_genres),
+						showLabel = isExpanded,
+						isExpanded = isExpanded,
+						onClick = {
+							navigationRepository.navigate(Destinations.allGenres)
+						}
+					)
+					Spacer(modifier = Modifier.height(2.dp))
+				}
+
+				if (showFavoritesButton) {
+					SidebarIconItem(
+						icon = favoritesIcon,
+						label = context.getString(R.string.lbl_favorites),
+						showLabel = isExpanded,
+						isExpanded = isExpanded,
+						onClick = {
+							navigationRepository.navigate(Destinations.allFavorites)
+						}
+					)
+					Spacer(modifier = Modifier.height(2.dp))
+				}
+
+				if (jellyseerrEnabled) {
+					SidebarIconItem(
+						icon = jellyseerrIcon,
+						label = "Jellyseerr",
+						showLabel = isExpanded,
+						isExpanded = isExpanded,
+						onClick = {
+							navigationRepository.navigate(Destinations.jellyseerrDiscover)
+						}
+					)
+					Spacer(modifier = Modifier.height(2.dp))
+				}
+
+				if (syncPlayEnabled) {
+					SidebarIconItem(
+						icon = syncplayIcon,
+						label = context.getString(R.string.syncplay),
+						showLabel = isExpanded,
+						isExpanded = isExpanded,
+						onClick = {
+							syncPlayViewModel.show()
+						}
+					)
+					Spacer(modifier = Modifier.height(2.dp))
+				}
+
+				if (showLibrariesInToolbar) {
+					SidebarIconItem(
+						icon = librariesIcon,
+						label = "Libraries",
+						showLabel = isExpanded,
+						isExpanded = isExpanded,
+						onFocusChanged = { hasFocus ->
+							librariesHasFocus = hasFocus
+						},
+						onClick = { }
+					)
+					
+					if (isExpanded && librariesHasFocus) {
+						if (enableMultiServer && aggregatedLibraries.isNotEmpty()) {
+							aggregatedLibraries.forEach { aggLib ->
+								SidebarTextItem(
+									label = aggLib.displayName,
+									onFocusChanged = { hasFocus ->
+										if (hasFocus) librariesHasFocus = true
+									},
+									onClick = {
+										scope.launch {
+											val destination = Destinations.libraryBrowser(aggLib.library, aggLib.server.id)
+											navigationRepository.navigate(destination)
+										}
+									}
+								)
+							}
+						} else {
+							userViews.forEach { library ->
+								SidebarTextItem(
+									label = library.name ?: "",
+									onFocusChanged = { hasFocus ->
+										if (hasFocus) librariesHasFocus = true
+									},
+									onClick = {
+										val destination = itemLauncher.getUserViewDestination(library)
+										navigationRepository.navigate(destination)
+									}
+								)
+							}
+						}
+					}
+					Spacer(modifier = Modifier.height(2.dp))
+				}
+			}
+
+			Column {
+				SidebarIconItem(
+					icon = settingsIcon,
+					label = "Settings",
+					showLabel = isExpanded,
+					isExpanded = isExpanded,
+					onClick = {
+						scope.launch {
+							settingsViewModel.show()
+						}
+					}
+				)
+			}
+		}
+	}
+
+	if (showShuffleDialog) {
+		ShuffleOptionsDialog(
+			userViews = userViews,
+			aggregatedLibraries = aggregatedLibraries,
+			enableMultiServer = enableMultiServer,
+			shuffleContentType = shuffleContentType,
+			api = apiClient,
+			onDismiss = { showShuffleDialog = false },
+			onShuffle = { libraryId, serverId, genreName, contentType, libraryCollectionType ->
+				showShuffleDialog = false
+				scope.launch {
+					executeShuffle(
+						libraryId = libraryId,
+						serverId = serverId,
+						genreName = genreName,
+						contentType = contentType,
+						libraryCollectionType = libraryCollectionType,
+						api = apiClient,
+						apiClientFactory = apiClientFactory,
+						navigationRepository = navigationRepository
+					)
+				}
+			}
+		)
+	}
+}
+
+@Composable
+private fun SidebarIconItem(
+	icon: ImageVector?,
+	imageUrl: String? = null,
+	label: String,
+	showLabel: Boolean,
+	isExpanded: Boolean,
+	focusRequester: FocusRequester? = null,
+	onFocusChanged: ((Boolean) -> Unit)? = null,
+	onClick: () -> Unit,
+	onLongClick: (() -> Unit)? = null
+) {
+	val interactionSource = remember { MutableInteractionSource() }
+	val isFocused by interactionSource.collectIsFocusedAsState()
+	
+	LaunchedEffect(isFocused) {
+		onFocusChanged?.invoke(isFocused)
+	}
+	
+	val focusedColor = Color(0xFF00A4DC)
+	val normalColor = if (!isExpanded && imageUrl == null) Color.White.copy(alpha = 0.5f) else Color.White
+	val iconColor = normalColor
+	val textColor = Color.White
+
+	Row(
+		modifier = Modifier
+			.then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+			.then(
+				if (isFocused) {
+					Modifier
+						.border(2.dp, focusedColor, RoundedCornerShape(24.dp))
+						.padding(horizontal = 4.dp)
+				} else {
+					Modifier.padding(horizontal = 4.dp)
+				}
+			)
+			.combinedClickable(
+				interactionSource = interactionSource,
+				indication = null,
+				onClick = onClick,
+				onLongClick = onLongClick
+			)
+			.padding(vertical = 6.dp, horizontal = 4.dp),
+		verticalAlignment = Alignment.CenterVertically
+	) {
+		Box(
+			modifier = Modifier.size(32.dp),
+			contentAlignment = Alignment.Center
+		) {
+			if (imageUrl != null) {
+				AsyncImage(
+					model = imageUrl,
+					contentDescription = label,
+					modifier = Modifier
+						.size(32.dp)
+						.clip(CircleShape),
+					contentScale = ContentScale.Crop
+				)
+			} else if (icon != null) {
+				Icon(
+					imageVector = icon,
+					contentDescription = label,
+					modifier = Modifier.size(24.dp),
+					tint = iconColor
+				)
+			}
+		}
+		
+		AnimatedVisibility(
+			visible = showLabel,
+			enter = slideInHorizontally() + fadeIn(),
+			exit = slideOutHorizontally() + fadeOut()
+		) {
+			Row {
+				Spacer(modifier = Modifier.width(12.dp))
+				Text(
+					text = label,
+					color = textColor,
+					fontSize = 16.sp
+				)
+				Spacer(modifier = Modifier.width(8.dp))
+			}
+		}
+	}
+}
+
+@Composable
+private fun SidebarTextItem(
+	label: String,
+	onFocusChanged: ((Boolean) -> Unit)? = null,
+	onClick: () -> Unit
+) {
+	val interactionSource = remember { MutableInteractionSource() }
+	val isFocused by interactionSource.collectIsFocusedAsState()
+	
+	LaunchedEffect(isFocused) {
+		onFocusChanged?.invoke(isFocused)
+	}
+	
+	val focusedColor = Color(0xFF00A4DC)
+	val textColor = Color.White
+
+	Row(
+		modifier = Modifier
+			.focusable(interactionSource = interactionSource)
+			.then(
+				if (isFocused) {
+					Modifier
+						.border(2.dp, focusedColor, RoundedCornerShape(24.dp))
+						.padding(horizontal = 4.dp)
+				} else {
+					Modifier.padding(horizontal = 4.dp)
+				}
+			)
+			.clickable(
+				interactionSource = interactionSource,
+				indication = null,
+				onClick = onClick
+			)
+			.padding(vertical = 6.dp, horizontal = 4.dp),
+		verticalAlignment = Alignment.CenterVertically
+	) {
+		Spacer(modifier = Modifier.width(48.dp))
+		Text(
+			text = label,
+			color = textColor,
+			fontSize = 16.sp
+		)
+		Spacer(modifier = Modifier.width(8.dp))
+	}
+}

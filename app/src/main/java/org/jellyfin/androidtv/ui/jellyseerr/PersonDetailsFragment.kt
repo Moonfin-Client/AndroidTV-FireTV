@@ -30,8 +30,8 @@ import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrPersonDetailsDto
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
-import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
+import org.jellyfin.androidtv.ui.shared.toolbar.NavigationOverlay
 import org.jellyfin.androidtv.util.dp
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -50,6 +50,7 @@ class PersonDetailsFragment : Fragment() {
 	private var personDetails: JellyseerrPersonDetailsDto? = null
 	private var toolbarContainer: View? = null
 	private var personInfoContainer: LinearLayout? = null
+	private var sidebarId: Int = View.NO_ID
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -84,6 +85,7 @@ class PersonDetailsFragment : Fragment() {
 				FrameLayout.LayoutParams.MATCH_PARENT
 			)
 			setBackgroundColor(Color.parseColor("#111827"))
+			id = View.generateViewId()
 		}
 
 		val rootLayout = LinearLayout(requireContext()).apply {
@@ -92,28 +94,9 @@ class PersonDetailsFragment : Fragment() {
 				LinearLayout.LayoutParams.MATCH_PARENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
 			)
-			setPadding(24.dp(context), 24.dp(context), 24.dp(context), 24.dp(context))
+			setPadding(300.dp(context), 24.dp(context), 24.dp(context), 24.dp(context))
 		}
 
-		// Add toolbar
-		val toolbar = ComposeView(requireContext()).apply {
-			layoutParams = LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.MATCH_PARENT,
-				LinearLayout.LayoutParams.WRAP_CONTENT
-			).apply {
-				bottomMargin = 24.dp(context)
-			}
-			id = View.generateViewId()
-			setContent {
-				MainToolbar(
-					activeButton = MainToolbarActiveButton.Jellyseerr
-				)
-			}
-		}
-		toolbarContainer = toolbar
-		rootLayout.addView(toolbar)
-
-		// Profile section will be added after data loads
 		val infoContainer = LinearLayout(requireContext()).apply {
 			orientation = LinearLayout.VERTICAL
 			layoutParams = LinearLayout.LayoutParams(
@@ -127,6 +110,32 @@ class PersonDetailsFragment : Fragment() {
 
 		scrollView.addView(rootLayout)
 		mainContainer.addView(scrollView)
+
+		val sidebarContainer = FrameLayout(requireContext()).apply {
+			layoutParams = FrameLayout.LayoutParams(
+				FrameLayout.LayoutParams.WRAP_CONTENT,
+				FrameLayout.LayoutParams.MATCH_PARENT
+			).apply {
+				gravity = Gravity.START
+			}
+			elevation = 8f * resources.displayMetrics.density
+		}
+		
+		val sidebarOverlay = ComposeView(requireContext()).apply {
+			id = View.generateViewId()
+			layoutParams = FrameLayout.LayoutParams(
+				FrameLayout.LayoutParams.WRAP_CONTENT,
+				FrameLayout.LayoutParams.MATCH_PARENT
+			)
+			setContent {
+				NavigationOverlay(
+					activeButton = MainToolbarActiveButton.Jellyseerr
+				)
+			}
+		}
+		sidebarId = sidebarOverlay.id
+		sidebarContainer.addView(sidebarOverlay)
+		mainContainer.addView(sidebarContainer)
 
 		return mainContainer
 	}
@@ -292,6 +301,7 @@ class PersonDetailsFragment : Fragment() {
 					setTypeface(typeface, android.graphics.Typeface.BOLD)
 					isFocusable = true
 					isFocusableInTouchMode = true
+					nextFocusLeftId = sidebarId
 					setPadding(8.dp(context), 8.dp(context), 8.dp(context), 8.dp(context))
 					layoutParams = LinearLayout.LayoutParams(
 						LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -415,6 +425,7 @@ class PersonDetailsFragment : Fragment() {
 			setPadding(0, 0, 0, 16.dp(context))
 			isFocusable = true
 			isFocusableInTouchMode = true
+			nextFocusLeftId = sidebarId
 
 			setOnFocusChangeListener { view, hasFocus ->
 				if (hasFocus) {

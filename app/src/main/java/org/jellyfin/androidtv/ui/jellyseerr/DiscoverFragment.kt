@@ -19,8 +19,8 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.data.service.BlurContext
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
-import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
+import org.jellyfin.androidtv.ui.shared.toolbar.NavigationOverlay
 import org.jellyfin.androidtv.util.Debouncer
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -55,9 +55,9 @@ class DiscoverFragment : Fragment() {
 		ratingTextView = view.findViewById(R.id.rating_text)
 		mediaTypeTextView = view.findViewById(R.id.media_type_text)
 
-		val toolbarView = view.findViewById<ComposeView>(R.id.toolbar)
-		toolbarView.setContent {
-			MainToolbar(
+		val sidebarOverlay = view.findViewById<ComposeView>(R.id.sidebar_overlay)
+		sidebarOverlay.setContent {
+			NavigationOverlay(
 				activeButton = MainToolbarActiveButton.Jellyseerr
 			)
 		}
@@ -68,10 +68,8 @@ class DiscoverFragment : Fragment() {
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 
-		// Get reference to rows fragment
 		rowsFragment = childFragmentManager.findFragmentById(R.id.jellyseerr_browse) as? JellyseerrDiscoverRowsFragment
 
-		// Observe selected item to update header
 		rowsFragment?.selectedItemStateFlow
 			?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
 			?.onEach { item ->

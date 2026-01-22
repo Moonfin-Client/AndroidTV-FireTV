@@ -79,7 +79,7 @@ fun SyncPlayDialog(
                     isOperationInProgress = true
                     coroutineScope.launch {
                         val userName = currentUser?.name
-                        val groupName = if (userName != null) "$userName's SyncPlay Group" else "SyncPlay Group"
+                        val groupName = if (userName != null) "$userName's group" else "SyncPlay Group"
                         val result = syncPlayManager.createGroup(groupName)
                         if (result.isFailure) {
                             val error = result.exceptionOrNull()

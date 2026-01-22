@@ -680,6 +680,9 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
 
             return;
         }
+        
+        // Notify SyncPlay of app resume
+        playbackControllerContainer.getValue().getPlaybackController().onResume();
 
         // Hide system bars
         WindowCompat.setDecorFitsSystemWindows(requireActivity().getWindow(), false);
@@ -702,6 +705,11 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
         if (mItemsToPlay == null || mItemsToPlay.isEmpty()) return;
 
         setPlayPauseActionState(0);
+        
+        // Notify SyncPlay of app pause
+        if (playbackControllerContainer.getValue().getPlaybackController() != null) {
+            playbackControllerContainer.getValue().getPlaybackController().onPause();
+        }
 
         // give back audio focus
         mAudioManager.abandonAudioFocus(mAudioFocusChanged);

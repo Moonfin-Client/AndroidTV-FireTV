@@ -870,6 +870,10 @@
     
     <!-- Toolbar Customization -->
     <string name="pref_toolbar_customization">Toolbar Customization</string>
+    <string name="pref_navbar_position">Navigation Bar Position</string>
+    <string name="pref_navbar_position_description">Choose where the navigation bar appears</string>
+    <string name="pref_navbar_position_top">Top</string>
+    <string name="pref_navbar_position_left">Left Sidebar</string>
     <string name="home_section_settings">Home Screen</string>
     <string name="pref_confirm_exit">Confirm Exit</string>
     <string name="pref_confirm_exit_description">Show confirmation dialog when exiting the app</string>
@@ -993,8 +997,8 @@
     <string name="syncplay_resume_playback_description">Start playing the group\'s content</string>
     <string name="syncplay_halt_playback">Pause playback</string>
     <string name="syncplay_halt_playback_description">Stop following group playback temporarily</string>
-    <string name="syncplay_user_joined">%s joined the group</string>
-    <string name="syncplay_user_left">%s left the group</string>
+    <string name="syncplay_user_joined">%s joined the SyncPlay group</string>
+    <string name="syncplay_user_left">%s left the SyncPlay group</string>
     <string name="syncplay_group_default_name">%s\'s Group</string>
     
     <!-- Genres Grid -->

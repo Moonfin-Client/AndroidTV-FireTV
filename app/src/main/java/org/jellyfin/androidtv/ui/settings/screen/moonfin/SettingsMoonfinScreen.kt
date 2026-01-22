@@ -37,6 +37,19 @@ fun SettingsMoonfinScreen() {
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_toolbar_customization)) }) }
 
 		item {
+			val navbarPosition by rememberPreference(userPreferences, UserPreferences.navbarPosition)
+			val navbarLabel = when (navbarPosition) {
+				org.jellyfin.androidtv.preference.constant.NavbarPosition.TOP -> stringResource(R.string.pref_navbar_position_top)
+				org.jellyfin.androidtv.preference.constant.NavbarPosition.LEFT -> stringResource(R.string.pref_navbar_position_left)
+			}
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_navbar_position)) },
+				captionContent = { Text(navbarLabel) },
+				onClick = { router.push(Routes.MOONFIN_NAVBAR_POSITION) }
+			)
+		}
+
+		item {
 			var showShuffleButton by rememberPreference(userPreferences, UserPreferences.showShuffleButton)
 			ListButton(
 				headingContent = { Text(stringResource(R.string.pref_show_shuffle_button)) },

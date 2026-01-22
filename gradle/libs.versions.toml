@@ -23,6 +23,7 @@ androidx-navigation3 = "1.0.0"
 androidx-preference = "1.2.1"
 androidx-recyclerview = "1.4.0"
 androidx-startup = "1.2.0"
+androidx-tv-material = "1.0.0"
 androidx-tvprovider = "1.1.0"
 androidx-window = "1.5.1"
 androidx-work = "2.11.0"
@@ -92,6 +93,7 @@ androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", vers
 androidx-preference = { module = "androidx.preference:preference-ktx", version.ref = "androidx-preference" }
 androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "androidx-recyclerview" }
 androidx-startup = { module = "androidx.startup:startup-runtime", version.ref = "androidx-startup" }
+androidx-tv-material = { module = "androidx.tv:tv-material", version.ref = "androidx-tv-material" }
 androidx-tvprovider = { module = "androidx.tvprovider:tvprovider", version.ref = "androidx-tvprovider" }
 androidx-window = { module = "androidx.window:window", version.ref = "androidx-window" }
 androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "androidx-work" }

@@ -47,6 +47,7 @@ import androidx.media3.ui.SubtitleView;
 
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.data.compat.StreamInfo;
+import org.jellyfin.androidtv.data.syncplay.SyncPlayManager;
 import org.jellyfin.androidtv.preference.UserPreferences;
 import org.jellyfin.androidtv.preference.constant.ZoomMode;
 import org.jellyfin.sdk.api.client.ApiClient;
@@ -85,6 +86,7 @@ public class VideoManager {
     public boolean isContracted = false;
 
     private final UserPreferences userPreferences = KoinJavaComponent.get(UserPreferences.class);
+    private final SyncPlayManager syncPlayManager = KoinJavaComponent.get(SyncPlayManager.class);
     private final HttpDataSource.Factory exoPlayerHttpDataSourceFactory = KoinJavaComponent.get(HttpDataSource.Factory.class);
 
     public VideoManager(@NonNull Activity activity, @NonNull View view, @NonNull PlaybackOverlayFragmentHelper helper) {
@@ -202,7 +204,11 @@ public class VideoManager {
             @Override
             public void onPlaybackStateChanged(int playbackState) {
                 if (playbackState == Player.STATE_BUFFERING) {
-                    Timber.d("Player is buffering");
+                    syncPlayManager.reportBuffering();
+                }
+
+                if (playbackState == Player.STATE_READY) {
+                    syncPlayManager.reportReady();
                 }
 
                 if (playbackState == Player.STATE_ENDED) {

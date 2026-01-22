@@ -145,6 +145,7 @@ dependencies {
 	implementation(libs.androidx.navigation3.ui)
 	implementation(libs.androidx.preference)
 	implementation(libs.androidx.appcompat)
+	implementation(libs.androidx.tv.material)
 	implementation(libs.androidx.tvprovider)
 	implementation(libs.androidx.constraintlayout)
 	implementation(libs.androidx.recyclerview)

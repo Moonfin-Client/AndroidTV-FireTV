@@ -19,6 +19,11 @@ interface NavigationRepository {
 	val currentAction: SharedFlow<NavigationAction>
 
 	/**
+	 * The current fragment destination.
+	 */
+	val currentDestination: Destination.Fragment?
+
+	/**
 	 * Navigate to [destination].
 	 *
 	 * @see Destinations
@@ -66,6 +71,9 @@ class NavigationRepositoryImpl(
 
 	private val _currentAction = MutableSharedFlow<NavigationAction>(1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 	override val currentAction = _currentAction.asSharedFlow()
+
+	override val currentDestination: Destination.Fragment?
+		get() = fragmentHistory.lastOrNull()
 
 	override fun navigate(destination: Destination, replace: Boolean) {
 		Timber.i("Navigating to $destination (via navigate function)")

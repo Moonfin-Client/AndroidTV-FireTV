@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.ui.platform.ComposeView
@@ -20,7 +21,9 @@ import kotlinx.coroutines.flow.onEach
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
+import org.jellyfin.androidtv.preference.constant.NavbarPosition
 import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowViewModel
+import org.jellyfin.androidtv.ui.shared.toolbar.LeftSidebarNavigation
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
 import org.koin.android.ext.android.inject
@@ -61,12 +64,37 @@ class HomeFragment : Fragment() {
 		summerView = view.findViewById(R.id.summerView)
 		halloweenView = view.findViewById(R.id.halloweenView)
 
-		// Setup toolbar Compose
-		val toolbarView = view.findViewById<ComposeView>(R.id.toolbar)
-		toolbarView.setContent {
-			MainToolbar(
-				activeButton = MainToolbarActiveButton.Home
-			)
+		val navbarPosition = userPreferences[UserPreferences.navbarPosition] ?: NavbarPosition.TOP
+		
+		when (navbarPosition) {
+			NavbarPosition.LEFT -> {
+				val toolbarContainer = view.findViewById<FrameLayout>(R.id.toolbar_actions)
+				toolbarContainer.isVisible = false
+				
+				val sidebarContainer = view.findViewById<FrameLayout>(R.id.left_sidebar)
+				sidebarContainer.isVisible = true
+				
+				val sidebarView = view.findViewById<ComposeView>(R.id.sidebar)
+				sidebarView.setContent {
+					LeftSidebarNavigation(
+						activeButton = MainToolbarActiveButton.Home
+					)
+				}
+			}
+			NavbarPosition.TOP -> {
+				val sidebarContainer = view.findViewById<FrameLayout>(R.id.left_sidebar)
+				sidebarContainer.isVisible = false
+				
+				val toolbarContainer = view.findViewById<FrameLayout>(R.id.toolbar_actions)
+				toolbarContainer.isVisible = true
+				
+				val toolbarView = view.findViewById<ComposeView>(R.id.toolbar)
+				toolbarView.setContent {
+					MainToolbar(
+						activeButton = MainToolbarActiveButton.Home
+					)
+				}
+			}
 		}
 
 		return view

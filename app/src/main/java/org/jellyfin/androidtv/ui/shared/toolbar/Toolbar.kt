@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -120,6 +121,7 @@ fun ToolbarButtons(
 
 	Row(
 		modifier = modifier
+			.widthIn(max = 400.dp)
 			.background(
 				brush = Brush.verticalGradient(
 					colors = listOf(
@@ -130,7 +132,7 @@ fun ToolbarButtons(
 				shape = pillShape
 			)
 			.clip(pillShape)
-			.padding(horizontal = 8.dp, vertical = 0.dp)
+			.padding(horizontal = 4.dp, vertical = 0.dp)
 			.horizontalScroll(scrollState)
 			.focusRestorer()
 			.focusGroup()

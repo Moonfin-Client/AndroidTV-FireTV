@@ -32,12 +32,12 @@
             android:layout_height="wrap_content" />
     </FrameLayout>
 
-    <!-- Logo at 80dp from top (shown when available) -->
+    <!-- Logo -->
     <ImageView
         android:id="@+id/logo"
         android:layout_width="wrap_content"
         android:layout_height="60dp"
-        android:layout_marginStart="24dp"
+        android:layout_marginStart="50dp"
         android:layout_marginTop="80dp"
         android:adjustViewBounds="true"
         android:scaleType="fitStart"
@@ -45,12 +45,12 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Title at 80dp from top (fallback when no logo) -->
+    <!-- Title -->
     <TextView
         android:id="@+id/title"
         android:layout_width="917dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
+        android:layout_marginStart="50dp"
         android:layout_marginTop="80dp"
         android:ellipsize="end"
         android:fontFamily="sans-serif-medium"
@@ -69,22 +69,23 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Info Row at 112dp from top - lightweight native View version -->
+    <!-- Info Row -->
     <org.jellyfin.androidtv.ui.home.SimpleInfoRowView
         android:id="@+id/infoRow"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
+        android:layout_marginStart="50dp"
         android:layout_marginTop="112dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Summary at 136dp from top -->
+    <!-- Summary -->
     <TextView
         android:id="@+id/summary"
         android:layout_width="917dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
+        android:layout_marginStart="50dp"
+        android:layout_marginEnd="25dp"
         android:layout_marginTop="136dp"
         android:ellipsize="end"
         android:maxLines="3"
@@ -98,11 +99,11 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Rows Fragment at 223dp from top, fills remaining space -->
+    <!-- Rows Fragment -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/rowsFragment"
         android:name="org.jellyfin.androidtv.ui.home.HomeRowsFragment"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="223dp"
         app:layout_constraintTop_toTopOf="parent"
@@ -164,5 +165,21 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Left Sidebar using Compose -->
+    <FrameLayout
+        android:id="@+id/left_sidebar"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:elevation="8dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+        
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/sidebar"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

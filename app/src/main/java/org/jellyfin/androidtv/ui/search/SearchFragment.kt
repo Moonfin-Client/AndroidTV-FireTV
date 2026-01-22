@@ -31,8 +31,8 @@ import androidx.leanback.app.RowsSupportFragment
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.search.composable.SearchTextInput
 import org.jellyfin.androidtv.ui.search.composable.SearchVoiceInput
-import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
+import org.jellyfin.androidtv.ui.shared.toolbar.NavigationLayout
 import org.jellyfin.androidtv.util.speech.rememberSpeechRecognizerAvailability
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -71,44 +71,43 @@ class SearchFragment : Fragment() {
 				}
 			}
 
-			Column {
-				MainToolbar(MainToolbarActiveButton.Search)
+			NavigationLayout(MainToolbarActiveButton.Search) {
+				Column {
+					Row(
+						horizontalArrangement = Arrangement.spacedBy(12.dp),
+						verticalAlignment = Alignment.CenterVertically,
+						modifier = Modifier
+							.focusRestorer()
+							.focusGroup()
+							.padding(horizontal = 48.dp)
+					) {
+						if (speechRecognizerAvailability) {
+							SearchVoiceInput(
+								onQueryChange = { query = query.copy(text = it) },
+								onQuerySubmit = {
+									viewModel.searchImmediately(query.text)
+									resultFocusRequester.requestFocus()
+								}
+							)
+						}
 
-				Row(
-					horizontalArrangement = Arrangement.spacedBy(12.dp),
-					verticalAlignment = Alignment.CenterVertically,
-					modifier = Modifier
-						.focusRestorer()
-						.focusGroup()
-						.padding(horizontal = 48.dp)
-				) {
-					if (speechRecognizerAvailability) {
-						SearchVoiceInput(
-							onQueryChange = { query = query.copy(text = it) },
+						SearchTextInput(
+							query = query.text,
+							onQueryChange = {
+								query = query.copy(text = it)
+								viewModel.searchDebounced(query.text)
+							},
 							onQuerySubmit = {
 								viewModel.searchImmediately(query.text)
+								// Note: We MUST change the focus to somewhere else when the keyboard is submitted because some vendors (like Amazon)
+								// will otherwise just keep showing a (fullscreen) keyboard, soft-locking the app.
 								resultFocusRequester.requestFocus()
-							}
+							},
+							modifier = Modifier
+								.weight(1f)
+								.focusRequester(textInputFocusRequester),
 						)
 					}
-
-					SearchTextInput(
-						query = query.text,
-						onQueryChange = {
-							query = query.copy(text = it)
-							viewModel.searchDebounced(query.text)
-						},
-						onQuerySubmit = {
-							viewModel.searchImmediately(query.text)
-							// Note: We MUST change the focus to somewhere else when the keyboard is submitted because some vendors (like Amazon)
-							// will otherwise just keep showing a (fullscreen) keyboard, soft-locking the app.
-							resultFocusRequester.requestFocus()
-						},
-						modifier = Modifier
-							.weight(1f)
-							.focusRequester(textInputFocusRequester),
-					)
-				}
 
 				// The leanback code has its own awful focus handling that doesn't work properly with Compose view inteop to workaround this
 				// issue we add custom behavior that only allows focus exit when the current selected row is the first one. Additionally when
@@ -139,6 +138,7 @@ class SearchFragment : Fragment() {
 						fragment.onItemViewSelectedListener = searchFragmentDelegate.onItemViewSelectedListener
 					}
 				)
+			}
 			}
 		}
 	}
