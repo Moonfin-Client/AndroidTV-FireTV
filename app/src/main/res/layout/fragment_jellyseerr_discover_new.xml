@@ -126,20 +126,24 @@
 		app:layout_constraintStart_toStartOf="parent"
 		app:layout_constraintEnd_toEndOf="parent" />
 
+	<!-- Top Toolbar using Compose -->
+	<androidx.compose.ui.platform.ComposeView
+		android:id="@+id/top_toolbar_overlay"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:elevation="8dp"
+		app:layout_constraintTop_toTopOf="parent"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintEnd_toEndOf="parent" />
+
 	<!-- Left Sidebar using Compose -->
-	<FrameLayout
-		android:id="@+id/left_sidebar"
+	<androidx.compose.ui.platform.ComposeView
+		android:id="@+id/sidebar_overlay"
 		android:layout_width="wrap_content"
 		android:layout_height="match_parent"
 		android:elevation="8dp"
 		app:layout_constraintTop_toTopOf="parent"
 		app:layout_constraintBottom_toBottomOf="parent"
-		app:layout_constraintStart_toStartOf="parent">
-		
-		<androidx.compose.ui.platform.ComposeView
-			android:id="@+id/sidebar_overlay"
-			android:layout_width="wrap_content"
-			android:layout_height="match_parent" />
-	</FrameLayout>
+		app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
