@@ -1192,7 +1192,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
 
     public void rewind() {
         UserSettingPreferences prefs = KoinJavaComponent.<UserSettingPreferences>get(UserSettingPreferences.class);
-        skip(-prefs.get(UserSettingPreferences.Companion.getSkipForwardLength()));
+        skip(-prefs.get(UserSettingPreferences.Companion.getSkipBackLength()));
     }
 
     public void seek(long pos) {

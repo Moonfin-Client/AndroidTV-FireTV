@@ -598,18 +598,24 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
                             setFadingEnabled(true);
                             return true;
                         }
-                        
-                        // Handle D-pad left/right on seekbar as immediate skip (bypass Leanback scrub mode)
+
+                        // Handle D-pad left/right on seekbar as immediate skip
+                        // Only when the progress bar row is focused, not other controls
                         if (leanbackOverlayFragment.isControlsOverlayVisible()) {
-                            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                                playbackControllerContainer.getValue().getPlaybackController().fastForward();
-                                leanbackOverlayFragment.updateCurrentPosition();
-                                return true;
-                            }
-                            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                                playbackControllerContainer.getValue().getPlaybackController().rewind();
-                                leanbackOverlayFragment.updateCurrentPosition();
-                                return true;
+                            View focusedView = requireActivity().getCurrentFocus();
+                            boolean isProgressBarFocused = focusedView instanceof androidx.leanback.widget.PlaybackTransportRowView
+                                    || (focusedView != null && focusedView.getParent() instanceof androidx.leanback.widget.PlaybackTransportRowView);
+                            if (isProgressBarFocused) {
+                                if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                                    playbackControllerContainer.getValue().getPlaybackController().fastForward();
+                                    leanbackOverlayFragment.updateCurrentPosition();
+                                    return true;
+                                }
+                                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                                    playbackControllerContainer.getValue().getPlaybackController().rewind();
+                                    leanbackOverlayFragment.updateCurrentPosition();
+                                    return true;
+                                }
                             }
                         }
                     }
