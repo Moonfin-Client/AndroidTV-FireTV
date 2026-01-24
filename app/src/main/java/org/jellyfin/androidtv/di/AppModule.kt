@@ -200,7 +200,7 @@ val appModule = module {
 	// SyncPlay
 	single { SyncPlayManager(androidContext(), get(), get()) }
 
-	single { BackgroundService(get(), get(), get(), get(), get(), get()) }
+	single { BackgroundService(get(), get(), get(), get(), get(), get(), get()) }
 	single { UpdateCheckerService(get()) }
 
 	single { MarkdownRenderer(get()) }
