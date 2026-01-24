@@ -39,6 +39,11 @@ class UserSettingPreferences(
 		 * Allows users to rewatch a few seconds they may have missed while paused.
 		 */
 		val unpauseRewindDuration = intPreference("unpauseRewindDuration", 0)
+
+		/**
+		 * Whether to show the item description/overview on the pause screen.
+		 */
+		val showDescriptionOnPause = booleanPreference("showDescriptionOnPause", false)
 		
 		// Media Bar settings
 		val mediaBarEnabled = booleanPreference("mediaBarEnabled", true)

@@ -142,6 +142,16 @@ fun SettingsPlaybackAdvancedScreen() {
 			}
 		}
 
+		item {
+			var showDescriptionOnPause by rememberPreference(userSettingPreferences, UserSettingPreferences.showDescriptionOnPause)
+
+			ListButton(
+				headingContent = { Text(stringResource(R.string.show_description_on_pause)) },
+				trailingContent = { Checkbox(checked = showDescriptionOnPause) },
+				onClick = { showDescriptionOnPause = !showDescriptionOnPause }
+			)
+		}
+
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_video)) }) }
 
 		item {

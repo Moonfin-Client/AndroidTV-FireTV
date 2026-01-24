@@ -68,6 +68,7 @@ import org.jellyfin.androidtv.util.CoroutineUtils;
 import org.jellyfin.androidtv.util.DateTimeExtensionsKt;
 import org.jellyfin.androidtv.util.ImageHelper;
 import org.jellyfin.androidtv.util.InfoLayoutHelper;
+import org.jellyfin.androidtv.preference.UserSettingPreferences;
 import org.jellyfin.androidtv.util.TextUtilsKt;
 import org.jellyfin.androidtv.util.TimeUtils;
 import org.jellyfin.androidtv.util.Utils;
@@ -1288,8 +1289,11 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
                 binding.itemTitle.setText(current.getName());
                 binding.itemSubtitle.setText(current.getName());
             }
+            // Show description on pause screen if enabled
+            UserSettingPreferences userSettingPreferences = org.koin.java.KoinJavaComponent.get(UserSettingPreferences.class);
+            boolean showDescription = userSettingPreferences.get(UserSettingPreferences.Companion.getShowDescriptionOnPause());
             String overview = current.getOverview();
-            if (overview != null && !overview.isEmpty()) {
+            if (showDescription && overview != null && !overview.isEmpty()) {
                 binding.itemDescription.setText(overview);
                 binding.itemDescription.setVisibility(View.VISIBLE);
             } else {
