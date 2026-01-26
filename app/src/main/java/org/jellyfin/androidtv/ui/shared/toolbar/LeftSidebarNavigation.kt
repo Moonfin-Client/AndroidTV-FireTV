@@ -70,6 +70,7 @@ import org.jellyfin.androidtv.ui.navigation.ActivityDestinations
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.MediaManager
+import org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer
 import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
 import org.jellyfin.androidtv.ui.shuffle.ShuffleOptionsDialog
 import org.jellyfin.androidtv.ui.shuffle.executeShuffle
@@ -216,6 +217,7 @@ private fun CollapsibleSidebarContent(
 	val syncPlayViewModel = koinActivityViewModel<SyncPlayViewModel>()
 	val apiClient = koinInject<ApiClient>()
 	val apiClientFactory = koinInject<ApiClientFactory>()
+	val themeMusicPlayer = koinInject<ThemeMusicPlayer>()
 	
 	var showShuffleDialog by remember { mutableStateOf(false) }
 	val showShuffle = shuffleContentType != "disabled" && showShuffleButton
@@ -251,6 +253,7 @@ private fun CollapsibleSidebarContent(
 	
 	LaunchedEffect(isExpanded) {
 		if (isExpanded) {
+			themeMusicPlayer.stop()
 			scrollState.animateScrollTo(0)
 			homeFocusRequester.requestFocus()
 		}

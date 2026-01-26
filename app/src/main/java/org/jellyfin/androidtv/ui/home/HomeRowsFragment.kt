@@ -384,8 +384,8 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 	override fun onPause() {
 		super.onPause()
 		
-		// Stop theme music when fragment is paused (e.g., user switches to another app)
-		themeMusicPlayer.fadeOutAndStop()
+		// Stop theme music immediately when fragment is paused
+		themeMusicPlayer.stop()
 	}
 
 	override fun onQueueStatusChanged(hasQueue: Boolean) {

@@ -13,6 +13,8 @@ import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.MediaType
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -25,7 +27,8 @@ class PlaybackLauncher(
 	private val navigationRepository: NavigationRepository,
 	private val userPreferences: UserPreferences,
 	private val syncPlayManager: SyncPlayManager,
-) {
+) : KoinComponent {
+	private val themeMusicPlayer by inject<ThemeMusicPlayer>()
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 	private val BaseItemDto.supportsExternalPlayer
 		get() = when (type) {
@@ -51,6 +54,9 @@ class PlaybackLauncher(
 		itemsPosition: Int = 0,
 		shuffle: Boolean = false,
 	) {
+		// Stop any playing theme music before starting playback
+		themeMusicPlayer.stop()
+		
 		val isAudio = items.any { it.mediaType == MediaType.AUDIO }
 
 		if (isAudio) {
