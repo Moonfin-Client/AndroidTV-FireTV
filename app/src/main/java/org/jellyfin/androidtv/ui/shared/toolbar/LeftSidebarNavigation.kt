@@ -481,7 +481,19 @@ private fun CollapsibleSidebarContent(
 						onFocusChanged = { hasFocus ->
 							librariesHasFocus = hasFocus
 						},
-						onClick = { }
+						onClick = {
+							if (enableMultiServer && aggregatedLibraries.isNotEmpty()) {
+								val firstLib = aggregatedLibraries.first()
+								scope.launch {
+									val destination = Destinations.libraryBrowser(firstLib.library, firstLib.server.id)
+									navigationRepository.navigate(destination)
+								}
+							} else if (userViews.isNotEmpty()) {
+								val firstLib = userViews.first()
+								val destination = itemLauncher.getUserViewDestination(firstLib)
+								navigationRepository.navigate(destination)
+							}
+						}
 					)
 					
 					if (isExpanded && librariesHasFocus) {
@@ -598,6 +610,16 @@ private fun SidebarIconItem(
 					Modifier.padding(horizontal = 4.dp)
 				}
 			)
+			.focusable(interactionSource = interactionSource)
+			.onKeyEvent { keyEvent ->
+				if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+					(keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter)) {
+					onClick()
+					true
+				} else {
+					false
+				}
+			}
 			.combinedClickable(
 				interactionSource = interactionSource,
 				indication = null,
