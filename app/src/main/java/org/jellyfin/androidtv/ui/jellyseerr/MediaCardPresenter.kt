@@ -4,14 +4,12 @@ import android.graphics.Color
 import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
-import androidx.leanback.widget.BaseCardView
-import androidx.leanback.widget.ImageCardView
 import androidx.leanback.widget.Presenter
 import coil3.load
-import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 
 class MediaCardPresenter(
@@ -20,82 +18,103 @@ class MediaCardPresenter(
 ) : Presenter() {
 
 	inner class ViewHolder(view: View) : Presenter.ViewHolder(view) {
-		private val cardView = view as ImageCardView
-
-		init {
-			val titleView = findTitleTextView(cardView)
-			titleView?.apply {
-				ellipsize = TextUtils.TruncateAt.MARQUEE
-				marqueeRepeatLimit = -1
-				isSingleLine = true
-				isSelected = true
-			}
-			cardView.alpha = 1.0f
-		}
+		private val card = view as LinearLayout
+		private val imageContainer: FrameLayout = card.getChildAt(0) as FrameLayout
+		private val posterImage: ImageView = imageContainer.getChildAt(0) as ImageView
+		private val titleText: TextView = card.getChildAt(1) as TextView
+		private val yearText: TextView = card.getChildAt(2) as TextView
 
 		fun setItem(item: JellyseerrDiscoverItemDto) {
-			cardView.titleText = item.title ?: item.name ?: "Unknown"
+			titleText.text = item.title ?: item.name ?: "Unknown"
 			
 			val year = item.releaseDate?.take(4) ?: item.firstAirDate?.take(4)
-			cardView.contentText = year ?: when (item.mediaType) {
+			yearText.text = year ?: when (item.mediaType) {
 				"movie" -> "Movie"
 				"tv" -> "TV Series"
 				else -> ""
 			}
 			
-			cardView.setMainImageDimensions(cardWidth, cardHeight)
 			if (item.posterPath != null) {
 				val posterUrl = "https://image.tmdb.org/t/p/w342${item.posterPath}"
-				cardView.mainImageView?.load(posterUrl)
+				posterImage.load(posterUrl)
 			} else {
-				cardView.mainImage = ContextCompat.getDrawable(cardView.context, R.drawable.ic_jellyseerr_logo)
+				posterImage.setImageResource(org.jellyfin.androidtv.R.drawable.ic_jellyseerr_logo)
 			}
-		}
-
-		private fun findTitleTextView(view: ViewGroup): TextView? {
-			for (i in 0 until view.childCount) {
-				val child = view.getChildAt(i)
-				if (child is TextView && child.id == androidx.leanback.R.id.title_text) {
-					return child
-				} else if (child is ViewGroup) {
-					val result = findTitleTextView(child)
-					if (result != null) return result
-				}
+			
+			while (imageContainer.childCount > 1) {
+				imageContainer.removeViewAt(imageContainer.childCount - 1)
 			}
-			return null
+			
+			PosterBadges.addToContainer(card.context, imageContainer, item)
 		}
 	}
 
 	override fun onCreateViewHolder(parent: ViewGroup): Presenter.ViewHolder {
-		val cardView = ImageCardView(parent.context).apply {
+		val context = parent.context
+		val density = context.resources.displayMetrics.density
+		
+		val card = LinearLayout(context).apply {
+			orientation = LinearLayout.VERTICAL
+			layoutParams = ViewGroup.LayoutParams(cardWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
 			isFocusable = true
 			isFocusableInTouchMode = true
-			cardType = BaseCardView.CARD_TYPE_INFO_UNDER
-			setBackgroundColor(Color.TRANSPARENT)
-		}
-		cardView.setMainImageDimensions(cardWidth, cardHeight)
-		
-		cardView.setInfoAreaBackgroundColor(Color.TRANSPARENT)
-		
-		cardView.viewTreeObserver.addOnGlobalLayoutListener {
-			removeBackgroundsRecursive(cardView)
-		}
-		
-		return ViewHolder(cardView)
-	}
-	
-	private fun removeBackgroundsRecursive(view: View) {
-		view.background = null
-		view.setBackgroundColor(Color.TRANSPARENT)
-		
-		if (view is ViewGroup) {
-			for (i in 0 until view.childCount) {
-				val child = view.getChildAt(i)
-				if (child !is ImageView || child.id != androidx.leanback.R.id.main_image) {
-					removeBackgroundsRecursive(child)
+			
+			setOnFocusChangeListener { view, hasFocus ->
+				if (hasFocus) {
+					view.scaleX = 1.05f
+					view.scaleY = 1.05f
+				} else {
+					view.scaleX = 1.0f
+					view.scaleY = 1.0f
 				}
 			}
 		}
+		
+		// Image container (FrameLayout for badge overlay)
+		val imageContainer = FrameLayout(context).apply {
+			layoutParams = LinearLayout.LayoutParams(cardWidth, cardHeight)
+		}
+		
+		// Poster image
+		val posterImage = ImageView(context).apply {
+			layoutParams = FrameLayout.LayoutParams(
+				FrameLayout.LayoutParams.MATCH_PARENT,
+				FrameLayout.LayoutParams.MATCH_PARENT
+			)
+			scaleType = ImageView.ScaleType.CENTER_CROP
+			setBackgroundColor(Color.parseColor("#1F2937"))
+		}
+		imageContainer.addView(posterImage)
+		card.addView(imageContainer)
+		
+		// Title text
+		val titleText = TextView(context).apply {
+			layoutParams = LinearLayout.LayoutParams(
+				LinearLayout.LayoutParams.MATCH_PARENT,
+				LinearLayout.LayoutParams.WRAP_CONTENT
+			).apply {
+				topMargin = (4 * density).toInt()
+			}
+			setTextColor(Color.WHITE)
+			textSize = 14f
+			maxLines = 1
+			ellipsize = TextUtils.TruncateAt.END
+		}
+		card.addView(titleText)
+		
+		// Year/type text
+		val yearText = TextView(context).apply {
+			layoutParams = LinearLayout.LayoutParams(
+				LinearLayout.LayoutParams.MATCH_PARENT,
+				LinearLayout.LayoutParams.WRAP_CONTENT
+			)
+			setTextColor(Color.parseColor("#9CA3AF"))
+			textSize = 12f
+			maxLines = 1
+		}
+		card.addView(yearText)
+		
+		return ViewHolder(card)
 	}
 
 	override fun onBindViewHolder(viewHolder: Presenter.ViewHolder, item: Any?) {

@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="42"
+    android:viewportHeight="42">
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M21,21
+            m-18,0
+            a18,18 0 1,1 36,0
+            a18,18 0 1,1 -36,0" />
+
+    <group
+        android:name="spinner"
+        android:pivotX="21"
+        android:pivotY="21">
+        <path
+            android:strokeColor="#6366F1"
+            android:strokeWidth="5"
+            android:strokeLineCap="round"
+            android:fillColor="@android:color/transparent"
+            android:pathData="M21,3
+                a18,18 0 0,1 18,18" />
+    </group>
+</vector>

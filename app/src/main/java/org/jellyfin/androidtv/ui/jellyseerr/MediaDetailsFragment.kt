@@ -1657,6 +1657,7 @@ class MediaDetailsFragment : Fragment() {
 			}
 		}
 		imageContainer.addView(posterImage)
+		PosterBadges.addToContainer(requireContext(), imageContainer, item)
 		card.addView(imageContainer)
 
 		val titleText = TextView(requireContext()).apply {
