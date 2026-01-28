@@ -3,6 +3,7 @@ package org.jellyfin.androidtv.ui.browsing.composable.inforow
 import android.content.Context
 import android.util.AttributeSet
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -17,8 +18,6 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jellyfin.androidtv.R
-import org.jellyfin.androidtv.preference.UserPreferences
-import org.jellyfin.androidtv.preference.constant.RatingType
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.composable.getResolutionName
 import org.jellyfin.androidtv.util.TimeUtils
@@ -246,18 +245,10 @@ fun BaseItemInfoRow(
 	mediaSource: MediaSourceInfo?,
 	includeRuntime: Boolean,
 ) {
-	val userPreferences = koinInject<UserPreferences>()
-	val ratingType = userPreferences[UserPreferences.defaultRatingType]
-
 	Row(
 		horizontalArrangement = Arrangement.spacedBy(8.dp),
 		verticalAlignment = Alignment.CenterVertically,
 	) {
-		if (ratingType != RatingType.RATING_HIDDEN) {
-			item.communityRating?.let { InfoRowCommunityRating(it / 10f) }
-			item.criticRating?.let { InfoRowCriticRating(it / 100f) }
-		}
-
 		when (item.type) {
 			BaseItemKind.EPISODE -> {
 				InfoRowSeasonEpisode(item)
@@ -381,9 +372,6 @@ fun BaseItemInfoRow(
 	}
 }
 
-/**
- * Exposes the [BaseItemInfoRow] composable as Android view.
- */
 class BaseItemInfoRowView @JvmOverloads constructor(
 	context: Context,
 	attrs: AttributeSet? = null,
@@ -422,5 +410,30 @@ class BaseItemInfoRowView @JvmOverloads constructor(
 		val includeRuntime by _includeRuntime.collectAsState()
 
 		item?.let { BaseItemInfoRow(it, mediaSource, includeRuntime) }
+	}
+}
+
+class RatingsRowView @JvmOverloads constructor(
+	context: Context,
+	attrs: AttributeSet? = null,
+) : AbstractComposeView(context, attrs) {
+	private val _item = MutableStateFlow<BaseItemDto?>(null)
+
+	var item: BaseItemDto?
+		get() = _item.value
+		set(value) {
+			_item.value = value
+		}
+
+	init {
+		isFocusable = false
+		descendantFocusability = FOCUS_BLOCK_DESCENDANTS
+		setPadding(0, 4, 0, 0)
+	}
+
+	@Composable
+	override fun Content() {
+		val item by _item.collectAsState()
+		item?.let { InfoRowMultipleRatings(it) }
 	}
 }

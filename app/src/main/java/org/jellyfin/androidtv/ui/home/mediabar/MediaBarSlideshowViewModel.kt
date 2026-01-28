@@ -165,7 +165,7 @@ class MediaBarSlideshowViewModel(
 					sortBy = setOf(org.jellyfin.sdk.model.api.ItemSortBy.RANDOM),
 					limit = itemsPerLibrary,
 					filters = filters,
-					fields = setOf(ItemFields.OVERVIEW, ItemFields.GENRES),
+					fields = setOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.PROVIDER_IDS),
 					imageTypeLimit = 1,
 					enableImageTypes = setOf(ImageType.BACKDROP, ImageType.LOGO),
 				)
@@ -308,6 +308,8 @@ class MediaBarSlideshowViewModel(
 					runtime = item.runTimeTicks?.let { ticks -> (ticks / 10000) },
 					criticRating = item.criticRating?.toInt(),
 					communityRating = item.communityRating,
+					tmdbId = item.providerIds?.get("Tmdb"),
+					imdbId = item.providerIds?.get("Imdb"),
 				)
 			}
 
@@ -598,6 +600,8 @@ class MediaBarSlideshowViewModel(
 						runtime = item.runTimeTicks?.let { ticks -> (ticks / 10000) },
 						criticRating = item.criticRating?.toInt(),
 						communityRating = item.communityRating,
+						tmdbId = item.providerIds?.get("Tmdb"),
+						imdbId = item.providerIds?.get("Imdb"),
 					)
 				}
 				

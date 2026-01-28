@@ -330,6 +330,8 @@
     <string name="lbl_stars">Stars</string>
     <string name="lbl_tomatoes">Tomatoes</string>
     <string name="pref_default_rating">Default rating type</string>
+    <string name="pref_enabled_ratings">Enabled Ratings</string>
+    <string name="pref_enabled_ratings_description">Select which ratings to display. Multiple ratings will appear on a separate row below metadata.</string>
     <string name="pref_clock_display">Show clock</string>
     <string name="lbl_always">Always</string>
     <string name="pref_clock_display_browsing">While browsing</string>
@@ -717,6 +719,10 @@
         <item quantity="one">%1$s item</item>
         <item quantity="other">%1$s items</item>
     </plurals>
+    <plurals name="ratings_enabled">
+        <item quantity="one">%1$s rating enabled</item>
+        <item quantity="other">%1$s ratings enabled</item>
+    </plurals>
     <plurals name="movies">
         <item quantity="one">%1$s movie</item>
         <item quantity="other">%1$s movies</item>
@@ -898,6 +904,25 @@
     <string name="pref_blur_medium">Med</string>
     <string name="pref_blur_strong">High</string>
     <string name="pref_blur_extra_strong">Extra</string>
+    
+    <!-- Additional Ratings -->
+    <string name="pref_enable_additional_ratings">Enable Additional Ratings</string>
+    <string name="pref_enable_additional_ratings_description">Fetch ratings from MDBList API (IMDB, TMDB, Metacritic, Trakt, Letterboxd, etc.)</string>
+    <string name="pref_mdblist_api_key">MDBList API Key</string>
+    <string name="pref_mdblist_api_key_description">Get a free API key from mdblist.com/preferences</string>
+    <string name="pref_additional_ratings_no_api_key">Please add your MDBList API key in Moonfin Settings</string>
+    <string name="pref_rating_source_imdb">IMDB</string>
+    <string name="pref_rating_source_rt_audience">Rotten Tomatoes Audience</string>
+    <string name="pref_rating_source_tmdb">The Movie Database</string>
+    <string name="pref_rating_source_metacritic">Metacritic</string>
+    <string name="pref_rating_source_trakt">Trakt</string>
+    <string name="pref_rating_source_letterboxd">Letterboxd</string>
+    <string name="pref_rating_source_rogerebert">Roger Ebert</string>
+    <string name="pref_rating_source_myanimelist">MyAnimeList</string>
+    <string name="pref_rating_source_anilist">AniList</string>
+    <string name="pref_rating_source_kinopoisk">Kinopoisk</string>
+    <string name="pref_rating_source_allocine">AlloCiné</string>
+    <string name="pref_rating_source_douban">Douban</string>
     
     <!-- Toolbar Customization -->
     <string name="pref_toolbar_customization">Toolbar Customization</string>

@@ -75,6 +75,18 @@
             android:orientation="horizontal"
             android:paddingStart="24dp"
             android:paddingEnd="24dp"
+            app:layout_constraintBottom_toTopOf="@id/fdRatingsRow"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/guide_right_start" />
+
+        <LinearLayout
+            android:id="@+id/fdRatingsRow"
+            android:layout_width="0dp"
+            android:layout_height="40sp"
+            android:dividerPadding="4sp"
+            android:orientation="horizontal"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
             app:layout_constraintBottom_toTopOf="@id/fdGenreRow"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/guide_right_start" />

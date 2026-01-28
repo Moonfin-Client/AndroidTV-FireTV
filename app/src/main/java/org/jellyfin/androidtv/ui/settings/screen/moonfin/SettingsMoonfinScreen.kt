@@ -272,6 +272,30 @@ fun SettingsMoonfinScreen() {
 			)
 		}
 
+		// Ratings Section
+		item { ListSection(headingContent = { Text(stringResource(R.string.pref_enable_additional_ratings)) }) }
+
+		item {
+			var enableAdditionalRatings by rememberPreference(userSettingPreferences, UserSettingPreferences.enableAdditionalRatings)
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_star), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_enable_additional_ratings)) },
+				captionContent = { Text(stringResource(R.string.pref_enable_additional_ratings_description)) },
+				trailingContent = { Checkbox(checked = enableAdditionalRatings) },
+				onClick = { enableAdditionalRatings = !enableAdditionalRatings }
+			)
+		}
+
+		item {
+			var mdblistApiKey by rememberPreference(userSettingPreferences, UserSettingPreferences.mdblistApiKey)
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_key), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_mdblist_api_key)) },
+				captionContent = { Text(if (mdblistApiKey.isNotEmpty()) "API Key: ${mdblistApiKey.take(8)}..." else stringResource(R.string.pref_mdblist_api_key_description)) },
+				onClick = { router.push(Routes.MOONFIN_MDBLIST_API_KEY) }
+			)
+		}
+
 		// Playback Section
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_playback)) }) }
 

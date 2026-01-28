@@ -29,6 +29,8 @@ data class MediaBarSlideItem(
 	val runtime: Long?,
 	val criticRating: Int?,
 	val communityRating: Float?,
+	val tmdbId: String? = null,
+	val imdbId: String? = null,
 )
 
 /**

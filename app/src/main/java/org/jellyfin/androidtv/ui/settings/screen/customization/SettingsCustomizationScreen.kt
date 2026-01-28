@@ -4,9 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.base.form.Checkbox
@@ -84,11 +86,13 @@ fun SettingsCustomizationScreen() {
 		}
 
 		item {
-			var defaultRatingType by rememberPreference(userPreferences, UserPreferences.defaultRatingType)
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			val enabledRatingsStr by rememberPreference(userSettingPreferences, UserSettingPreferences.enabledRatings)
+			val enabledCount = enabledRatingsStr.split(",").filter { it.isNotBlank() }.size
 
 			ListButton(
-				headingContent = { Text(stringResource(R.string.pref_default_rating)) },
-				captionContent = { Text(stringResource(defaultRatingType.nameRes)) },
+				headingContent = { Text(stringResource(R.string.pref_enabled_ratings)) },
+				captionContent = { Text(pluralStringResource(R.plurals.ratings_enabled, enabledCount, enabledCount)) },
 				onClick = { router.push(Routes.CUSTOMIZATION_RATING_TYPE) }
 			)
 		}

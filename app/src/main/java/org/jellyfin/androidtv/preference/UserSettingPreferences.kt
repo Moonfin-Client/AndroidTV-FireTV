@@ -62,6 +62,16 @@ class UserSettingPreferences(
 		val detailsBackgroundBlurAmount = intPreference("detailsBackgroundBlurAmount", 10)
 		val browsingBackgroundBlurAmount = intPreference("browsingBackgroundBlurAmount", 10)
 
+		// Rating settings
+		val enableAdditionalRatings = booleanPreference("enableAdditionalRatings", false)
+		val mdblistApiKey = stringPreference("mdblistApiKey", "")
+		
+		/**
+		 * Comma-separated list of enabled rating types.
+		 * Default: "RATING_TOMATOES,RATING_STARS" (RT and Community Rating)
+		 */
+		val enabledRatings = stringPreference("enabledRatings", "RATING_TOMATOES,RATING_STARS")
+
 		// New home sections configuration (JSON storage)
 		val homeSectionsJson = stringPreference("home_sections_config", "")
 		
@@ -280,6 +290,30 @@ class UserSettingPreferences(
 				} catch (e: Exception) {
 					// If parsing fails, leave as-is (defaults will be used)
 				}
+			}
+			
+			// Migration 4: Migrate single rating preference to multi-select
+			// Note: Old defaultRatingType is in UserPreferences (default shared prefs)
+			// New enabledRatings is in UserSettingPreferences (same store for global)
+			migration(toVersion = 4) { prefs ->
+				// Check if enabledRatings already exists (skip if already migrated)
+				val existingRatings = prefs.getString(enabledRatings.key, null)
+				if (existingRatings != null) return@migration
+				
+				// Read old single rating type from the same shared preferences
+				// (UserSettingPreferences uses default shared prefs when userId is null)
+				val oldRatingType = prefs.getString("pref_rating_type", "RATING_TOMATOES")
+				
+				// Convert to new multi-select format
+				// If user had a specific rating selected, enable both that and community rating
+				val newEnabledRatings = when (oldRatingType) {
+					"RATING_HIDDEN" -> "" // No ratings
+					"RATING_STARS" -> "RATING_STARS" // Just community rating
+					"RATING_TOMATOES" -> "RATING_TOMATOES,RATING_STARS" // RT + Stars (default)
+					else -> "$oldRatingType,RATING_STARS" // User's preference + community rating
+				}
+				
+				putString(enabledRatings.key, newEnabledRatings)
 			}
 		}
 	}

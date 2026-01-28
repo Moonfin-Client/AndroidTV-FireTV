@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Popcorn bucket (rotten/low audience score) - green tinted -->
+    <path
+        android:pathData="M5,8L7,20H17L19,8H5Z"
+        android:fillColor="#6B8E23"/>
+    <path
+        android:pathData="M5,8L4,6H20L19,8H5Z"
+        android:fillColor="#556B2F"/>
+    <!-- Spilled/fallen popcorn kernels -->
+    <path
+        android:pathData="M8,5C8,3.5 9,2 10.5,2C12,2 13,3.5 13,5C13,6.5 11.5,7 10.5,7C9.5,7 8,6.5 8,5Z"
+        android:fillColor="#9ACD32"/>
+    <path
+        android:pathData="M11,4C11,2.5 12,1 13.5,1C15,1 16,2.5 16,4C16,5.5 14.5,6 13.5,6C12.5,6 11,5.5 11,4Z"
+        android:fillColor="#9ACD32"/>
+    <path
+        android:pathData="M6,6C6,4.5 7,3 8.5,3C10,3 11,4.5 11,6C11,7.5 9.5,8 8.5,8C7.5,8 6,7.5 6,6Z"
+        android:fillColor="#9ACD32"/>
+    <path
+        android:pathData="M13,6C13,4.5 14,3 15.5,3C17,3 18,4.5 18,6C18,7.5 16.5,8 15.5,8C14.5,8 13,7.5 13,6Z"
+        android:fillColor="#9ACD32"/>
+</vector>

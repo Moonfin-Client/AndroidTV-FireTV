@@ -5,11 +5,14 @@ import android.graphics.Shader
 import android.os.Build
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,9 +59,11 @@ import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.data.repository.MdbListRepository
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.constant.NavbarPosition
+import org.jellyfin.androidtv.preference.constant.RatingType
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.shared.LogoView
 import org.jellyfin.androidtv.util.TimeUtils
@@ -347,24 +352,10 @@ private fun MediaInfoOverlay(
 					color = Color.White
 				)
 			}
-
-			// Rating indicators
-			item.communityRating?.let { rating ->
-				Row(verticalAlignment = Alignment.CenterVertically) {
-					Text(
-						text = "★",
-						color = Color(0xFFFFD700),
-						fontSize = 16.sp
-					)
-					Spacer(modifier = Modifier.width(4.dp))
-					Text(
-						text = String.format("%.1f", rating),
-						fontSize = 16.sp,
-						color = Color.White
-					)
-				}
-			}
 		}
+
+		// Ratings row (separate line)
+		MediaBarRating(item = item)
 
 		// Genres
 		if (item.genres.isNotEmpty()) {
@@ -448,6 +439,167 @@ private fun ErrorView(message: String) {
 			text = message,
 			fontSize = 16.sp,
 			color = Color.White.copy(alpha = 0.7f)
+		)
+	}
+}
+@Composable
+private fun MediaBarRating(item: MediaBarSlideItem) {
+	val userSettingPreferences = koinInject<UserSettingPreferences>()
+	val mdbListRepository = koinInject<MdbListRepository>()
+	
+	val enabledRatingsStr = userSettingPreferences[UserSettingPreferences.enabledRatings]
+	val enableAdditionalRatings = userSettingPreferences[UserSettingPreferences.enableAdditionalRatings]
+	val apiKey = userSettingPreferences[UserSettingPreferences.mdblistApiKey]
+	
+	// Parse enabled ratings
+	val enabledRatings = enabledRatingsStr.split(",")
+		.filter { it.isNotBlank() }
+		.mapNotNull { name -> RatingType.entries.find { it.name == name.trim() } }
+		.filter { it != RatingType.RATING_HIDDEN }
+	
+	// Check if ratings are hidden or none selected
+	if (enabledRatings.isEmpty()) return
+	
+	var apiRatings by remember { mutableStateOf<Map<String, Float>?>(null) }
+	
+	// Determine if we need to fetch external ratings
+	val needsExternalRating = enableAdditionalRatings && 
+		apiKey.isNotBlank() && 
+		(item.tmdbId != null || item.imdbId != null)
+	
+	var isLoading by remember { mutableStateOf(needsExternalRating) }
+	
+	// Fetch external ratings if needed
+	if (needsExternalRating) {
+		LaunchedEffect(item.itemId, apiKey) {
+			if (apiKey.isBlank() || (item.tmdbId == null && item.imdbId == null)) {
+				isLoading = false
+				return@LaunchedEffect
+			}
+			
+			isLoading = true
+			try {
+				val fakeItem = org.jellyfin.sdk.model.api.BaseItemDto(
+					id = item.itemId,
+					name = item.title,
+					type = org.jellyfin.sdk.model.api.BaseItemKind.MOVIE,
+					providerIds = buildMap {
+						item.tmdbId?.let { put("Tmdb", it) }
+						item.imdbId?.let { put("Imdb", it) }
+					}
+				)
+				apiRatings = mdbListRepository.getRatings(fakeItem, apiKey)
+			} catch (e: Exception) {
+				// Silently fail
+			} finally {
+				isLoading = false
+			}
+		}
+	}
+	
+	// Build ratings map with all available ratings
+	val allRatings = remember(apiRatings, item.criticRating, item.communityRating) {
+		buildMap {
+			item.criticRating?.let { put("RT", it / 100f) }
+			item.communityRating?.let { put("stars", it / 10f) }
+			apiRatings?.let { putAll(it) }
+		}
+	}
+	
+	// Don't render while loading to avoid flicker
+	if (isLoading && needsExternalRating) return
+	
+	// Show ratings in a wrapping flow row
+	@OptIn(ExperimentalLayoutApi::class)
+	FlowRow(
+		verticalArrangement = Arrangement.spacedBy(4.dp),
+		horizontalArrangement = Arrangement.spacedBy(16.dp)
+	) {
+		enabledRatings.forEach { ratingType ->
+			val source = when (ratingType) {
+				RatingType.RATING_TOMATOES -> "RT"
+				RatingType.RATING_RT_AUDIENCE -> "tomatoes_audience"
+				RatingType.RATING_STARS -> "stars"
+				RatingType.RATING_IMDB -> "imdb"
+				RatingType.RATING_TMDB -> "tmdb"
+				RatingType.RATING_METACRITIC -> "metacritic"
+				RatingType.RATING_TRAKT -> "trakt"
+				RatingType.RATING_LETTERBOXD -> "letterboxd"
+				RatingType.RATING_ROGER_EBERT -> "rogerebert"
+				RatingType.RATING_MYANIMELIST -> "myanimelist"
+				RatingType.RATING_ANILIST -> "anilist"
+				RatingType.RATING_KINOPOISK -> "kinopoisk"
+				RatingType.RATING_ALLOCINE -> "allocine"
+				RatingType.RATING_DOUBAN -> "douban"
+				RatingType.RATING_HIDDEN -> return@forEach
+			}
+			
+			// Check if additional ratings is required for this source
+			val requiresApi = source !in listOf("RT", "stars")
+			if (requiresApi && !enableAdditionalRatings) return@forEach
+			
+			val rating = allRatings[source] ?: return@forEach
+			
+			SingleRating(source = source, rating = rating)
+		}
+	}
+}
+
+@Composable
+private fun SingleRating(source: String, rating: Float) {
+	Row(verticalAlignment = Alignment.CenterVertically) {
+		val displayText = when (source) {
+			"RT" -> "${(rating * 100).toInt()}%"
+			"tomatoes_audience" -> "${(rating * 100).toInt()}%"
+			"stars" -> String.format("%.1f", rating * 10)
+			"imdb" -> String.format("%.1f", rating)
+			"tmdb", "metacritic", "trakt" -> rating.toInt().toString()
+			"letterboxd", "rogerebert", "myanimelist", "kinopoisk", "douban" -> String.format("%.1f", rating)
+			"anilist" -> (rating * 100f).toInt().toString()
+			"allocine" -> String.format("%.1f", rating * 5f)
+			else -> String.format("%.1f", rating)
+		}
+		
+		val iconRes = when (source) {
+			"RT" -> if (rating >= 0.60f) R.drawable.ic_rt_fresh else R.drawable.ic_rt_rotten
+			"tomatoes_audience" -> if (rating >= 0.60f) R.drawable.ic_rt_audience_fresh else R.drawable.ic_rt_audience_rotten
+			"stars" -> null
+			"imdb" -> R.drawable.ic_imdb
+			"tmdb" -> R.drawable.ic_tmdb
+			"metacritic" -> R.drawable.ic_metacritic
+			"trakt" -> R.drawable.ic_trakt
+			"letterboxd" -> R.drawable.ic_letterboxd
+			"rogerebert" -> R.drawable.ic_roger_ebert
+			"myanimelist" -> R.drawable.ic_myanimelist
+			"anilist" -> R.drawable.ic_anilist
+			"kinopoisk" -> R.drawable.ic_kinopoisk
+			"allocine" -> R.drawable.ic_allocine
+			"douban" -> R.drawable.ic_douban
+			else -> null
+		}
+		
+		if (source == "stars") {
+			Text(
+				text = "★",
+				color = Color(0xFFFFD700),
+				fontSize = 16.sp
+			)
+			Spacer(modifier = Modifier.width(4.dp))
+		} else {
+			iconRes?.let {
+				Image(
+					painter = painterResource(id = it),
+					contentDescription = source,
+					modifier = Modifier.size(20.dp)
+				)
+				Spacer(modifier = Modifier.width(6.dp))
+			}
+		}
+		
+		Text(
+			text = displayText,
+			fontSize = 16.sp,
+			color = Color.White
 		)
 	}
 }
