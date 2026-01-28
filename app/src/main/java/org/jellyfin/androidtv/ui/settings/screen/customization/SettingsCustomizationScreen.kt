@@ -97,6 +97,203 @@ fun SettingsCustomizationScreen() {
 			)
 		}
 
+		// Additional Ratings (Moonfin)
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			var enableAdditionalRatings by rememberPreference(userSettingPreferences, UserSettingPreferences.enableAdditionalRatings)
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_star), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_enable_additional_ratings)) },
+				captionContent = { Text(stringResource(R.string.pref_enable_additional_ratings_description)) },
+				trailingContent = { Checkbox(checked = enableAdditionalRatings) },
+				onClick = { enableAdditionalRatings = !enableAdditionalRatings }
+			)
+		}
+
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			var mdblistApiKey by rememberPreference(userSettingPreferences, UserSettingPreferences.mdblistApiKey)
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_key), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_mdblist_api_key)) },
+				captionContent = { Text(if (mdblistApiKey.isNotEmpty()) "API Key: ${mdblistApiKey.take(8)}..." else stringResource(R.string.pref_mdblist_api_key_description)) },
+				onClick = { router.push(Routes.MOONFIN_MDBLIST_API_KEY) }
+			)
+		}
+
+		// Toolbar Customization (Moonfin)
+		item { ListSection(headingContent = { Text(stringResource(R.string.pref_toolbar_customization)) }) }
+
+		item {
+			val navbarPosition by rememberPreference(userPreferences, UserPreferences.navbarPosition)
+			val navbarLabel = when (navbarPosition) {
+				org.jellyfin.androidtv.preference.constant.NavbarPosition.TOP -> stringResource(R.string.pref_navbar_position_top)
+				org.jellyfin.androidtv.preference.constant.NavbarPosition.LEFT -> stringResource(R.string.pref_navbar_position_left)
+			}
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_navbar_position)) },
+				captionContent = { Text(navbarLabel) },
+				onClick = { router.push(Routes.MOONFIN_NAVBAR_POSITION) }
+			)
+		}
+
+		item {
+			var showShuffleButton by rememberPreference(userPreferences, UserPreferences.showShuffleButton)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_show_shuffle_button)) },
+				captionContent = { Text(stringResource(R.string.pref_show_shuffle_button_description)) },
+				trailingContent = { Checkbox(checked = showShuffleButton) },
+				onClick = { showShuffleButton = !showShuffleButton }
+			)
+		}
+
+		item {
+			var showGenresButton by rememberPreference(userPreferences, UserPreferences.showGenresButton)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_show_genres_button)) },
+				captionContent = { Text(stringResource(R.string.pref_show_genres_button_description)) },
+				trailingContent = { Checkbox(checked = showGenresButton) },
+				onClick = { showGenresButton = !showGenresButton }
+			)
+		}
+
+		item {
+			var showFavoritesButton by rememberPreference(userPreferences, UserPreferences.showFavoritesButton)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_show_favorites_button)) },
+				captionContent = { Text(stringResource(R.string.pref_show_favorites_button_description)) },
+				trailingContent = { Checkbox(checked = showFavoritesButton) },
+				onClick = { showFavoritesButton = !showFavoritesButton }
+			)
+		}
+
+		item {
+			var showLibrariesInToolbar by rememberPreference(userPreferences, UserPreferences.showLibrariesInToolbar)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_show_libraries_in_toolbar)) },
+				captionContent = { Text(stringResource(R.string.pref_show_libraries_in_toolbar_description)) },
+				trailingContent = { Checkbox(checked = showLibrariesInToolbar) },
+				onClick = { showLibrariesInToolbar = !showLibrariesInToolbar }
+			)
+		}
+
+		item {
+			val shuffleContentType by rememberPreference(userPreferences, UserPreferences.shuffleContentType)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_shuffle_content_type)) },
+				captionContent = { Text(getShuffleContentTypeLabel(shuffleContentType)) },
+				onClick = { router.push(Routes.MOONFIN_SHUFFLE_CONTENT_TYPE) }
+			)
+		}
+
+		// Appearance (Moonfin)
+		item { ListSection(headingContent = { Text(stringResource(R.string.pref_appearance)) }) }
+
+		item {
+			val seasonalSurprise by rememberPreference(userPreferences, UserPreferences.seasonalSurprise)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_seasonal_surprise)) },
+				captionContent = { Text(getSeasonalLabel(seasonalSurprise)) },
+				onClick = { router.push(Routes.MOONFIN_SEASONAL_SURPRISE) }
+			)
+		}
+
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			val detailsBlur by rememberPreference(userSettingPreferences, UserSettingPreferences.detailsBackgroundBlurAmount)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_details_background_blur_amount)) },
+				captionContent = { Text(getBlurLabel(detailsBlur)) },
+				onClick = { router.push(Routes.MOONFIN_DETAILS_BLUR) }
+			)
+		}
+
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			val browsingBlur by rememberPreference(userSettingPreferences, UserSettingPreferences.browsingBackgroundBlurAmount)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_browsing_background_blur_amount)) },
+				captionContent = { Text(getBlurLabel(browsingBlur)) },
+				onClick = { router.push(Routes.MOONFIN_BROWSING_BLUR) }
+			)
+		}
+
+		// Theme Music (Moonfin)
+		item { ListSection(headingContent = { Text(stringResource(R.string.pref_theme_music_title)) }) }
+
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			var themeMusicEnabled by rememberPreference(userSettingPreferences, UserSettingPreferences.themeMusicEnabled)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_theme_music_enable)) },
+				captionContent = { Text(stringResource(R.string.pref_theme_music_enable_summary)) },
+				trailingContent = { Checkbox(checked = themeMusicEnabled) },
+				onClick = { themeMusicEnabled = !themeMusicEnabled }
+			)
+		}
+
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			val themeMusicEnabled by rememberPreference(userSettingPreferences, UserSettingPreferences.themeMusicEnabled)
+			var themeMusicOnHomeRows by rememberPreference(userSettingPreferences, UserSettingPreferences.themeMusicOnHomeRows)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_theme_music_on_home_rows)) },
+				captionContent = { Text(stringResource(R.string.pref_theme_music_on_home_rows_summary)) },
+				trailingContent = { Checkbox(checked = themeMusicOnHomeRows) },
+				enabled = themeMusicEnabled,
+				onClick = { themeMusicOnHomeRows = !themeMusicOnHomeRows }
+			)
+		}
+
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			val themeMusicEnabled by rememberPreference(userSettingPreferences, UserSettingPreferences.themeMusicEnabled)
+			val themeMusicVolume by rememberPreference(userSettingPreferences, UserSettingPreferences.themeMusicVolume)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_theme_music_volume)) },
+				captionContent = { Text("$themeMusicVolume%") },
+				enabled = themeMusicEnabled,
+				onClick = { router.push(Routes.MOONFIN_THEME_MUSIC_VOLUME) }
+			)
+		}
+
+		// Parental Controls (Moonfin)
+		item { ListSection(headingContent = { Text(stringResource(R.string.pref_parental_controls)) }) }
+
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_lock), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_parental_controls)) },
+				captionContent = { Text(stringResource(R.string.pref_parental_controls_description)) },
+				onClick = { router.push(Routes.MOONFIN_PARENTAL_CONTROLS) }
+			)
+		}
+
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			val themeMusicEnabled by rememberPreference(userSettingPreferences, UserSettingPreferences.themeMusicEnabled)
+			var themeMusicOnHomeRows by rememberPreference(userSettingPreferences, UserSettingPreferences.themeMusicOnHomeRows)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_theme_music_on_home_rows)) },
+				captionContent = { Text(stringResource(R.string.pref_theme_music_on_home_rows_summary)) },
+				trailingContent = { Checkbox(checked = themeMusicOnHomeRows) },
+				enabled = themeMusicEnabled,
+				onClick = { themeMusicOnHomeRows = !themeMusicOnHomeRows }
+			)
+		}
+
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			val themeMusicEnabled by rememberPreference(userSettingPreferences, UserSettingPreferences.themeMusicEnabled)
+			val themeMusicVolume by rememberPreference(userSettingPreferences, UserSettingPreferences.themeMusicVolume)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_theme_music_volume)) },
+				captionContent = { Text("$themeMusicVolume%") },
+				enabled = themeMusicEnabled,
+				onClick = { router.push(Routes.MOONFIN_THEME_MUSIC_VOLUME) }
+			)
+		}
+
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_browsing)) }) }
 
 		item {
@@ -115,4 +312,33 @@ fun SettingsCustomizationScreen() {
 			)
 		}
 	}
+}
+
+@Composable
+fun getShuffleContentTypeLabel(type: String): String = when (type) {
+	"movies" -> stringResource(R.string.pref_shuffle_movies)
+	"tv" -> stringResource(R.string.pref_shuffle_tv)
+	"both" -> stringResource(R.string.pref_shuffle_both)
+	else -> type
+}
+
+@Composable
+private fun getSeasonalLabel(season: String): String = when (season) {
+	"none" -> stringResource(R.string.pref_seasonal_none)
+	"winter" -> stringResource(R.string.pref_seasonal_winter)
+	"spring" -> stringResource(R.string.pref_seasonal_spring)
+	"summer" -> stringResource(R.string.pref_seasonal_summer)
+	"halloween" -> stringResource(R.string.pref_seasonal_halloween)
+	"fall" -> stringResource(R.string.pref_seasonal_fall)
+	else -> season
+}
+
+@Composable
+private fun getBlurLabel(value: Int): String = when (value) {
+	0 -> stringResource(R.string.pref_blur_none)
+	5 -> stringResource(R.string.pref_blur_light)
+	10 -> stringResource(R.string.pref_blur_medium)
+	15 -> stringResource(R.string.pref_blur_strong)
+	20 -> stringResource(R.string.pref_blur_extra_strong)
+	else -> "${value}dp"
 }

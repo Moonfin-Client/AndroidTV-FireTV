@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.unit.dp
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.base.LocalShapes
@@ -26,8 +25,7 @@ fun SettingsLayout(
 			.clip(LocalShapes.current.large)
 			.background(JellyfinTheme.colorScheme.surface)
 			.width(350.dp)
-			.fillMaxHeight()
-			.focusRestorer(),
+			.fillMaxHeight(),
 		content = content
 	)
 }

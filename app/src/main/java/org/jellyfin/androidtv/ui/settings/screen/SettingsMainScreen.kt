@@ -19,8 +19,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.UpdateCheckerService
@@ -75,20 +76,6 @@ fun SettingsMainScreen() {
 			ListButton(
 				leadingContent = {
 					Icon(
-						painterResource(R.drawable.ic_moonfin_white),
-						contentDescription = null
-					)
-				},
-				headingContent = { Text(stringResource(R.string.moonfin_settings)) },
-				captionContent = { Text("Moonfin-specific customization") },
-				onClick = { router.push(Routes.MOONFIN) }
-			)
-		}
-
-		item {
-			ListButton(
-				leadingContent = {
-					Icon(
 						painterResource(R.drawable.ic_jellyseerr_jellyfish),
 						contentDescription = null,
 						modifier = Modifier.size(24.dp)
@@ -100,7 +87,6 @@ fun SettingsMainScreen() {
 			)
 		}
 
-		// TODO: Temporarily added to root - should be accessed via customization screen instead
 		item {
 			ListButton(
 				leadingContent = { Icon(painterResource(R.drawable.ic_photos), contentDescription = null) },
@@ -113,7 +99,7 @@ fun SettingsMainScreen() {
 			ListButton(
 				leadingContent = { Icon(painterResource(R.drawable.ic_syncplay), contentDescription = null) },
 				headingContent = { Text(stringResource(R.string.syncplay)) },
-				captionContent = { Text("Watch together with synchronized playback") },
+				captionContent = { Text(stringResource(R.string.syncplay_description)) },
 				onClick = { router.push(Routes.SYNCPLAY) }
 			)
 		}
@@ -144,7 +130,7 @@ fun SettingsMainScreen() {
 		}
 
 		item {
-ListSection(
+			ListSection(
 				headingContent = { Text("Support & Updates") },
 			)
 		}
@@ -203,7 +189,7 @@ ListSection(
 }
 
 private fun checkForUpdates(context: Context, updateChecker: UpdateCheckerService) {
-	GlobalScope.launch(Dispatchers.Main) {
+	CoroutineScope(Dispatchers.Main).launch {
 		Toast.makeText(context, "Checking for updates…", Toast.LENGTH_SHORT).show()
 
 		try {
@@ -257,8 +243,6 @@ private fun showReleaseNotesDialog(
 	updateInfo: UpdateCheckerService.UpdateInfo
 ) {
 	val sizeMB = updateInfo.apkSize / (1024.0 * 1024.0)
-
-	// Create WebView for HTML content
 	val webView = WebView(context).apply {
 		layoutParams = LinearLayout.LayoutParams(
 			ViewGroup.LayoutParams.MATCH_PARENT,
@@ -269,7 +253,6 @@ private fun showReleaseNotesDialog(
 			defaultTextEncodingName = "utf-8"
 		}
 
-		// Convert markdown to HTML with dark theme styling
 		val htmlContent = buildString {
 			append("<!DOCTYPE html><html><head>")
 			append("<meta name='viewport' content='width=device-width, initial-scale=1.0'>")
@@ -294,7 +277,6 @@ private fun showReleaseNotesDialog(
 			append("<p><strong>Size:</strong> ${String.format("%.1f", sizeMB)} MB</p>")
 			append("<hr>")
 
-			// Convert basic markdown to HTML
 			val releaseNotes = updateInfo.releaseNotes
 				.replace("### ", "<h3>")
 				.replace("## ", "<h2>")
@@ -316,7 +298,6 @@ private fun showReleaseNotesDialog(
 		loadDataWithBaseURL(null, htmlContent, "text/html", "utf-8", null)
 	}
 
-	// Create container with padding
 	val container = LinearLayout(context).apply {
 		orientation = LinearLayout.VERTICAL
 		setPadding(48, 24, 48, 24)
@@ -335,7 +316,6 @@ private fun showReleaseNotesDialog(
 		}
 		.show()
 		.apply {
-			// Make dialog wider
 			window?.setLayout(
 				(context.resources.displayMetrics.widthPixels * 0.90).toInt(),
 				ViewGroup.LayoutParams.WRAP_CONTENT
@@ -348,10 +328,8 @@ private fun downloadAndInstall(
 	updateChecker: UpdateCheckerService,
 	updateInfo: UpdateCheckerService.UpdateInfo
 ) {
-	// Check for install permission on Android 8.0+
 	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 		if (!context.packageManager.canRequestPackageInstalls()) {
-			// Show dialog to take user to settings
 			androidx.appcompat.app.AlertDialog.Builder(context)
 				.setTitle("Install Permission Required")
 				.setMessage("This app needs permission to install updates. Please grant it in the settings.")
@@ -364,7 +342,7 @@ private fun downloadAndInstall(
 		}
 	}
 
-	GlobalScope.launch(Dispatchers.Main) {
+	CoroutineScope(Dispatchers.Main).launch {
 		Toast.makeText(context, "Downloading update…", Toast.LENGTH_SHORT).show()
 
 		try {

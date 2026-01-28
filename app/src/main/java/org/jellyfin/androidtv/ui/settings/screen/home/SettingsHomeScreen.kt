@@ -40,6 +40,8 @@ import org.koin.compose.koinInject
 @Composable
 fun SettingsHomeScreen() {
 	val userSettingPreferences = koinInject<UserSettingPreferences>()
+	val userPreferences = koinInject<org.jellyfin.androidtv.preference.UserPreferences>()
+	val router = org.jellyfin.androidtv.ui.navigation.LocalRouter.current
 	
 	var sections by remember { mutableStateOf(userSettingPreferences.homeSectionsConfig) }
 	var focusedSectionType by remember { mutableStateOf<HomeSectionType?>(null) }
@@ -67,8 +69,115 @@ fun SettingsHomeScreen() {
 			)
 		}
 		
-		// Display each section with checkbox and reorder buttons
-		// Filter out MEDIA_BAR since it's controlled by a separate toggle in Moonfin settings
+		// Home Screen Settings (Moonfin features)
+		item {
+			var mergeContinueWatchingNextUp by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userPreferences, org.jellyfin.androidtv.preference.UserPreferences.mergeContinueWatchingNextUp)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.lbl_merge_continue_watching_next_up)) },
+				captionContent = { Text(stringResource(R.string.lbl_merge_continue_watching_next_up_description)) },
+				trailingContent = { Checkbox(checked = mergeContinueWatchingNextUp) },
+				onClick = { mergeContinueWatchingNextUp = !mergeContinueWatchingNextUp }
+			)
+		}
+
+		item {
+			var enableMultiServerLibraries by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userPreferences, org.jellyfin.androidtv.preference.UserPreferences.enableMultiServerLibraries)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_multi_server_libraries)) },
+				captionContent = { Text(stringResource(R.string.pref_multi_server_libraries_description)) },
+				trailingContent = { Checkbox(checked = enableMultiServerLibraries) },
+				onClick = { enableMultiServerLibraries = !enableMultiServerLibraries }
+			)
+		}
+
+		item {
+			var enableFolderView by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userPreferences, org.jellyfin.androidtv.preference.UserPreferences.enableFolderView)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_enable_folder_view)) },
+				captionContent = { Text(stringResource(R.string.pref_enable_folder_view_description)) },
+				trailingContent = { Checkbox(checked = enableFolderView) },
+				onClick = { enableFolderView = !enableFolderView }
+			)
+		}
+
+		item {
+			var confirmExit by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userPreferences, org.jellyfin.androidtv.preference.UserPreferences.confirmExit)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_confirm_exit)) },
+				captionContent = { Text(stringResource(R.string.pref_confirm_exit_description)) },
+				trailingContent = { Checkbox(checked = confirmExit) },
+				onClick = { confirmExit = !confirmExit }
+			)
+		}
+
+		// Home Rows Image Type (Moonfin)
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_grid), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_home_rows_image_type)) },
+				onClick = { router.push(org.jellyfin.androidtv.ui.settings.Routes.MOONFIN_HOME_ROWS_IMAGE) }
+			)
+		}
+
+		// Media Bar Settings (Moonfin)
+		item { ListSection(headingContent = { Text(stringResource(R.string.pref_media_bar_title)) }) }
+
+		item {
+			var mediaBarEnabled by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarEnabled)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_media_bar_enable)) },
+				captionContent = { Text(stringResource(R.string.pref_media_bar_enable_summary)) },
+				trailingContent = { Checkbox(checked = mediaBarEnabled) },
+				onClick = { mediaBarEnabled = !mediaBarEnabled }
+			)
+		}
+
+		item {
+			val mediaBarEnabled by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarEnabled)
+			val mediaBarContentType by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarContentType)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_media_bar_content_type)) },
+				captionContent = { Text(org.jellyfin.androidtv.ui.settings.screen.customization.getShuffleContentTypeLabel(mediaBarContentType)) },
+				enabled = mediaBarEnabled,
+				onClick = { router.push(org.jellyfin.androidtv.ui.settings.Routes.MOONFIN_MEDIA_BAR_CONTENT_TYPE) }
+			)
+		}
+
+		item {
+			val mediaBarEnabled by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarEnabled)
+			val mediaBarItemCount by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarItemCount)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_media_bar_item_count)) },
+				captionContent = { Text(getMediaBarItemCountLabel(mediaBarItemCount)) },
+				enabled = mediaBarEnabled,
+				onClick = { router.push(org.jellyfin.androidtv.ui.settings.Routes.MOONFIN_MEDIA_BAR_ITEM_COUNT) }
+			)
+		}
+
+		item {
+			val mediaBarEnabled by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarEnabled)
+			val mediaBarOverlayOpacity by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarOverlayOpacity)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_media_bar_overlay_opacity)) },
+				captionContent = { Text("$mediaBarOverlayOpacity%") },
+				enabled = mediaBarEnabled,
+				onClick = { router.push(org.jellyfin.androidtv.ui.settings.Routes.MOONFIN_MEDIA_BAR_OPACITY) }
+			)
+		}
+
+		item {
+			val mediaBarEnabled by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarEnabled)
+			val mediaBarOverlayColor by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarOverlayColor)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_media_bar_overlay_color)) },
+				captionContent = { Text(getOverlayColorLabel(mediaBarOverlayColor)) },
+				enabled = mediaBarEnabled,
+				onClick = { router.push(org.jellyfin.androidtv.ui.settings.Routes.MOONFIN_MEDIA_BAR_COLOR) }
+			)
+		}
+
+		item { ListSection(headingContent = { Text(stringResource(R.string.home_sections_description)) }) }
+		
 		val configurableSections = sections
 			.filter { it.type != HomeSectionType.MEDIA_BAR }
 			.sortedBy { it.order }
@@ -154,14 +263,12 @@ private fun HomeSectionRow(
 	val focusRequester = remember { FocusRequester() }
 	var isFocused by remember { mutableStateOf(false) }
 	
-	// Request focus when this item should be focused
 	LaunchedEffect(shouldRequestFocus) {
 		if (shouldRequestFocus) {
 			focusRequester.requestFocus()
 		}
 	}
 	
-	// Single button for the entire row - left/right keys move the item up/down
 	ListButton(
 		modifier = Modifier
 			.fillMaxWidth()
@@ -199,7 +306,6 @@ private fun HomeSectionRow(
 			Text(context.getString(section.type.nameRes))
 		},
 		trailingContent = {
-			// Visual indicators for up/down (not interactive)
 			Row(
 				horizontalArrangement = Arrangement.spacedBy(4.dp),
 				verticalAlignment = Alignment.CenterVertically
@@ -220,4 +326,29 @@ private fun HomeSectionRow(
 		},
 		onClick = onToggle
 	)
+}
+
+@Composable
+private fun getMediaBarItemCountLabel(count: String): String = when (count) {
+	"5" -> stringResource(R.string.pref_media_bar_5_items)
+	"10" -> stringResource(R.string.pref_media_bar_10_items)
+	"15" -> stringResource(R.string.pref_media_bar_15_items)
+	else -> count
+}
+
+@Composable
+private fun getOverlayColorLabel(color: String): String = when (color) {
+	"black" -> stringResource(R.string.pref_media_bar_color_black)
+	"gray" -> stringResource(R.string.pref_media_bar_color_gray)
+	"dark_blue" -> stringResource(R.string.pref_media_bar_color_dark_blue)
+	"purple" -> stringResource(R.string.pref_media_bar_color_purple)
+	"teal" -> stringResource(R.string.pref_media_bar_color_teal)
+	"navy" -> stringResource(R.string.pref_media_bar_color_navy)
+	"charcoal" -> stringResource(R.string.pref_media_bar_color_charcoal)
+	"brown" -> stringResource(R.string.pref_media_bar_color_brown)
+	"dark_red" -> stringResource(R.string.pref_media_bar_color_dark_red)
+	"dark_green" -> stringResource(R.string.pref_media_bar_color_dark_green)
+	"slate" -> stringResource(R.string.pref_media_bar_color_slate)
+	"indigo" -> stringResource(R.string.pref_media_bar_color_indigo)
+	else -> color
 }
