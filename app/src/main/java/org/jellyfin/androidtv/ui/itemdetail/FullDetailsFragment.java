@@ -884,8 +884,25 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 shuffleButton = TextUnderButton.create(requireContext(), R.drawable.ic_shuffle, buttonSize, 2, getString(R.string.lbl_shuffle_all), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        play(mBaseItem, 0, true);
+                        // If this is a genre, shuffle within that genre
+                        if (mBaseItem.getType() == BaseItemKind.GENRE) {
+                            org.jellyfin.androidtv.ui.shuffle.ShuffleUtilsKt.executeGenreShuffle(
+                                mBaseItem.getName(),
+                                mBaseItem.getParentId(),
+                                KoinJavaComponent.get(org.jellyfin.androidtv.preference.UserPreferences.class),
+                                KoinJavaComponent.get(NavigationRepository.class)
+                            );
+                        } else {
+                            play(mBaseItem, 0, true);
+                        }
                     }
+                });
+                shuffleButton.setOnLongClickListener(v -> {
+                    org.jellyfin.androidtv.ui.shuffle.ShuffleDialogLauncherKt.showShuffleDialog(
+                        requireContext(),
+                        KoinJavaComponent.get(NavigationRepository.class)
+                    );
+                    return true;
                 });
                 mDetailsOverviewRow.addAction(shuffleButton);
             }

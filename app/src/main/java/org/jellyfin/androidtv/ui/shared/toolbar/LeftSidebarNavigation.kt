@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.activity.compose.LocalActivity
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -605,6 +606,9 @@ private fun SidebarIconItem(
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
+	val scope = rememberCoroutineScope()
+	var longPressJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+	var longPressTriggered by remember { mutableStateOf(false) }
 	
 	LaunchedEffect(isFocused) {
 		onFocusChanged?.invoke(isFocused)
@@ -629,10 +633,30 @@ private fun SidebarIconItem(
 			)
 			.focusable(interactionSource = interactionSource)
 			.onKeyEvent { keyEvent ->
-				if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-					(keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter)) {
-					onClick()
-					true
+				if (keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter) {
+					when (keyEvent.nativeKeyEvent.action) {
+						android.view.KeyEvent.ACTION_DOWN -> {
+							if (longPressJob == null && onLongClick != null) {
+								longPressTriggered = false
+								longPressJob = scope.launch {
+									delay(500L)
+									longPressTriggered = true
+									onLongClick()
+								}
+							}
+							true
+						}
+						android.view.KeyEvent.ACTION_UP -> {
+							longPressJob?.cancel()
+							longPressJob = null
+							if (!longPressTriggered) {
+								onClick()
+							}
+							longPressTriggered = false
+							true
+						}
+						else -> false
+					}
 				} else {
 					false
 				}

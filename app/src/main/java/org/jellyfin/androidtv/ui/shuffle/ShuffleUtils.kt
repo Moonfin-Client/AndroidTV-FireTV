@@ -27,13 +27,47 @@ fun executeQuickShuffle(
 ) {
 	val api = GlobalContext.get().get<ApiClient>()
 	val apiClientFactory = GlobalContext.get().get<ApiClientFactory>()
-	val shuffleContentType = userPreferences[UserPreferences.shuffleContentType] ?: "both"
+	val shuffleContentType = userPreferences[UserPreferences.shuffleContentType]
 	
 	CoroutineScope(Dispatchers.Main).launch {
 		executeShuffle(
 			libraryId = null,
 			serverId = null,
 			genreName = null,
+			contentType = shuffleContentType,
+			libraryCollectionType = null,
+			api = api,
+			apiClientFactory = apiClientFactory,
+			navigationRepository = navigationRepository
+		)
+	}
+}
+
+/**
+ * Execute shuffle from a genre folder - fetches a random item from that specific genre
+ * Called from Java code when shuffle button is clicked in a genre folder
+ */
+fun executeGenreShuffle(
+	genreName: String?,
+	libraryId: UUID?,
+	userPreferences: UserPreferences,
+	navigationRepository: NavigationRepository
+) {
+	if (genreName.isNullOrBlank()) {
+		// Fallback to quick shuffle if no genre name
+		executeQuickShuffle(userPreferences, navigationRepository)
+		return
+	}
+	
+	val api = GlobalContext.get().get<ApiClient>()
+	val apiClientFactory = GlobalContext.get().get<ApiClientFactory>()
+	val shuffleContentType = userPreferences[UserPreferences.shuffleContentType]
+	
+	CoroutineScope(Dispatchers.Main).launch {
+		executeShuffle(
+			libraryId = libraryId,
+			serverId = null,
+			genreName = genreName,
 			contentType = shuffleContentType,
 			libraryCollectionType = null,
 			api = api,
@@ -73,12 +107,14 @@ suspend fun executeShuffle(
 				parentId = libraryId,
 				genres = genreName?.let { setOf(it) },
 				includeItemTypes = includeTypes,
+				excludeItemTypes = setOf(org.jellyfin.sdk.model.api.BaseItemKind.BOX_SET),
 				recursive = true,
 				sortBy = setOf(ItemSortBy.RANDOM),
 				limit = 1,
 			)
-			Timber.d("Shuffle search results: totalRecordCount=${response.content.totalRecordCount}, items=${response.content.items?.size ?: 0}")
-			response.content.items?.firstOrNull()
+			val items = response.content.items
+			Timber.d("Shuffle search results: totalRecordCount=${response.content.totalRecordCount}, items=${items?.size ?: 0}")
+			items?.firstOrNull()
 		}
 		if (randomItem != null) {
 			Timber.d("Found random item: ${randomItem.name} (${randomItem.type})")

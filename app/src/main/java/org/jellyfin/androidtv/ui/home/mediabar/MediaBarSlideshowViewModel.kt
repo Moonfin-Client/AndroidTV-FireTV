@@ -160,6 +160,7 @@ class MediaBarSlideshowViewModel(
 			try {
 				val response by apiClient.itemsApi.getItems(
 					includeItemTypes = setOf(itemType),
+					excludeItemTypes = setOf(org.jellyfin.sdk.model.api.BaseItemKind.BOX_SET),
 					parentId = library.id,
 					recursive = true,
 					sortBy = setOf(org.jellyfin.sdk.model.api.ItemSortBy.RANDOM),

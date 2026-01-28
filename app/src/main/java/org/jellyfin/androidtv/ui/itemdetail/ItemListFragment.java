@@ -487,13 +487,27 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
                 TextUnderButton shuffle = TextUnderButton.create(requireContext(), R.drawable.ic_shuffle, buttonSize, 2, getString(R.string.lbl_shuffle_all), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        if (!mItems.isEmpty()) {
-                            //use server retrieval in order to get all items
+                        // If this is a genre, shuffle within that genre
+                        if (mBaseItem.getType() == BaseItemKind.GENRE) {
+                            org.jellyfin.androidtv.ui.shuffle.ShuffleUtilsKt.executeGenreShuffle(
+                                mBaseItem.getName(),
+                                mBaseItem.getParentId(),
+                                KoinJavaComponent.get(org.jellyfin.androidtv.preference.UserPreferences.class),
+                                KoinJavaComponent.get(NavigationRepository.class)
+                            );
+                        } else if (!mItems.isEmpty()) {
                             playbackHelper.getValue().retrieveAndPlay(mBaseItem.getId(), true, requireContext());
                         } else {
                             Utils.showToast(requireContext(), R.string.msg_no_playable_items);
                         }
                     }
+                });
+                shuffle.setOnLongClickListener(v -> {
+                    org.jellyfin.androidtv.ui.shuffle.ShuffleDialogLauncherKt.showShuffleDialog(
+                        requireContext(),
+                        KoinJavaComponent.get(NavigationRepository.class)
+                    );
+                    return true;
                 });
                 mButtonRow.addView(shuffle);
                 shuffle.setOnFocusChangeListener((v, hasFocus) -> {
