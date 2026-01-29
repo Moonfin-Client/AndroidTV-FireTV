@@ -88,6 +88,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind;
 import org.jellyfin.sdk.model.api.BaseItemPerson;
 import org.jellyfin.sdk.model.api.MediaSourceInfo;
 import org.jellyfin.sdk.model.api.MediaStream;
+import org.jellyfin.sdk.model.api.MediaStreamType;
 import org.jellyfin.sdk.model.api.MediaType;
 import org.jellyfin.sdk.model.api.PersonKind;
 import org.jellyfin.sdk.model.api.SeriesTimerInfoDto;
@@ -114,6 +115,8 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
     TextUnderButton mResumeButton;
     private TextUnderButton mVersionsButton;
+    private TextUnderButton mAudioTrackButton;
+    private TextUnderButton mSubtitleTrackButton;
     TextUnderButton mPrevButton;
     private TextUnderButton mRecordButton;
     private TextUnderButton mRecSeriesButton;
@@ -919,7 +922,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 mDetailsOverviewRow.addAction(imix);
             }
         }
-        //Video versions button
         if (mBaseItem.getMediaSources() != null && mBaseItem.getMediaSources().size() > 1) {
             mVersionsButton = TextUnderButton.create(requireContext(), R.drawable.ic_guide, buttonSize, 0, getString(R.string.select_version), new View.OnClickListener() {
                 @Override
@@ -935,6 +937,39 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
             mDetailsOverviewRow.addAction(mVersionsButton);
         }
 
+        if (mBaseItem.getMediaSources() != null && !mBaseItem.getMediaSources().isEmpty()) {
+            MediaSourceInfo mediaSource = mBaseItem.getMediaSources().get(0);
+            if (mediaSource.getMediaStreams() != null) {
+                List<MediaStream> mediaStreams = mediaSource.getMediaStreams();
+                
+                long audioTrackCount = mediaStreams.stream()
+                        .filter(stream -> stream.getType() == MediaStreamType.AUDIO)
+                        .count();
+                if (audioTrackCount > 1) {
+                    mAudioTrackButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_audio, buttonSize, 0, getString(R.string.lbl_audio_track), new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            FullDetailsFragmentHelperKt.showAudioTrackSelector(FullDetailsFragment.this, v, mBaseItem);
+                        }
+                    });
+                    mDetailsOverviewRow.addAction(mAudioTrackButton);
+                }
+
+                long subtitleTrackCount = mediaStreams.stream()
+                        .filter(stream -> stream.getType() == MediaStreamType.SUBTITLE)
+                        .count();
+                if (subtitleTrackCount > 0) {
+                    mSubtitleTrackButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_subtitle, buttonSize, 0, getString(R.string.lbl_subtitle_track), new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            FullDetailsFragmentHelperKt.showSubtitleTrackSelector(FullDetailsFragment.this, v, mBaseItem);
+                        }
+                    });
+                    mDetailsOverviewRow.addAction(mSubtitleTrackButton);
+                }
+            }
+        }
+
         if (TrailerUtils.hasPlayableTrailers(requireContext(), mBaseItem)) {
             trailerButton = TextUnderButton.create(requireContext(), R.drawable.ic_trailer, buttonSize, 0, getString(R.string.lbl_play_trailers), new View.OnClickListener() {
                 @Override
@@ -948,7 +983,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
         if (mProgramInfo != null && Utils.canManageRecordings(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue())) {
             if (mBaseItem.getEndDate().isAfter(LocalDateTime.now())) {
-                //Record button
                 mRecordButton = TextUnderButton.create(requireContext(), R.drawable.ic_record, buttonSize, 4, getString(R.string.lbl_record), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -1147,7 +1181,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
         }
 
-        //Now, create a more button to show if needed
         moreButton = TextUnderButton.create(requireContext(), R.drawable.ic_more, buttonSize, 0, getString(R.string.lbl_other_options), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
