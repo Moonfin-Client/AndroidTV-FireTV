@@ -98,7 +98,7 @@ class PersonDetailsFragment : Fragment() {
 				LinearLayout.LayoutParams.MATCH_PARENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
 			)
-			setPadding(300.dp(context), 24.dp(context), 24.dp(context), 24.dp(context))
+			setPadding(50.dp(context), 80.dp(context), 50.dp(context), 24.dp(context))
 		}
 
 		val infoContainer = LinearLayout(requireContext()).apply {
