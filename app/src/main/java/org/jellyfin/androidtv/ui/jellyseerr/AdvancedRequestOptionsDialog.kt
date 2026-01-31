@@ -459,8 +459,8 @@ class AdvancedRequestOptionsDialog(
 	}
 	
 	private fun getDisplayPath(path: String): String {
-		// Show just the last folder name for cleaner display
-		return path.trimEnd('/').substringAfterLast('/')
+		// Show the full path for better clarity when multiple drives have same endpoint folder names
+		return path.trimEnd('/')
 	}
 	
 	private fun submitRequest() {
