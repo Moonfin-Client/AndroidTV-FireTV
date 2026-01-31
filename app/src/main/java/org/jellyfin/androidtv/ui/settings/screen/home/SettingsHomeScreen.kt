@@ -176,6 +176,18 @@ fun SettingsHomeScreen() {
 			)
 		}
 
+		item {
+			val mediaBarEnabled by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarEnabled)
+			var mediaBarSwapLayout by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarSwapLayout)
+			ListButton(
+				headingContent = { Text("Swap Layout") },
+				captionContent = { Text("Switch positions of logo and info overlay") },
+				trailingContent = { Checkbox(checked = mediaBarSwapLayout) },
+				enabled = mediaBarEnabled,
+				onClick = { mediaBarSwapLayout = !mediaBarSwapLayout }
+			)
+		}
+
 		item { ListSection(headingContent = { Text(stringResource(R.string.home_sections_description)) }) }
 		
 		val configurableSections = sections

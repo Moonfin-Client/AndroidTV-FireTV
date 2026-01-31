@@ -184,7 +184,10 @@ fun MediaBarSlideshowView(
 			is MediaBarState.Ready -> {
 				val item = currentState.items.getOrNull(playbackState.currentIndex)
 
-				// Content row: Info overlay on left, logo on right
+				// Check if layout should be swapped
+				val swapLayout = userSettingPreferences[UserSettingPreferences.mediaBarSwapLayout]
+
+				// Content row: Info overlay and logo
 				Row(
 					modifier = Modifier
 						.align(Alignment.BottomStart)
@@ -193,34 +196,68 @@ fun MediaBarSlideshowView(
 					horizontalArrangement = Arrangement.SpaceBetween,
 					verticalAlignment = Alignment.Bottom
 				) {
-					// Media info overlay on the left
-					if (item != null) {
-						MediaInfoOverlay(
-							item = item,
-							overlayColor = overlayColor,
-							overlayOpacity = overlayOpacity,
-							modifier = Modifier.width(600.dp)
-						)
-					}
+					if (swapLayout) {
+						// Logo on the left when swapped
+						Box(
+							modifier = Modifier
+								.weight(1f)
+								.height(140.dp)
+								.padding(end = 24.dp),
+							contentAlignment = Alignment.Center
+						) {
+							Crossfade(
+								targetState = item?.logoUrl,
+								animationSpec = tween(300),
+								label = "mediabar_logo_transition"
+							) { logoUrl ->
+								if (logoUrl != null) {
+									LogoView(
+										url = logoUrl,
+										modifier = Modifier.fillMaxSize()
+									)
+								}
+							}
+						}
 
-					// Logo on the right - fills remaining space
-					Box(
-						modifier = Modifier
-							.weight(1f)
-							.height(140.dp)
-							.padding(start = 24.dp),
-						contentAlignment = Alignment.Center
-					) {
-						Crossfade(
-							targetState = item?.logoUrl,
-							animationSpec = tween(300),
-							label = "mediabar_logo_transition"
-						) { logoUrl ->
-							if (logoUrl != null) {
-								LogoView(
-									url = logoUrl,
-									modifier = Modifier.fillMaxSize()
-								)
+						// Media info overlay on the right when swapped
+						if (item != null) {
+							MediaInfoOverlay(
+								item = item,
+								overlayColor = overlayColor,
+								overlayOpacity = overlayOpacity,
+								modifier = Modifier.width(600.dp)
+							)
+						}
+					} else {
+						// Media info overlay on the left (default)
+						if (item != null) {
+							MediaInfoOverlay(
+								item = item,
+								overlayColor = overlayColor,
+								overlayOpacity = overlayOpacity,
+								modifier = Modifier.width(600.dp)
+							)
+						}
+
+						// Logo on the right (default)
+						Box(
+							modifier = Modifier
+								.weight(1f)
+								.height(140.dp)
+								.padding(start = 24.dp),
+							contentAlignment = Alignment.Center
+						) {
+							Crossfade(
+								targetState = item?.logoUrl,
+								animationSpec = tween(300),
+								label = "mediabar_logo_transition"
+							) { logoUrl ->
+								if (logoUrl != null) {
+									LogoView(
+										url = logoUrl,
+										modifier = Modifier.fillMaxSize()
+									)
+								}
 							}
 						}
 					}
