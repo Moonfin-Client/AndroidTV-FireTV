@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.Handler;
 import android.util.TypedValue;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
@@ -177,6 +178,15 @@ public class VideoManager {
                 subslp.topMargin = verticalMargins / (-2);
                 // Store new params and make the subs view visible despite being outside parent
                 subtitleView.setLayoutParams(subslp);
+                // Disable clipping on parent views to allow subtitles to render outside bounds
+                // This is needed for both top and bottom positioned subtitles on wide aspect ratio videos
+                FrameLayout parent = (FrameLayout) mExoPlayerView.getParent();
+                parent.setClipChildren(false);
+                parent.setClipToPadding(false);
+                if (parent.getParent() instanceof ViewGroup) {
+                    ((ViewGroup) parent.getParent()).setClipChildren(false);
+                    ((ViewGroup) parent.getParent()).setClipToPadding(false);
+                }
                 mExoPlayerView.setClipChildren(false);
             }
         });
