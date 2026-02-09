@@ -359,8 +359,9 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 		}
 
 		if (!justLoaded) {
-			// Always refresh all rows and data when returning to home to get latest from server
-			refreshRows(force = true, delayed = true) // Force refresh to get latest data
+			// Re-retrieve rows that have pending change triggers (e.g. Resume, Next Up, Latest)
+			// but don't force-refresh static rows like Views/My Media to avoid resetting selection
+			refreshRows(delayed = true)
 			
 			// Reload media bar with fresh random items when returning to home
 			mediaBarViewModel.loadInitialContent()
