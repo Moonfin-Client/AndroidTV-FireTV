@@ -1,6 +1,7 @@
 package org.jellyfin.androidtv.ui.jellyseerr
 
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
@@ -58,21 +59,25 @@ class MediaCardPresenter(
 			layoutParams = ViewGroup.LayoutParams(cardWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
 			isFocusable = true
 			isFocusableInTouchMode = true
-			
-			setOnFocusChangeListener { view, hasFocus ->
-				if (hasFocus) {
-					view.scaleX = 1.05f
-					view.scaleY = 1.05f
-				} else {
-					view.scaleX = 1.0f
-					view.scaleY = 1.0f
-				}
-			}
 		}
 		
 		// Image container (FrameLayout for badge overlay)
 		val imageContainer = FrameLayout(context).apply {
 			layoutParams = LinearLayout.LayoutParams(cardWidth, cardHeight)
+		}
+
+		card.setOnFocusChangeListener { view, hasFocus ->
+			if (hasFocus) {
+				view.scaleX = 1.05f
+				view.scaleY = 1.05f
+				imageContainer.foreground = GradientDrawable().apply {
+					setStroke((2 * density).toInt(), Color.WHITE)
+				}
+			} else {
+				view.scaleX = 1.0f
+				view.scaleY = 1.0f
+				imageContainer.foreground = null
+			}
 		}
 		
 		// Poster image

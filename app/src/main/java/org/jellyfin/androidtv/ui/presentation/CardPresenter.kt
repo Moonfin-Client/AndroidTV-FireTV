@@ -360,6 +360,7 @@ private fun CardViewHolderContent(
 
 	val card = @Composable {
 		ItemCard(
+			focused = focused,
 			image = {
 				if (image != null) {
 					val apiClientFactory = koinInject<ApiClientFactory>()
