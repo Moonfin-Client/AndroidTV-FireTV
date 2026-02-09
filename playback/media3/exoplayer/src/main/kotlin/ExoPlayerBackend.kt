@@ -22,7 +22,10 @@ import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.ui.SubtitleView
-import io.github.peerless2012.ass.media.kt.buildWithAssSupport
+import io.github.peerless2012.ass.media.AssHandler
+import io.github.peerless2012.ass.media.kt.withAssMkvSupport
+import io.github.peerless2012.ass.media.kt.withAssSupport
+import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
 import io.github.peerless2012.ass.media.type.AssRenderType
 import org.jellyfin.playback.core.backend.BasePlayerBackend
 import org.jellyfin.playback.core.mediastream.MediaStream
@@ -103,13 +106,22 @@ class ExoPlayerBackend(
 			.setPauseAtEndOfMediaItems(true)
 
 		val player = if (exoPlayerOptions.enableLibAssRenderer) {
-			builder.buildWithAssSupport(
-				context = context,
-				renderType = AssRenderType.OVERLAY_OPEN_GL,
-				dataSourceFactory = dataSourceFactory,
-				extractorsFactory = extractorsFactory,
-				renderersFactory = renderersFactory
-			)
+			val assHandler = AssHandler(AssRenderType.OVERLAY_OPEN_GL)
+			assHandler.renderCallback = { render ->
+				render?.setFontScale(exoPlayerOptions.assSubtitleFontScale)
+			}
+			val assParserFactory = AssSubtitleParserFactory(assHandler)
+			val assMediaSourceFactory = DefaultMediaSourceFactory(
+				dataSourceFactory,
+				extractorsFactory.withAssMkvSupport(assParserFactory, assHandler)
+			).apply {
+				setSubtitleParserFactory(assParserFactory)
+			}
+			builder
+				.setMediaSourceFactory(assMediaSourceFactory)
+				.setRenderersFactory(renderersFactory.withAssSupport(assHandler))
+				.build()
+				.also { assHandler.init(it) }
 		} else {
 			builder.build()
 		}
