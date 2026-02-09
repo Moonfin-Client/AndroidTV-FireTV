@@ -306,14 +306,8 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 		
-		// Enable hardware acceleration for smoother scrolling
-		view.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-		
 		// Configure the vertical grid view to not release focus upward
 		verticalGridView?.apply {
-			// Enable hardware acceleration on the grid view
-			setLayerType(View.LAYER_TYPE_HARDWARE, null)
-			
 			// Reduce item prefetch distance for faster initial load
 			setItemViewCacheSize(20)
 			

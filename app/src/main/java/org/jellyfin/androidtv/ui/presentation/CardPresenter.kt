@@ -1,6 +1,10 @@
 package org.jellyfin.androidtv.ui.presentation
 
+import android.content.Context
+import android.graphics.Rect
+import android.os.Build
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -57,6 +61,41 @@ import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.koin.compose.koinInject
 
+/**
+ * FrameLayout wrapper that provides a reliable focus callback via [onFocusChanged] override.
+ *
+ * This wrapper addresses two issues with using [ComposeView] directly inside Leanback's
+ * [HorizontalGridView]:
+ *
+ * 1. **Focus listener overwrite**: Leanback's `FocusHighlightHelper` sets its own
+ *    [android.view.View.OnFocusChangeListener] on item views during binding (via `FocusAnimator`),
+ *    overwriting any listener set by the Presenter. The [onFocusChanged] override is a protected
+ *    [android.view.View] method that always fires regardless, so our focus state tracking works.
+ *
+ * 2. **ComposeView focus isolation**: The wrapper is the focusable view that Leanback's
+ *    [HorizontalGridView] manages, while the [ComposeView] inside is a non-focusable rendering
+ *    surface. This avoids [ComposeView]-specific focus quirks (e.g. AndroidComposeView key event
+ *    interception) on devices like Fire TV 4K v1 (API 28).
+ */
+private class FocusAwareCardContainer(context: Context) : FrameLayout(context) {
+	/** Callback invoked when focus state changes. Not overwritten by Leanback's FocusAnimator. */
+	var focusCallback: ((Boolean) -> Unit)? = null
+
+	init {
+		isFocusable = true
+		isFocusableInTouchMode = true
+		descendantFocusability = FOCUS_BLOCK_DESCENDANTS
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			defaultFocusHighlightEnabled = false
+		}
+	}
+
+	override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
+		super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
+		focusCallback?.invoke(gainFocus)
+	}
+}
+
 class CardPresenter(
 	val showInfo: Boolean,
 	val imageType: ImageType,
@@ -69,13 +108,24 @@ class CardPresenter(
 	constructor() : this(true)
 
 	override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-		val view = ComposeView(parent.context).apply {
+		val container = FocusAwareCardContainer(parent.context)
+
+		val composeView = ComposeView(parent.context).apply {
+			// ComposeView is a non-focusable rendering surface inside the container.
+			// Focus is managed entirely by the FocusAwareCardContainer wrapper.
+			isFocusable = false
 			setParentCompositionContext(parent.findViewTreeCompositionContext())
-			setViewTreeLifecycleOwner(parent.findViewTreeLifecycleOwner())
-			setViewTreeSavedStateRegistryOwner(parent.findViewTreeSavedStateRegistryOwner())
 		}
 
-		return CardViewHolder(view)
+		// Set view tree owners on the container so they propagate to ComposeView
+		container.setViewTreeLifecycleOwner(parent.findViewTreeLifecycleOwner())
+		container.setViewTreeSavedStateRegistryOwner(parent.findViewTreeSavedStateRegistryOwner())
+		container.addView(composeView, FrameLayout.LayoutParams(
+			FrameLayout.LayoutParams.WRAP_CONTENT,
+			FrameLayout.LayoutParams.WRAP_CONTENT
+		))
+
+		return CardViewHolder(container, composeView)
 	}
 
 	override fun onBindViewHolder(viewHolder: ViewHolder, item: Any?) {
@@ -91,7 +141,10 @@ class CardPresenter(
 		viewHolder.unbind()
 	}
 
-	private inner class CardViewHolder(composeView: ComposeView) : ViewHolder(composeView) {
+	private inner class CardViewHolder(
+		container: FocusAwareCardContainer,
+		composeView: ComposeView,
+	) : ViewHolder(container) {
 		private val _item = MutableStateFlow<BaseRowItem?>(null)
 		private val _focused = MutableStateFlow(false)
 
@@ -110,8 +163,11 @@ class CardPresenter(
 				)
 			}
 
-			_focused.value = view.isFocused
-			composeView.onFocusChangeListener = { _, focused -> _focused.value = focused }
+			_focused.value = container.isFocused
+			// Use onFocusChanged callback on the container instead of OnFocusChangeListener
+			// because Leanback's FocusHighlightHelper.BrowseItemFocusHighlight overwrites
+			// OnFocusChangeListener with its own FocusAnimator during item binding.
+			container.focusCallback = { focused -> _focused.value = focused }
 		}
 
 		fun bind(item: BaseRowItem) {

@@ -19,7 +19,6 @@ class MediaBarPresenter(
 ) : RowPresenter() {
 	
 	override fun createRowViewHolder(parent: ViewGroup): RowPresenter.ViewHolder {
-		// Create a container with bottom margin to push the next row down
 		val container = FrameLayout(parent.context).apply {
 			layoutParams = ViewGroup.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,

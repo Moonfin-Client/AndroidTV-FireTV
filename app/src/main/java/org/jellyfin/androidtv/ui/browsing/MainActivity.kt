@@ -40,7 +40,6 @@ import org.jellyfin.androidtv.ui.playback.PlaybackLauncher
 import org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer
 import org.jellyfin.androidtv.ui.screensaver.InAppScreensaver
 import org.jellyfin.androidtv.ui.settings.compat.MainActivitySettings
-import org.jellyfin.androidtv.ui.syncplay.MainActivitySyncPlay
 import org.jellyfin.androidtv.ui.startup.StartupActivity
 import org.jellyfin.androidtv.util.applyTheme
 import org.jellyfin.androidtv.util.isMediaSessionKeyEvent
@@ -115,7 +114,6 @@ class MainActivity : FragmentActivity() {
 		binding = ActivityMainBinding.inflate(layoutInflater)
 		binding.background.setContent { AppBackground() }
 		binding.settings.setContent { MainActivitySettings() }
-		binding.syncplay.setContent { MainActivitySyncPlay() }
 		binding.screensaver.setContent { InAppScreensaver() }
 		setContentView(binding.root)
 

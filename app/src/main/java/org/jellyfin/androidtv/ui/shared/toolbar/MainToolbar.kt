@@ -69,6 +69,7 @@ import org.jellyfin.androidtv.preference.constant.ClockBehavior
 import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
 import org.jellyfin.androidtv.ui.shuffle.ShuffleManager
 import org.jellyfin.androidtv.ui.shuffle.ShuffleOptionsDialog
+import org.jellyfin.androidtv.ui.syncplay.SyncPlayDialog
 import org.jellyfin.androidtv.ui.syncplay.SyncPlayViewModel
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.primaryImage
@@ -499,6 +500,15 @@ private fun MainToolbar(
 					)
 				}
 			}
+		)
+	}
+
+	// SyncPlay dialog - hosted here instead of a separate activity-level ComposeView overlay
+	val syncPlayVisible by syncPlayViewModel.visible.collectAsState()
+	if (syncPlayVisible) {
+		SyncPlayDialog(
+			visible = true,
+			onDismissRequest = { syncPlayViewModel.hide() }
 		)
 	}
 }
