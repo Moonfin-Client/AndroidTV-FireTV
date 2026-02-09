@@ -1,0 +1,79 @@
+name: "Bug: Jellyseerr"
+description: Report a Jellyseerr integration issue
+title: "[Jellyseerr] "
+labels: ["Bug", "Jellyseerr"]
+body:
+  - type: input
+    id: app_version
+    attributes:
+      label: Moonfin version
+      description: The app version / release tag (e.g., v1.5.0)
+      placeholder: v1.5.0
+    validations:
+      required: true
+
+  - type: input
+    id: android_version
+    attributes:
+      label: Android Flavor and Device Type
+      description: "Example: Android 12 on Google Streamer, Android 13 on Fire TV Stick, etc."
+      placeholder: Android 13 on Google Chromecast with Google TV
+    validations:
+      required: true
+
+  - type: dropdown
+    id: connection_type
+    attributes:
+      label: How are you connecting?
+      options:
+        - Local network (http://IP:5055)
+        - Domain + reverse proxy
+        - Remote access (port forward)
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: https
+    attributes:
+      label: Using HTTPS?
+      options:
+        - "Yes"
+        - "No"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error message / what happens
+      placeholder: |
+        "Failed to connect..." / spinner / auth loop / blank page / etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+
+  - type: dropdown
+    id: works_elsewhere
+    attributes:
+      label: Does Jellyseerr work from a phone/PC browser on the same network?
+      options:
+        - "Yes"
+        - "No"
+        - "Haven't tried"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / extra context (optional)
+    validations:
+      required: false

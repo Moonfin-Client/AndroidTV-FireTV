@@ -1,0 +1,63 @@
+name: "Bug: UI"
+description: Report a UI/UX issue (navigation, screens, layout, focus, etc.)
+title: "[UI] "
+labels: ["Bug", "UI"]
+body:
+  - type: input
+    id: app_version
+    attributes:
+      label: Moonfin version
+      description: The app version / release tag (e.g., v1.5.0)
+      placeholder: v1.5.0
+    validations:
+      required: true
+
+  - type: input
+    id: android_version
+    attributes:
+      label: Android Flavor and Device Type
+      description: "Example: Android 12 on Google Streamer, Android 13 on Fire TV Stick, etc."
+      placeholder: Android 13 on Google Chromecast with Google TV
+    validations:
+      required: true
+
+  - type: dropdown
+    id: screen
+    attributes:
+      label: Where does it happen?
+      options:
+        - Login
+        - Home
+        - Details page
+        - Settings
+        - Search
+        - Jellyseerr
+        - Player UI (controls/OSD)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: input_method
+    attributes:
+      label: Input method
+      options:
+        - Standard remote (d-pad)
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / photos (optional)
+      description: Attach a photo of the TV screen if it helps.
+    validations:
+      required: false

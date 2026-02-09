@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest an improvement or new feature
+title: "[Feature] "
+labels: ["Feature Request"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      placeholder: I find it frustrating when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      placeholder: It would be great if...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered (optional)
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context (optional)
+      description: Mockups, links, related issues, etc.
+    validations:
+      required: false
+
