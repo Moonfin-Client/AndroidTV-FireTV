@@ -12,6 +12,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.LocationType
 import org.jellyfin.sdk.model.api.PersonKind
+import org.jellyfin.sdk.model.api.PlayAccess
 import java.time.LocalDateTime
 
 fun BaseItemDto.getSeasonEpisodeName(context: Context): String {
@@ -49,6 +50,7 @@ fun BaseItemDto.getDisplayName(context: Context): String {
 
 
 fun BaseItemDto?.canPlay() = this != null
+	&& playAccess != PlayAccess.NONE
 	&& isPlaceHolder != true
 	&& (type != BaseItemKind.EPISODE || locationType != LocationType.VIRTUAL)
 	&& type != BaseItemKind.PERSON
