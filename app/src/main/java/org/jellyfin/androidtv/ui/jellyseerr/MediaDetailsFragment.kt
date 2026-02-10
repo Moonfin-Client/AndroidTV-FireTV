@@ -114,6 +114,8 @@ class MediaDetailsFragment : Fragment() {
 			setBackgroundColor(Color.parseColor("#111827"))
 		}
 
+		val navbarPosition = userPreferences[UserPreferences.navbarPosition]
+
 		val scrollView = ScrollView(requireContext()).apply {
 			layoutParams = FrameLayout.LayoutParams(
 				FrameLayout.LayoutParams.MATCH_PARENT,
@@ -124,7 +126,6 @@ class MediaDetailsFragment : Fragment() {
 			isFocusableInTouchMode = true
 			isScrollbarFadingEnabled = false
 			nextFocusLeftId = sidebarId
-			setPadding(0, 80.dp(context), 0, 0)
 			clipToPadding = false
 		}
 
@@ -140,8 +141,6 @@ class MediaDetailsFragment : Fragment() {
 		rootLayout.addView(createBackdropWithHeaderSection())
 		
 		mainContainer.addView(scrollView)
-		
-		val navbarPosition = userPreferences[UserPreferences.navbarPosition]
 		
 		when (navbarPosition) {
 			NavbarPosition.LEFT -> {
@@ -273,6 +272,8 @@ class MediaDetailsFragment : Fragment() {
 			}
 			setBackgroundColor(Color.parseColor("#111827"))
 			setPadding(50.dp(context), 0, 50.dp(context), 0)
+			clipChildren = false
+			clipToPadding = false
 		}
 		contentWrapper.addView(createOverviewSection())
 		contentWrapper.addView(createCastSection())
@@ -1132,6 +1133,8 @@ class MediaDetailsFragment : Fragment() {
 				topMargin = (-24.dp(context) * 0.7).toInt() // Raised by 30% (from 0.4 to 0.7)
 			}
 			setPadding(24.dp(context), 0, 24.dp(context), 24.dp(context))
+			clipChildren = false
+			clipToPadding = false
 			id = View.generateViewId()
 		}
 		
@@ -1299,6 +1302,8 @@ class MediaDetailsFragment : Fragment() {
 			).apply {
 				topMargin = 32.dp(context)
 			}
+			clipChildren = false
+			clipToPadding = false
 		}
 
 		val recommendationsHeading = TextView(requireContext()).apply {
@@ -1341,6 +1346,8 @@ class MediaDetailsFragment : Fragment() {
 						)
 						isHorizontalScrollBarEnabled = false
 						setPadding(12.dp(context), 0, 0, 0)
+						clipChildren = false
+						clipToPadding = false
 					}
 
 					val recommendationsRow = LinearLayout(requireContext()).apply {
@@ -1349,6 +1356,8 @@ class MediaDetailsFragment : Fragment() {
 							LinearLayout.LayoutParams.WRAP_CONTENT,
 							LinearLayout.LayoutParams.WRAP_CONTENT
 						)
+						clipChildren = false
+						clipToPadding = false
 					}
 
 					recommendationsList.forEach { item ->
@@ -1387,6 +1396,8 @@ class MediaDetailsFragment : Fragment() {
 			).apply {
 				topMargin = 32.dp(context)
 			}
+			clipChildren = false
+			clipToPadding = false
 		}
 
 		// Dynamic title based on media type
@@ -1435,6 +1446,8 @@ class MediaDetailsFragment : Fragment() {
 						)
 						isHorizontalScrollBarEnabled = false
 						setPadding(12.dp(context), 0, 0, 0)
+						clipChildren = false
+						clipToPadding = false
 					}
 
 					val similarRow = LinearLayout(requireContext()).apply {
@@ -1443,6 +1456,8 @@ class MediaDetailsFragment : Fragment() {
 							LinearLayout.LayoutParams.WRAP_CONTENT,
 							LinearLayout.LayoutParams.WRAP_CONTENT
 						)
+						clipChildren = false
+						clipToPadding = false
 					}
 
 					similarList.forEach { item ->
@@ -1481,6 +1496,8 @@ class MediaDetailsFragment : Fragment() {
 			).apply {
 				topMargin = 32.dp(context)
 			}
+			clipChildren = false
+			clipToPadding = false
 		}
 
 		// Get keywords from movie or TV details
@@ -1517,6 +1534,8 @@ class MediaDetailsFragment : Fragment() {
 				LinearLayout.LayoutParams.WRAP_CONTENT
 			)
 			setPadding(0, 0, 0, 0)
+			clipChildren = false
+			clipToPadding = false
 		}
 
 		// Group keywords into rows - dynamic width wrapping
@@ -1533,6 +1552,8 @@ class MediaDetailsFragment : Fragment() {
 					).apply {
 						bottomMargin = 12.dp(context)
 					}
+					clipChildren = false
+					clipToPadding = false
 				}
 				keywordsContainer.addView(currentRow)
 				itemsInRow = 0
