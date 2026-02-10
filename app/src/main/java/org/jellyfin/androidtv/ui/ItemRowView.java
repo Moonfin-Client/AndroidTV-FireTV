@@ -167,6 +167,19 @@ public class ItemRowView extends FrameLayout {
     public void setReorderingEnabled(boolean enabled) {
         reorderingEnabled = enabled;
         mChevronContainer.setVisibility(enabled ? VISIBLE : GONE);
+
+        // When chevrons are visible, runtime must be to their left instead of at parent end
+        android.widget.RelativeLayout.LayoutParams lp =
+                (android.widget.RelativeLayout.LayoutParams) mRunTime.getLayoutParams();
+        if (enabled) {
+            lp.removeRule(android.widget.RelativeLayout.ALIGN_PARENT_END);
+            lp.addRule(android.widget.RelativeLayout.START_OF, mChevronContainer.getId());
+        } else {
+            lp.removeRule(android.widget.RelativeLayout.START_OF);
+            lp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_END);
+        }
+        mRunTime.setLayoutParams(lp);
+
         updateChevronColors(hasFocus());
     }
 

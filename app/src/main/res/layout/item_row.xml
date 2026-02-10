@@ -34,11 +34,51 @@
         tools:text="Track" />
 
     <LinearLayout
+        android:id="@+id/chevronContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/chevronUp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_up"
+            android:contentDescription="@string/home_sections_move_up" />
+
+        <ImageView
+            android:id="@+id/chevronDown"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center_vertical"
+            android:src="@drawable/ic_down"
+            android:contentDescription="@string/home_sections_move_down" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/runTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:layout_marginEnd="8dp"
+        android:duplicateParentState="true"
+        android:textColor="@drawable/button_default_text"
+        android:textSize="16sp"
+        tools:text="Time" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
-        android:layout_toStartOf="@+id/runTime"
-        android:layout_toEndOf="@+id/indexNo"
+        android:layout_toStartOf="@id/runTime"
+        android:layout_toEndOf="@id/indexNo"
+        android:layout_centerVertical="true"
         android:duplicateParentState="true"
         android:orientation="vertical">
 
@@ -63,45 +103,6 @@
             android:textColor="@drawable/button_default_text"
             android:textSize="12sp"
             tools:text="Artist" />
-
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/runTime"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_toStartOf="@+id/chevronContainer"
-        android:layout_centerVertical="true"
-        android:layout_marginEnd="8dp"
-        android:duplicateParentState="true"
-        android:textColor="@drawable/button_default_text"
-        android:textSize="16sp"
-        tools:text="Time" />
-
-    <LinearLayout
-        android:id="@+id/chevronContainer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_centerVertical="true"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <ImageView
-            android:id="@+id/chevronUp"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="center_vertical"
-            android:src="@drawable/ic_up"
-            android:contentDescription="@string/home_sections_move_up" />
-
-        <ImageView
-            android:id="@+id/chevronDown"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="center_vertical"
-            android:src="@drawable/ic_down"
-            android:contentDescription="@string/home_sections_move_down" />
 
     </LinearLayout>
 
