@@ -93,10 +93,12 @@ class MyDetailsOverviewRowPresenter(
 		val ends = if (item.endDate != null) {
 			item.endDate?.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
 		} else {
-			item.runTimeTicks?.let {
+			item.runTimeTicks?.let { runtime ->
 				val now = java.time.LocalDateTime.now()
-				val runtimeMinutes = (it / 600000000).toInt()
-				val endTime = now.plusMinutes(runtimeMinutes.toLong())
+				val positionTicks = item.userData?.playbackPositionTicks ?: 0L
+				val remainingTicks = (runtime - positionTicks).coerceAtLeast(0L)
+				val remainingMinutes = (remainingTicks / 600000000).toInt()
+				val endTime = now.plusMinutes(remainingMinutes.toLong())
 				endTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
 			}
 		}
