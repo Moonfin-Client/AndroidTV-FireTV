@@ -1,13 +1,10 @@
 package org.jellyfin.androidtv.ui.shared.toolbar
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
@@ -298,6 +295,7 @@ private fun CollapsibleSidebarContent(
 			modifier = Modifier
 			.fillMaxHeight()
 			.width(sidebarWidth)
+			.clipToBounds()
 			.then(
 				if (isExpanded) {
 					Modifier.background(expandedBackground)
@@ -371,9 +369,7 @@ private fun CollapsibleSidebarContent(
 		Column(
 			modifier = Modifier
 				.fillMaxHeight()
-				.verticalScroll(scrollState)
 				.padding(vertical = 16.dp, horizontal = 8.dp),
-			verticalArrangement = Arrangement.SpaceBetween
 		) {
 			Column {
 				SidebarIconItem(
@@ -394,6 +390,9 @@ private fun CollapsibleSidebarContent(
 			}
 
 			Column(
+				modifier = Modifier
+					.weight(1f)
+					.verticalScroll(scrollState),
 				horizontalAlignment = Alignment.Start
 			) {
 				SidebarIconItem(
@@ -669,9 +668,24 @@ private fun SidebarIconItem(
 	}
 	
 	val focusedColor = Color(0xFF00A4DC)
-	val normalColor = if (!isExpanded && imageUrl == null) Color.White.copy(alpha = 0.5f) else Color.White
-	val iconColor = normalColor
+	val iconAlpha by animateFloatAsState(
+		targetValue = if (isExpanded || imageUrl != null) 1f else 0.5f,
+		label = "iconAlpha"
+	)
+	val iconColor = Color.White.copy(alpha = iconAlpha)
 	val textColor = Color.White
+
+	// Delay label appearance until sidebar width animation has partially completed
+	var delayedShowLabel by remember { mutableStateOf(showLabel) }
+	LaunchedEffect(showLabel) {
+		if (showLabel) {
+			delay(150)
+			delayedShowLabel = true
+		} else {
+			// Instantly hide labels before width starts shrinking
+			delayedShowLabel = false
+		}
+	}
 
 	Row(
 		modifier = Modifier
@@ -747,11 +761,7 @@ private fun SidebarIconItem(
 			}
 		}
 		
-		AnimatedVisibility(
-			visible = showLabel,
-			enter = slideInHorizontally() + fadeIn(),
-			exit = slideOutHorizontally() + fadeOut()
-		) {
+		if (delayedShowLabel) {
 			Row {
 				Spacer(modifier = Modifier.width(12.dp))
 				Text(
