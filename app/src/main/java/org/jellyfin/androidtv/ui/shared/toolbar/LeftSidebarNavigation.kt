@@ -393,7 +393,8 @@ private fun CollapsibleSidebarContent(
 				modifier = Modifier
 					.weight(1f)
 					.verticalScroll(scrollState),
-				horizontalAlignment = Alignment.Start
+				horizontalAlignment = Alignment.Start,
+				verticalArrangement = if (isExpanded) Arrangement.Top else Arrangement.Center
 			) {
 				SidebarIconItem(
 					icon = homeIcon,
