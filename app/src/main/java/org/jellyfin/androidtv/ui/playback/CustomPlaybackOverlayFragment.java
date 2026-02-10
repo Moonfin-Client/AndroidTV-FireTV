@@ -137,6 +137,28 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
     private final Lazy<NavigationRepository> navigationRepository = inject(NavigationRepository.class);
     private final Lazy<BackgroundService> backgroundService = inject(BackgroundService.class);
     private final Lazy<ImageHelper> imageHelper = inject(ImageHelper.class);
+    private final Lazy<org.jellyfin.androidtv.preference.UserPreferences> userPreferences = inject(org.jellyfin.androidtv.preference.UserPreferences.class);
+
+    // Trickplay scrub auto-confirm: when the user stops pressing D-pad left/right
+    // during scrub mode, this fires after 1.5s to confirm the seek and restore play state.
+    private final Handler seekAutoConfirmHandler = new Handler(android.os.Looper.getMainLooper());
+    private boolean wasPlayingBeforeScrub = false;
+    private final Runnable seekAutoConfirmRunnable = () -> {
+        if (getActivity() == null) return;
+        View focused = requireActivity().getCurrentFocus();
+        if (focused != null) {
+            focused.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER));
+            focused.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER));
+        }
+        if (wasPlayingBeforeScrub) {
+            seekAutoConfirmHandler.postDelayed(() -> {
+                PlaybackController pc = playbackControllerContainer.getValue().getPlaybackController();
+                if (!pc.isPlaying() && pc.hasInitializedVideoManager()) {
+                    pc.play(pc.getCurrentPosition());
+                }
+            }, 200);
+        }
+    };
 
     private final PlaybackOverlayFragmentHelper helper = new PlaybackOverlayFragmentHelper(this);
 
@@ -607,20 +629,27 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
                             return true;
                         }
 
-                        // Handle D-pad left/right on seekbar as immediate skip
-                        // Only when the progress bar row is focused, not other controls
+                        // D-pad left/right on seekbar: trickplay ON uses Leanback scrub mode
+                        // with auto-confirm after 1.5s; trickplay OFF does immediate skip.
                         if (leanbackOverlayFragment.isControlsOverlayVisible()) {
                             View focusedView = requireActivity().getCurrentFocus();
                             boolean isProgressBarFocused = focusedView instanceof androidx.leanback.widget.PlaybackTransportRowView
                                     || (focusedView != null && focusedView.getParent() instanceof androidx.leanback.widget.PlaybackTransportRowView);
-                            if (isProgressBarFocused) {
-                                if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                                    playbackControllerContainer.getValue().getPlaybackController().fastForward();
-                                    leanbackOverlayFragment.updateCurrentPosition();
-                                    return true;
-                                }
-                                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                                    playbackControllerContainer.getValue().getPlaybackController().rewind();
+                            if (isProgressBarFocused && (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_LEFT)) {
+                                boolean trickPlayEnabled = userPreferences.getValue().get(org.jellyfin.androidtv.preference.UserPreferences.Companion.getTrickPlayEnabled());
+                                if (trickPlayEnabled) {
+                                    // Save play state on first scrub press for restore after auto-confirm
+                                    if (!seekAutoConfirmHandler.hasCallbacks(seekAutoConfirmRunnable)) {
+                                        wasPlayingBeforeScrub = playbackControllerContainer.getValue().getPlaybackController().isPlaying();
+                                    }
+                                    seekAutoConfirmHandler.removeCallbacks(seekAutoConfirmRunnable);
+                                    seekAutoConfirmHandler.postDelayed(seekAutoConfirmRunnable, 1500);
+                                } else {
+                                    if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                                        playbackControllerContainer.getValue().getPlaybackController().fastForward();
+                                    } else {
+                                        playbackControllerContainer.getValue().getPlaybackController().rewind();
+                                    }
                                     leanbackOverlayFragment.updateCurrentPosition();
                                     return true;
                                 }
@@ -1437,6 +1466,7 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
 
     @Override
     public void onDestroy() {
+        seekAutoConfirmHandler.removeCallbacks(seekAutoConfirmRunnable);
         super.onDestroy();
 
         // Show system bars

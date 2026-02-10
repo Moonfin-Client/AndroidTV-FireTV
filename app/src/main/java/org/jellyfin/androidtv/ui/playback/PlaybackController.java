@@ -579,6 +579,15 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             case PLAYING:
                 // do nothing
                 break;
+            case SEEKING:
+                if (!hasInitializedVideoManager()) {
+                    return;
+                }
+                mVideoManager.play();
+                mPlaybackState = PlaybackState.PLAYING;
+                if (mFragment != null) mFragment.setFadingEnabled(true);
+                startReportLoop();
+                break;
             case PAUSED:
                 if (!hasInitializedVideoManager()) {
                     return;
@@ -1300,11 +1309,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                 }
             });
         } else {
-            // use the same approach to directplay seeking as setOnProgressListener
-            // set state to SEEKING
-            // if seek succeeds call play and mirror the logic in play() for unpausing. if fails call pause()
-            // stopProgressLoop() being called at the beginning of startProgressLoop keeps this from breaking. otherwise it would start twice
-            // if seek() is called from skip()
+            boolean shouldResumeAfterSeek = mPlaybackState == PlaybackState.PLAYING;
             mPlaybackState = PlaybackState.SEEKING;
             if (mVideoManager.seekTo(pos) < 0) {
                 wasSeeking = false;
@@ -1313,16 +1318,17 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                 pause();
             } else {
                 wasSeeking = false;
-                // Don't automatically resume if responding to SyncPlay command (server controls play state)
                 if (isRespondingToSyncPlayCommand) {
                     mPlaybackState = PlaybackState.PAUSED;
                     if (mFragment != null) mFragment.setFadingEnabled(false);
-                } else {
-                    // Original upstream behavior: always play after successful seek
+                } else if (shouldResumeAfterSeek) {
                     mVideoManager.play();
                     mPlaybackState = PlaybackState.PLAYING;
                     if (mFragment != null) mFragment.setFadingEnabled(true);
                     startReportLoop();
+                } else {
+                    mPlaybackState = PlaybackState.PAUSED;
+                    if (mFragment != null) mFragment.setFadingEnabled(false);
                 }
             }
         }
@@ -1330,14 +1336,14 @@ public class PlaybackController implements PlaybackControllerNotifiable {
 
     private long currentSkipPos = 0;
     private final Runnable skipRunnable = () -> {
-        if (!(isPlaying() || isPaused())) return; // in case we completed since this was requested
+        if (!(isPlaying() || isPaused() || mPlaybackState == PlaybackState.SEEKING)) return; // in case we completed since this was requested
 
         seek(currentSkipPos);
         currentSkipPos = 0;
     };
 
     private void skip(int msec) {
-        if (hasInitializedVideoManager() && (isPlaying() || isPaused()) && spinnerOff && mVideoManager.getCurrentPosition() > 0) { //guard against skipping before playback has truly begun
+        if (hasInitializedVideoManager() && (isPlaying() || isPaused() || mPlaybackState == PlaybackState.SEEKING) && spinnerOff && mVideoManager.getCurrentPosition() > 0) { //guard against skipping before playback has truly begun
             mHandler.removeCallbacks(skipRunnable);
             refreshCurrentPosition();
             currentSkipPos = Utils.getSafeSeekPosition((currentSkipPos == 0 ? mCurrentPosition : currentSkipPos) + msec, getDuration());
