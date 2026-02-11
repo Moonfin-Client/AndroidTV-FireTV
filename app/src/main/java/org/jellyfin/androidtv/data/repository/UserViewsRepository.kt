@@ -4,8 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import org.jellyfin.androidtv.preference.LibraryPreferences
-import org.jellyfin.androidtv.preference.PreferencesRepository
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.userViewsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -22,22 +20,16 @@ interface UserViewsRepository {
 
 class UserViewsRepositoryImpl(
 	private val api: ApiClient,
-	private val preferencesRepository: PreferencesRepository,
 ) : UserViewsRepository {
 	override val views = flow {
-		val views by api.userViewsApi.getUserViews()
+		val views by api.userViewsApi.getUserViews(includeHidden = false)
 		val filteredViews = views.items
 			.filter { isSupported(it.collectionType) }
-			.filter { view ->
-				val displayPreferencesId = view.displayPreferencesId ?: return@filter true
-				val prefs = preferencesRepository.getLibraryPreferences(displayPreferencesId, api)
-				!prefs[LibraryPreferences.hidden]
-			}
 		emit(filteredViews)
 	}.flowOn(Dispatchers.IO)
 
 	override val allViews = flow {
-		val views by api.userViewsApi.getUserViews()
+		val views by api.userViewsApi.getUserViews(includeHidden = true)
 		val filteredViews = views.items
 			.filter { isSupported(it.collectionType) }
 		emit(filteredViews)

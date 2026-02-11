@@ -164,7 +164,7 @@ val appModule = module {
 	single { InteractionTrackerViewModel(get(), get()) }
 
 	single<UserRepository> { UserRepositoryImpl() }
-	single<UserViewsRepository> { UserViewsRepositoryImpl(get(), get()) }
+	single<UserViewsRepository> { UserViewsRepositoryImpl(get()) }
 	single<NotificationsRepository> { NotificationsRepositoryImpl(get(), get()) }
 	single<ItemMutationRepository> { ItemMutationRepositoryImpl(get(), get()) }
 	single<CustomMessageRepository> { CustomMessageRepositoryImpl() }
@@ -175,7 +175,7 @@ val appModule = module {
 	single<ExternalAppRepository> { ExternalAppRepository(get()) }
 	single { LocalWatchlistRepository(androidContext()) }
 	single<org.jellyfin.androidtv.data.repository.MultiServerRepository> { 
-		org.jellyfin.androidtv.data.repository.MultiServerRepositoryImpl(get(), get(), get(), get(), get(defaultDeviceInfo), get(), get()) 
+		org.jellyfin.androidtv.data.repository.MultiServerRepositoryImpl(get(), get(), get(), get(), get(defaultDeviceInfo), get()) 
 	}
 	single { org.jellyfin.androidtv.util.sdk.ApiClientFactory(get(), get(), get(defaultDeviceInfo)) }
 	single<org.jellyfin.androidtv.data.repository.ParentalControlsRepository> {

@@ -11,8 +11,6 @@ import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
 import org.jellyfin.androidtv.data.model.AggregatedItem
 import org.jellyfin.androidtv.data.model.AggregatedLibrary
-import org.jellyfin.androidtv.preference.LibraryPreferences
-import org.jellyfin.androidtv.preference.PreferencesRepository
 import org.jellyfin.androidtv.util.sdk.forUser
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
@@ -92,7 +90,6 @@ class MultiServerRepositoryImpl(
 	private val authenticationStore: AuthenticationStore,
 	private val defaultDeviceInfo: DeviceInfo,
 	private val userViewsRepository: UserViewsRepository,
-	private val preferencesRepository: PreferencesRepository,
 ) : MultiServerRepository {
 
 	companion object {
@@ -186,7 +183,7 @@ class MultiServerRepositoryImpl(
 			try {
 				// Query libraries with timeout
 				val libraries = withTimeoutOrNull(SERVER_TIMEOUT) {
-					val response = session.apiClient.userViewsApi.getUserViews()
+					val response = session.apiClient.userViewsApi.getUserViews(includeHidden = includeHidden)
 					response.content.items
 						.filter { userViewsRepository.isSupported(it.collectionType) }
 				}
@@ -198,22 +195,7 @@ class MultiServerRepositoryImpl(
 
 				Timber.d("MultiServerRepository: Got ${libraries.size} libraries from ${session.server.name}")
 
-				// Filter out hidden libraries if requested (using LibraryPreferences per library)
-				val filteredLibraries = if (!includeHidden) {
-					libraries.filter { library ->
-						val displayPreferencesId = library.displayPreferencesId
-						if (displayPreferencesId != null) {
-							val prefs = preferencesRepository.getLibraryPreferences(displayPreferencesId, session.apiClient)
-							!prefs[LibraryPreferences.hidden]
-						} else {
-							true // Show libraries without displayPreferencesId
-						}
-					}
-				} else {
-					libraries
-				}
-
-				filteredLibraries.map { library ->
+				libraries.map { library ->
 					val libraryName = library.name.orEmpty()
 					AggregatedLibrary(
 						library = library,

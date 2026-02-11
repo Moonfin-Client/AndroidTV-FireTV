@@ -15,8 +15,6 @@ import org.jellyfin.androidtv.data.querying.GetSpecialsRequest
 import org.jellyfin.androidtv.data.querying.GetTrailersRequest
 import org.jellyfin.androidtv.data.repository.ParentalControlsRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
-import org.jellyfin.androidtv.preference.LibraryPreferences
-import org.jellyfin.androidtv.preference.PreferencesRepository
 import org.jellyfin.androidtv.ui.GridButton
 import org.jellyfin.androidtv.ui.browsing.BrowseGridFragment.SortOption
 import org.jellyfin.androidtv.util.sdk.compat.copyWithServerId
@@ -52,7 +50,6 @@ import timber.log.Timber
 import kotlin.math.min
 
 private val parentalControlsRepositoryLazy: Lazy<ParentalControlsRepository> = inject(ParentalControlsRepository::class.java)
-private val preferencesRepositoryLazy: Lazy<PreferencesRepository> = inject(PreferencesRepository::class.java)
 
 fun <T : Any> ItemRowAdapter.setItems(
 	items: Collection<T>,
@@ -346,18 +343,12 @@ fun ItemRowAdapter.retrieveAdditionalParts(api: ApiClient, query: GetAdditionalP
 fun ItemRowAdapter.retrieveUserViews(api: ApiClient, userViewsRepository: UserViewsRepository) {
 	ProcessLifecycleOwner.get().lifecycleScope.launch {
 			runCatching {
-				val preferencesRepository = preferencesRepositoryLazy.value
 				val response = withContext(Dispatchers.IO) {
-					api.userViewsApi.getUserViews().content
+					api.userViewsApi.getUserViews(includeHidden = false).content
 				}
 
 				val filteredItems = response.items
 					.filter { userViewsRepository.isSupported(it.collectionType) }
-					.filter { view ->
-					val displayPreferencesId = view.displayPreferencesId ?: return@filter true
-					val prefs = preferencesRepository.getLibraryPreferences(displayPreferencesId, api)
-					!prefs[LibraryPreferences.hidden]
-				}
 
 			setItems(
 				items = filteredItems,
