@@ -98,6 +98,7 @@ import org.koin.java.KoinJavaComponent;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -327,7 +328,9 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 if (viewholder == null) return;
 
                 if (mBaseItem != null && ((mBaseItem.getRunTimeTicks() != null && mBaseItem.getRunTimeTicks() > 0) || mBaseItem.getRunTimeTicks() != null)) {
-                    viewholder.setInfoValue3(getEndTime());
+                    String endTime = getEndTime();
+                    viewholder.setInfoValue3(endTime);
+                    viewholder.updateEndTime(endTime);
                     mLoopHandler.postDelayed(this, 15000);
                 }
             }
@@ -765,12 +768,19 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     }
 
     private String getEndTime() {
-        if (mBaseItem != null && mBaseItem.getType() != BaseItemKind.MUSIC_ARTIST && mBaseItem.getType() != BaseItemKind.PERSON) {
+        if (mBaseItem != null && mBaseItem.getType() != BaseItemKind.MUSIC_ARTIST && mBaseItem.getType() != BaseItemKind.PERSON && mBaseItem.getType() != BaseItemKind.SERIES) {
             Long runtime = Utils.getSafeValue(mBaseItem.getRunTimeTicks(), mBaseItem.getRunTimeTicks());
             if (runtime != null && runtime > 0) {
-                LocalDateTime endTime = mBaseItem.getType() == BaseItemKind.PROGRAM && mBaseItem.getEndDate() != null ? mBaseItem.getEndDate() : LocalDateTime.now().plusNanos(runtime * 100);
-                if (JavaCompat.getCanResume(mBaseItem)) {
-                    endTime = LocalDateTime.now().plusNanos((runtime - mBaseItem.getUserData().getPlaybackPositionTicks()) * 100);
+                // Convert ticks to milliseconds (10,000 ticks = 1 ms)
+                long runtimeMs = runtime / 10000;
+                LocalDateTime endTime;
+                if (mBaseItem.getType() == BaseItemKind.PROGRAM && mBaseItem.getEndDate() != null) {
+                    endTime = mBaseItem.getEndDate();
+                } else if (JavaCompat.getCanResume(mBaseItem)) {
+                    long remainingMs = (runtime - mBaseItem.getUserData().getPlaybackPositionTicks()) / 10000;
+                    endTime = LocalDateTime.now().plus(remainingMs, ChronoUnit.MILLIS);
+                } else {
+                    endTime = LocalDateTime.now().plus(runtimeMs, ChronoUnit.MILLIS);
                 }
                 return DateTimeExtensionsKt.getTimeFormatter(getContext()).format(endTime);
             }

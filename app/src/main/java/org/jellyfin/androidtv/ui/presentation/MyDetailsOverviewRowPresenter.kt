@@ -9,8 +9,6 @@ import org.jellyfin.androidtv.util.InfoLayoutHelper
 import org.jellyfin.androidtv.util.MarkdownRenderer
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.PersonKind
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 class MyDetailsOverviewRowPresenter(
 	private val markdownRenderer: MarkdownRenderer,
@@ -81,27 +79,12 @@ class MyDetailsOverviewRowPresenter(
 		binding.fdStudiosGroup.isVisible = !studios.isNullOrBlank()
 		binding.fdStudiosContent.text = studios
 
-		val runs = item.runTimeTicks?.let {
-			val totalMinutes = (it / 600000000).toInt()
-			val hours = totalMinutes / 60
-			val minutes = totalMinutes % 60
-			if (hours > 0) "${hours}h ${minutes}min" else "${minutes}min"
-		}
+		// Use InfoItem values from FullDetailsFragment instead of recalculating
+		val runs = row.infoItem2?.value
 		binding.fdRunsGroup.isVisible = !runs.isNullOrBlank()
 		binding.fdRunsContent.text = runs
 
-		val ends = if (item.endDate != null) {
-			item.endDate?.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
-		} else {
-			item.runTimeTicks?.let { runtime ->
-				val now = java.time.LocalDateTime.now()
-				val positionTicks = item.userData?.playbackPositionTicks ?: 0L
-				val remainingTicks = (runtime - positionTicks).coerceAtLeast(0L)
-				val remainingMinutes = (remainingTicks / 600000000).toInt()
-				val endTime = now.plusMinutes(remainingMinutes.toLong())
-				endTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
-			}
-		}
+		val ends = row.infoItem3?.value
 		binding.fdEndsGroup.isVisible = !ends.isNullOrBlank()
 		binding.fdEndsContent.text = ends
 	}
@@ -117,6 +100,11 @@ class MyDetailsOverviewRowPresenter(
 
 		fun setInfoValue3(text: String?) {
 			binding.infoValue3.text = text
+		}
+
+		fun updateEndTime(text: String?) {
+			binding.fdEndsContent.text = text
+			binding.fdEndsGroup.isVisible = !text.isNullOrBlank()
 		}
 	}
 
