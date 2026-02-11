@@ -73,6 +73,7 @@ import kotlinx.serialization.json.Json;
 public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.OnKeyListener {
     protected TextView mTitle;
     private LinearLayout mInfoRow;
+    private LinearLayout mRatingsRow;
     private TextView mSummary;
 
     protected static final int BY_LETTER = 0;
@@ -127,6 +128,7 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
 
         mTitle = binding.title;
         mInfoRow = binding.infoRow;
+        mRatingsRow = binding.ratingsRow;
         mSummary = binding.summary;
 
         // Inject the RowsSupportFragment in the results container
@@ -495,6 +497,7 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
             if (!(item instanceof BaseRowItem)) {
                 mTitle.setText(mFolder != null ? mFolder.getName() : "");
                 mInfoRow.removeAllViews();
+                mRatingsRow.removeAllViews();
                 mSummary.setText("");
                 mCurrentItem = null;
                 mCurrentRow = null;
@@ -516,6 +519,7 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
             else mSummary.setText(null);
 
             InfoLayoutHelper.addInfoRow(requireContext(), rowItem.getBaseItem(), mInfoRow, true);
+            InfoLayoutHelper.addRatingsRow(requireContext(), rowItem.getBaseItem(), mRatingsRow);
 
             ItemRowAdapter adapter = (ItemRowAdapter) ((ListRow) row).getAdapter();
             adapter.loadMoreItemsIfNeeded(adapter.indexOf(rowItem));

@@ -28,11 +28,21 @@
         android:id="@+id/infoRow"
         android:layout_toStartOf="@+id/clock"/>
 
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="20sp"
+        android:layout_below="@+id/infoRow"
+        android:layout_alignStart="@+id/title"
+        android:layout_marginTop="2sp"
+        android:id="@+id/ratingsRow"
+        android:layout_toStartOf="@+id/clock"/>
+
     <TextView
         android:layout_width="570sp"
         android:layout_height="150sp"
         android:id="@+id/summary"
-        android:layout_below="@+id/infoRow"
+        android:layout_below="@+id/ratingsRow"
         android:layout_alignStart="@+id/infoRow"
         android:ellipsize="end"
         android:textSize="16sp"
