@@ -62,6 +62,83 @@ class JellyseerrHttpClient(
 		}
 	}
 
+	/**
+	 * Fetches a fresh CSRF token from the server.
+	 * CSRF tokens must be fetched before each state-changing request (POST, DELETE, PUT)
+	 * when CSRF protection is enabled on the Jellyseerr server.
+	 * 
+	 * @param endpoint The API endpoint to fetch the token from (uses GET request)
+	 * @return The CSRF token if found, null otherwise
+	 */
+	private suspend fun fetchCsrfToken(endpoint: String): String? {
+		val url = URLBuilder("$baseUrl$endpoint").build()
+		Timber.d("Jellyseerr: Fetching CSRF token via GET request to $endpoint")
+		
+		return try {
+			val csrfResponse = httpClient.get(url) {
+				addAuthHeader()
+			}
+			Timber.d("Jellyseerr: CSRF token fetch response - Status: ${csrfResponse.status.value}")
+			
+			// Extract CSRF token from stored cookies (after Ktor's HttpCookies plugin processes Set-Cookie headers)
+			val storedCookies = cookieStorage?.get(url) ?: emptyList()
+			Timber.d("Jellyseerr: Found ${storedCookies.size} stored cookies after GET request")
+			
+			var csrfToken: String? = null
+			for (cookie in storedCookies) {
+				Timber.d("Jellyseerr: Stored cookie: ${cookie.name} (domain: ${cookie.domain}, path: ${cookie.path})")
+				if (cookie.name == "XSRF-TOKEN") {
+					csrfToken = cookie.value
+					Timber.d("Jellyseerr: XSRF-TOKEN cookie found with value: ${csrfToken.take(10)}...")
+					break
+				}
+			}
+			
+			// Fallback: manually parse Set-Cookie headers if cookie wasn't stored properly
+			if (csrfToken == null) {
+				Timber.d("Jellyseerr: No XSRF-TOKEN cookie in storage, trying to parse from headers")
+				val setCookieHeaders = csrfResponse.headers.getAll("Set-Cookie") ?: emptyList()
+				Timber.d("Jellyseerr: Found ${setCookieHeaders.size} Set-Cookie headers")
+				for (cookieHeader in setCookieHeaders) {
+					Timber.d("Jellyseerr: Processing cookie header: ${cookieHeader.take(100)}...")
+					val cookiePart = cookieHeader.split(";").firstOrNull()?.trim() ?: continue
+					val parts = cookiePart.split("=", limit = 2)
+					if (parts.size == 2) {
+						val name = parts[0].trim()
+						val value = parts[1].trim()
+						if (name == "XSRF-TOKEN") {
+							csrfToken = value
+							Timber.d("Jellyseerr: XSRF-TOKEN parsed from header!")
+							break
+						}
+					}
+				}
+			}
+			
+			if (csrfToken != null) {
+				Timber.d("Jellyseerr: CSRF token ready: ${csrfToken.take(10)}...")
+			} else {
+				Timber.d("Jellyseerr: No XSRF-TOKEN cookie found (CSRF protection may be disabled)")
+			}
+			
+			csrfToken
+		} catch (e: Exception) {
+			Timber.w("Jellyseerr: Failed to fetch CSRF token (non-critical): ${e.message}")
+			// Continue anyway - server might not require CSRF
+			null
+		}
+	}
+
+	/**
+	 * Adds CSRF token headers to a request if the token is available
+	 */
+	private fun HttpRequestBuilder.addCsrfHeaders(csrfToken: String?) {
+		if (csrfToken != null) {
+			header("X-CSRF-Token", csrfToken)
+			header("X-XSRF-TOKEN", csrfToken)
+		}
+	}
+
 	private val jsonConfig = Json {
 		ignoreUnknownKeys = true
 		prettyPrint = false
@@ -139,6 +216,9 @@ class JellyseerrHttpClient(
 	): Result<JellyseerrRequestDto> = runCatching {
 		val url = URLBuilder("$baseUrl/api/v1/request").build()
 		
+		// Fetch CSRF token before state-changing request
+		val csrfToken = fetchCsrfToken("/api/v1/request")
+		
 		val seasonsValue = if (mediaType == "tv" && seasons == null) {
 			Seasons.All
 		} else {
@@ -157,6 +237,7 @@ class JellyseerrHttpClient(
 
 		val response = httpClient.post(url) {
 			addAuthHeader()
+			addCsrfHeaders(csrfToken)
 			contentType(ContentType.Application.Json)
 			setBody(requestBody)
 		}
@@ -177,8 +258,12 @@ class JellyseerrHttpClient(
 	suspend fun deleteRequest(requestId: Int): Result<Unit> = runCatching {
 		val url = URLBuilder("$baseUrl/api/v1/request/$requestId").build()
 		
+		// Fetch CSRF token before state-changing request
+		val csrfToken = fetchCsrfToken("/api/v1/request/$requestId")
+		
 		val response = httpClient.delete(url) {
 			addAuthHeader()
+			addCsrfHeaders(csrfToken)
 		}
 
 		Timber.d("Jellyseerr: Deleted request $requestId - Status: ${response.status}")
@@ -646,56 +731,8 @@ class JellyseerrHttpClient(
 		Timber.d("Jellyseerr: Attempting local login to URL: $url")
 		Timber.d("Jellyseerr: Base URL: $baseUrl")
 		
-		Timber.d("Jellyseerr: Fetching CSRF token via GET request")
-		var csrfToken: String? = null
-		try {
-			val csrfResponse = httpClient.get(url)
-			Timber.d("Jellyseerr: CSRF token fetch response - Status: ${csrfResponse.status.value}")
-		
-			// Extract CSRF token from stored cookies (after Ktor's HttpCookies plugin processes Set-Cookie headers)
-			// This ensures cookies are properly stored with all their attributes (domain, path, secure, etc.)
-			val storedCookies = cookieStorage?.get(url) ?: emptyList()
-			Timber.d("Jellyseerr: Found ${storedCookies.size} stored cookies after GET request")
-		
-			for (cookie in storedCookies) {
-				Timber.d("Jellyseerr: Stored cookie: ${cookie.name} (domain: ${cookie.domain}, path: ${cookie.path})")
-				if (cookie.name == "XSRF-TOKEN") {
-					csrfToken = cookie.value
-					Timber.d("Jellyseerr: XSRF-TOKEN cookie found with value: ${csrfToken.take(10)}...")
-					break
-				}
-			}
-		
-			if (csrfToken == null) {
-				Timber.d("Jellyseerr: No XSRF-TOKEN cookie in storage, trying to parse from headers")
-				// Fallback: manually parse Set-Cookie headers if cookie wasn't stored properly
-				val setCookieHeaders = csrfResponse.headers.getAll("Set-Cookie") ?: emptyList()
-				Timber.d("Jellyseerr: Found ${setCookieHeaders.size} Set-Cookie headers")
-				for (cookieHeader in setCookieHeaders) {
-					Timber.d("Jellyseerr: Processing cookie header: ${cookieHeader.take(100)}...")
-					val cookiePart = cookieHeader.split(";").firstOrNull()?.trim() ?: continue
-					val parts = cookiePart.split("=", limit = 2)
-					if (parts.size == 2) {
-						val name = parts[0].trim()
-						val value = parts[1].trim()
-						if (name == "XSRF-TOKEN") {
-							csrfToken = value
-							Timber.d("Jellyseerr: XSRF-TOKEN parsed from header!")
-							break
-						}
-					}
-				}
-			}
-		
-			if (csrfToken != null) {
-				Timber.d("Jellyseerr: CSRF token ready: ${csrfToken.take(10)}...")
-			} else {
-				Timber.d("Jellyseerr: No XSRF-TOKEN cookie found (CSRF protection may be disabled)")
-			}
-		} catch (e: Exception) {
-			Timber.w("Jellyseerr: Failed to fetch CSRF token (non-critical): ${e.message}")
-			// Continue anyway - server might not require CSRF
-		}
+		// Fetch CSRF token before login
+		val csrfToken = fetchCsrfToken("/api/v1/auth/local")
 		
 		// Add a small delay to ensure cookies are fully persisted (helps with storage race conditions)
 		kotlinx.coroutines.delay(100)
@@ -703,10 +740,7 @@ class JellyseerrHttpClient(
 		var response = httpClient.post(url) {
 			contentType(ContentType.Application.Json)
 			setBody(loginBody)
-			if (csrfToken != null) {
-				header("X-CSRF-Token", csrfToken)
-				header("X-XSRF-TOKEN", csrfToken)
-			}
+			addCsrfHeaders(csrfToken)
 		}
 		
 		Timber.d("Jellyseerr: Local login response - Status: ${response.status.value} ${response.status.description}")
@@ -721,10 +755,7 @@ class JellyseerrHttpClient(
 				response = httpClient.post(url) {
 					contentType(ContentType.Application.Json)
 					setBody(loginBody)
-					if (csrfToken != null) {
-						header("X-CSRF-Token", csrfToken)
-						header("X-XSRF-TOKEN", csrfToken)
-					}
+					addCsrfHeaders(csrfToken)
 				}
 				
 				Timber.d("Jellyseerr: HTTPS retry response - Status: ${response.status.value} ${response.status.description}")
@@ -765,58 +796,8 @@ class JellyseerrHttpClient(
 		Timber.d("Jellyseerr: Jellyfin URL: $jellyfinUrl")
 		Timber.d("Jellyseerr: Username: $username")
 		
-		// First, make a GET request to obtain CSRF token cookie
-		// This is required when CSRF protection is enabled on the Jellyseerr server
-		Timber.d("Jellyseerr: Fetching CSRF token via GET request")
-		var csrfToken: String? = null
-		try {
-			val csrfResponse = httpClient.get(url)
-			Timber.d("Jellyseerr: CSRF token fetch response - Status: ${csrfResponse.status.value}")
-		
-			// Extract CSRF token from stored cookies (after Ktor's HttpCookies plugin processes Set-Cookie headers)
-			// This ensures cookies are properly stored with all their attributes (domain, path, secure, etc.)
-			val storedCookies = cookieStorage?.get(url) ?: emptyList()
-			Timber.d("Jellyseerr: Found ${storedCookies.size} stored cookies after GET request")
-		
-			for (cookie in storedCookies) {
-				Timber.d("Jellyseerr: Stored cookie: ${cookie.name} (domain: ${cookie.domain}, path: ${cookie.path})")
-				if (cookie.name == "XSRF-TOKEN") {
-					csrfToken = cookie.value
-					Timber.d("Jellyseerr: XSRF-TOKEN cookie found with value: ${csrfToken.take(10)}...")
-					break
-				}
-			}
-		
-			if (csrfToken == null) {
-				Timber.d("Jellyseerr: No XSRF-TOKEN cookie in storage, trying to parse from headers")
-				// Fallback: manually parse Set-Cookie headers if cookie wasn't stored properly
-				val setCookieHeaders = csrfResponse.headers.getAll("Set-Cookie") ?: emptyList()
-				Timber.d("Jellyseerr: Found ${setCookieHeaders.size} Set-Cookie headers")
-				for (cookieHeader in setCookieHeaders) {
-					Timber.d("Jellyseerr: Processing cookie header: ${cookieHeader.take(100)}...")
-					val cookiePart = cookieHeader.split(";").firstOrNull()?.trim() ?: continue
-					val parts = cookiePart.split("=", limit = 2)
-					if (parts.size == 2) {
-						val name = parts[0].trim()
-						val value = parts[1].trim()
-						if (name == "XSRF-TOKEN") {
-							csrfToken = value
-							Timber.d("Jellyseerr: XSRF-TOKEN parsed from header!")
-							break
-						}
-					}
-				}
-			}
-		
-			if (csrfToken != null) {
-				Timber.d("Jellyseerr: CSRF token ready: ${csrfToken.take(10)}...")
-			} else {
-				Timber.d("Jellyseerr: No XSRF-TOKEN cookie found (CSRF protection may be disabled)")
-			}
-		} catch (e: Exception) {
-			Timber.w("Jellyseerr: Failed to fetch CSRF token (non-critical): ${e.message}")
-			// Continue anyway - server might not require CSRF
-		}
+		// Fetch CSRF token before login
+		val csrfToken = fetchCsrfToken("/api/v1/auth/jellyfin")
 		
 		// Add a small delay to ensure cookies are fully persisted (helps with storage race conditions)
 		kotlinx.coroutines.delay(100)
@@ -829,11 +810,7 @@ class JellyseerrHttpClient(
 				"username" to username,
 				"password" to password
 			))
-			// Include CSRF token in headers if available (both common header names)
-			if (csrfToken != null) {
-				header("X-CSRF-Token", csrfToken)
-				header("X-XSRF-TOKEN", csrfToken)
-			}
+			addCsrfHeaders(csrfToken)
 		}
 		
 		Timber.d("Jellyseerr: Jellyfin login response - Status: ${response.status.value} ${response.status.description}")
@@ -852,11 +829,7 @@ class JellyseerrHttpClient(
 						"username" to username,
 						"password" to password
 					))
-					// Include CSRF token in header if available
-					if (csrfToken != null) {
-						header("X-CSRF-Token", csrfToken)
-						header("X-XSRF-TOKEN", csrfToken)
-					}
+					addCsrfHeaders(csrfToken)
 				}
 				
 				Timber.d("Jellyseerr: HTTPS retry response - Status: ${response.status.value} ${response.status.description}")
@@ -883,11 +856,7 @@ class JellyseerrHttpClient(
 					"password" to password,
 					"hostname" to jellyfinUrl
 				))
-				// Include CSRF token in header if available
-				if (csrfToken != null) {
-					header("X-CSRF-Token", csrfToken)
-					header("X-XSRF-TOKEN", csrfToken)
-				}
+				addCsrfHeaders(csrfToken)
 			}
 			
 			Timber.d("Jellyseerr: Second attempt response - Status: ${response.status.value} ${response.status.description}")
@@ -961,7 +930,12 @@ class JellyseerrHttpClient(
 	suspend fun regenerateApiKey(): Result<String> = runCatching {
 		val url = URLBuilder("$baseUrl/api/v1/settings/main/regenerate").build()
 		
+		// Fetch CSRF token before state-changing request
+		val csrfToken = fetchCsrfToken("/api/v1/settings/main/regenerate")
+		
 		val response = httpClient.post(url) {
+			addAuthHeader()
+			addCsrfHeaders(csrfToken)
 			header("User-Agent", "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Safari/537.36")
 			header("Origin", baseUrl)
 			header("Referer", "$baseUrl/")
