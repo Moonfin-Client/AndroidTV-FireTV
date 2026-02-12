@@ -44,6 +44,8 @@ fun StartupToolbar(
 				Spacer(Modifier.width(8.dp))
 
 				ToolbarClock()
+
+				Spacer(Modifier.width(12.dp))
 			}
 		}
 	)
