@@ -50,6 +50,10 @@ private fun getSkipButtonText(
 			val seconds = timeRemaining.inWholeSeconds
 			stringResource(R.string.play_next_episode_countdown, seconds)
 		}
+		nextEpisodeTitle != null -> {
+			// Next episode available but timer disabled - show play next without countdown
+			stringResource(R.string.lbl_play_next_up)
+		}
 		segmentType == "INTRO" -> stringResource(R.string.skip_intro)
 		segmentType == "RECAP" -> stringResource(R.string.skip_recap)
 		segmentType == "COMMERCIAL" -> stringResource(R.string.skip_commercial)

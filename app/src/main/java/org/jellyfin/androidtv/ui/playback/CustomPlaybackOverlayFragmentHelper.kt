@@ -10,6 +10,8 @@ import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.model.DataRefreshService
 import org.jellyfin.androidtv.data.repository.ItemMutationRepository
+import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.constant.NEXTUP_TIMER_DISABLED
 import org.jellyfin.androidtv.ui.GuideChannelHeader
 import org.jellyfin.androidtv.ui.asTimerInfoDto
 import org.jellyfin.androidtv.ui.livetv.TvManager
@@ -194,6 +196,7 @@ fun CustomPlaybackOverlayFragment.askToSkip(position: Duration, segmentType: Med
 	// Post to main thread since this is called from ExoPlayer's playback thread
 	lifecycleScope.launch(Dispatchers.Main) {
 		val playbackController = playbackController
+		val userPreferences by inject<UserPreferences>()
 		
 		// Only show "Play Next Episode" for OUTRO segments
 		val isOutro = segmentType == MediaSegmentType.OUTRO
@@ -205,10 +208,15 @@ fun CustomPlaybackOverlayFragment.askToSkip(position: Duration, segmentType: Med
 			binding.skipOverlay.targetPosition = position
 			binding.skipOverlay.nextEpisodeTitle = nextEpisode.name
 			
-			// Set episode end position for timer calculation
-			val durationMs = playbackController.duration
-			if (durationMs > 0) {
-				binding.skipOverlay.episodeEndPosition = durationMs.milliseconds
+			// Set episode end position for timer calculation using user's configured timeout
+			val nextUpTimeout = userPreferences[UserPreferences.nextUpTimeout]
+			if (nextUpTimeout != NEXTUP_TIMER_DISABLED) {
+				// Calculate when auto-play should trigger based on current position + user's timeout
+				val currentPositionMs = playbackController.currentPosition
+				binding.skipOverlay.episodeEndPosition = (currentPositionMs + nextUpTimeout).milliseconds
+			} else {
+				// Timer disabled - don't auto-play, just show button indefinitely
+				binding.skipOverlay.episodeEndPosition = null
 			}
 			
 			// Set callback to play next episode when button pressed or timer expires
