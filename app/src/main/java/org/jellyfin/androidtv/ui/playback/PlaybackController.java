@@ -701,10 +701,15 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         internalOptions.setMediaSources(item.getMediaSources());
         
         // Extract serverId for multi-server support
+        // Only set serverId when the item is from a different server than the current session.
+        // This avoids creating a separate API client (with a different device ID) for same-server
+        // items, which can cause transcoding session mismatches on the server.
         UUID parsedServerId = UUIDUtils.parseUUID(item.getServerId());
-        if (parsedServerId != null) {
+        UUID currentServerId = sessionRepository.getValue().getCurrentSession().getValue() != null ?
+            sessionRepository.getValue().getCurrentSession().getValue().getServerId() : null;
+        if (parsedServerId != null && !parsedServerId.equals(currentServerId)) {
             internalOptions.setServerId(parsedServerId);
-            Timber.i("PlaybackController: Using server %s for playback", parsedServerId);
+            Timber.i("PlaybackController: Using cross-server API for playback: item server %s, current server %s", parsedServerId, currentServerId);
         }
         
         if (playbackRetries > 0 || (isLiveTv && !directStreamLiveTv)) internalOptions.setEnableDirectPlay(false);
