@@ -39,6 +39,7 @@ fun SettingsAppThemeScreen() {
 				trailingContent = { RadioButton(checked = appTheme == entry) },
 				onClick = {
 					if (appTheme != entry) {
+						userPreferences[UserPreferences.appTheme] = entry
 						appTheme = entry
 						// Recreate activity to apply new theme
 						activity?.recreate()
