@@ -29,6 +29,8 @@ import androidx.fragment.compose.AndroidFragment
 import androidx.fragment.compose.content
 import androidx.leanback.app.RowsSupportFragment
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
+import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.constant.NavbarPosition
 import org.jellyfin.androidtv.ui.search.composable.SearchTextInput
 import org.jellyfin.androidtv.ui.search.composable.SearchVoiceInput
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
@@ -55,6 +57,8 @@ class SearchFragment : Fragment() {
 			val textInputFocusRequester = remember { FocusRequester() }
 			val resultFocusRequester = remember { FocusRequester() }
 			val speechRecognizerAvailability = rememberSpeechRecognizerAvailability()
+			val userPreferences = koinInject<UserPreferences>()
+			val isSidebar = userPreferences[UserPreferences.navbarPosition] == NavbarPosition.LEFT
 
 			LaunchedEffect(Unit) {
 				val extraQuery = arguments?.getString(EXTRA_QUERY)
@@ -79,7 +83,8 @@ class SearchFragment : Fragment() {
 						modifier = Modifier
 							.focusRestorer()
 							.focusGroup()
-							.padding(horizontal = 48.dp)
+							.padding(start = 48.dp, end = if (isSidebar) 80.dp else 48.dp)
+							.padding(top = if (isSidebar) 20.dp else 0.dp)
 					) {
 						if (speechRecognizerAvailability) {
 							SearchVoiceInput(
