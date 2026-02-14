@@ -47,6 +47,9 @@ import org.jellyfin.androidtv.ui.composable.item.ItemCard
 import org.jellyfin.androidtv.ui.composable.item.ItemCardBaseItemOverlay
 import org.jellyfin.androidtv.ui.composable.item.ItemCardJellyseerrOverlay
 import org.jellyfin.androidtv.ui.composable.item.ItemPreview
+import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
+import org.jellyfin.androidtv.data.service.jellyseerr.getJellyseerrJson
+import org.jellyfin.androidtv.data.service.jellyseerr.isJellyseerrItem
 import org.jellyfin.androidtv.ui.itemhandling.BaseItemDtoBaseRowItem
 import org.jellyfin.androidtv.ui.itemhandling.BaseRowItem
 import org.jellyfin.androidtv.ui.itemhandling.BaseRowType
@@ -406,8 +409,15 @@ private fun CardViewHolderContent(
 			},
 			overlay = {
 				val showInfo = !usePreview && item.showCardInfoOverlay
-				if (item is JellyseerrMediaBaseRowItem) {
-					ItemCardJellyseerrOverlay(item = item.item)
+				val jellyseerrItem = when {
+					item is JellyseerrMediaBaseRowItem -> item.item
+					item.baseItem?.isJellyseerrItem() == true -> item.baseItem?.getJellyseerrJson()?.let { json ->
+						try { kotlinx.serialization.json.Json.decodeFromString<JellyseerrDiscoverItemDto>(json) } catch (_: Exception) { null }
+					}
+					else -> null
+				}
+				if (jellyseerrItem != null) {
+					ItemCardJellyseerrOverlay(item = jellyseerrItem)
 				} else {
 					item.baseItem?.let { baseItem ->
 						ItemCardBaseItemOverlay(
