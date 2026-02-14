@@ -4,10 +4,12 @@ import android.graphics.Color
 import android.graphics.Outline
 import android.os.Bundle
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import androidx.core.view.isVisible
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -75,7 +77,22 @@ class PersonDetailsFragment : Fragment() {
 		container: ViewGroup?,
 		savedInstanceState: Bundle?
 	): View {
-		val mainContainer = FrameLayout(requireContext()).apply {
+		val mainContainer = object : FrameLayout(requireContext()) {
+			override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+				if (event.action == KeyEvent.ACTION_DOWN &&
+					event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+					val focused = findFocus()
+					if (focused != null && isAtLeftEdge(focused)) {
+						val sidebar = findViewById<View>(sidebarId)
+						if (sidebar != null && sidebar.isVisible) {
+							sidebar.requestFocus()
+							return true
+						}
+					}
+				}
+				return super.dispatchKeyEvent(event)
+			}
+		}.apply {
 			layoutParams = ViewGroup.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
 				ViewGroup.LayoutParams.MATCH_PARENT
@@ -175,6 +192,33 @@ class PersonDetailsFragment : Fragment() {
 		}
 
 		return mainContainer
+	}
+
+	/**
+	 * Check if a focused view is at the left edge of its scrollable parent.
+	 */
+	private fun isAtLeftEdge(view: View): Boolean {
+		val hsv = findParentOfType<android.widget.HorizontalScrollView>(view)
+		if (hsv != null) {
+			return hsv.scrollX == 0
+		}
+		val parent = view.parent as? ViewGroup ?: return true
+		for (i in 0 until parent.childCount) {
+			val child = parent.getChildAt(i)
+			if (child.isFocusable) {
+				return child === view
+			}
+		}
+		return true
+	}
+
+	private inline fun <reified T : View> findParentOfType(view: View): T? {
+		var current = view.parent
+		while (current != null) {
+			if (current is T) return current
+			current = current.parent
+		}
+		return null
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -338,7 +382,6 @@ class PersonDetailsFragment : Fragment() {
 					setTypeface(typeface, android.graphics.Typeface.BOLD)
 					isFocusable = true
 					isFocusableInTouchMode = true
-					nextFocusLeftId = sidebarId
 					setPadding(8.dp(context), 8.dp(context), 8.dp(context), 8.dp(context))
 					layoutParams = LinearLayout.LayoutParams(
 						LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -462,7 +505,6 @@ class PersonDetailsFragment : Fragment() {
 			setPadding(0, 0, 0, 16.dp(context))
 			isFocusable = true
 			isFocusableInTouchMode = true
-			nextFocusLeftId = sidebarId
 
 			setOnFocusChangeListener { view, hasFocus ->
 				if (hasFocus) {

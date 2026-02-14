@@ -10,6 +10,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import androidx.core.view.isVisible
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -106,7 +107,25 @@ class MediaDetailsFragment : Fragment() {
 	): View {
 		sidebarId = View.generateViewId()
 		
-		val mainContainer = FrameLayout(requireContext()).apply {
+		val mainContainer = object : FrameLayout(requireContext()) {
+			override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+				if (event.action == KeyEvent.ACTION_DOWN) {
+					when (event.keyCode) {
+						KeyEvent.KEYCODE_DPAD_LEFT -> {
+							val focused = findFocus()
+							if (focused != null && isAtLeftEdge(focused)) {
+								val sidebar = findViewById<View>(sidebarId)
+								if (sidebar != null && sidebar.isVisible) {
+									sidebar.requestFocus()
+									return true
+								}
+							}
+						}
+					}
+				}
+				return super.dispatchKeyEvent(event)
+			}
+		}.apply {
 			layoutParams = ViewGroup.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
 				ViewGroup.LayoutParams.MATCH_PARENT
@@ -125,7 +144,6 @@ class MediaDetailsFragment : Fragment() {
 			isFocusable = true
 			isFocusableInTouchMode = true
 			isScrollbarFadingEnabled = false
-			nextFocusLeftId = sidebarId
 			clipToPadding = false
 		}
 
@@ -201,7 +219,39 @@ class MediaDetailsFragment : Fragment() {
 		
 		return mainContainer
 	}
-	
+
+	/**
+	 * Check if a focused view is at the left edge of its scrollable parent.
+	 * For views inside a HorizontalScrollView at scrollX == 0 and first child position,
+	 * or for views that are the first focusable child in their row.
+	 */
+	private fun isAtLeftEdge(view: View): Boolean {
+		// Check if inside a HorizontalScrollView that is scrolled to the start
+		val hsv = findParentOfType<android.widget.HorizontalScrollView>(view)
+		if (hsv != null) {
+			// Only transfer if scrolled to the very start
+			return hsv.scrollX == 0
+		}
+		// For non-scrolling containers (e.g. button row), check if this is the leftmost focusable
+		val parent = view.parent as? ViewGroup ?: return true
+		for (i in 0 until parent.childCount) {
+			val child = parent.getChildAt(i)
+			if (child.isFocusable) {
+				return child === view
+			}
+		}
+		return true
+	}
+
+	private inline fun <reified T : View> findParentOfType(view: View): T? {
+		var current = view.parent
+		while (current != null) {
+			if (current is T) return current
+			current = current.parent
+		}
+		return null
+	}
+
 	private fun createBackdropWithHeaderSection(): View {
 		val container = FrameLayout(requireContext()).apply {
 			layoutParams = LinearLayout.LayoutParams(
@@ -693,7 +743,6 @@ class MediaDetailsFragment : Fragment() {
 				}
 			}
 			id = View.generateViewId()
-			nextFocusLeftId = sidebarId
 			layoutParams = LinearLayout.LayoutParams(
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
@@ -714,7 +763,6 @@ class MediaDetailsFragment : Fragment() {
 					showCancelRequestDialog(pendingRequests)
 				}
 				id = View.generateViewId()
-				nextFocusLeftId = sidebarId
 				layoutParams = LinearLayout.LayoutParams(
 					LinearLayout.LayoutParams.WRAP_CONTENT,
 					LinearLayout.LayoutParams.WRAP_CONTENT
@@ -734,7 +782,6 @@ class MediaDetailsFragment : Fragment() {
 				playTrailer()
 			}
 			id = View.generateViewId()
-			nextFocusLeftId = sidebarId
 			layoutParams = LinearLayout.LayoutParams(
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
@@ -754,7 +801,6 @@ class MediaDetailsFragment : Fragment() {
 					playInMoonfin()
 				}
 				id = View.generateViewId()
-				nextFocusLeftId = sidebarId
 				layoutParams = LinearLayout.LayoutParams(
 					LinearLayout.LayoutParams.WRAP_CONTENT,
 					LinearLayout.LayoutParams.WRAP_CONTENT
@@ -1213,7 +1259,6 @@ class MediaDetailsFragment : Fragment() {
 			gravity = Gravity.CENTER_HORIZONTAL
 			isFocusable = true
 			isFocusableInTouchMode = true
-			nextFocusLeftId = sidebarId
 			setPadding(8.dp(context), 8.dp(context), 8.dp(context), 8.dp(context))
 			
 			setOnFocusChangeListener { view, hasFocus ->
@@ -1586,7 +1631,6 @@ class MediaDetailsFragment : Fragment() {
 				}
 				isFocusable = true
 				isFocusableInTouchMode = true
-				nextFocusLeftId = sidebarId
 
 				setOnClickListener {
 					// Navigate to browse-by with keyword filter
@@ -1640,7 +1684,6 @@ class MediaDetailsFragment : Fragment() {
 			setPadding(0, 0, 0, 16.dp(context))
 			isFocusable = true
 			isFocusableInTouchMode = true
-			nextFocusLeftId = sidebarId
 
 			setOnFocusChangeListener { view, hasFocus ->
 				if (hasFocus) {

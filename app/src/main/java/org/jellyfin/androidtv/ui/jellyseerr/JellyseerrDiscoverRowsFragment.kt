@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.leanback.app.RowsSupportFragment
 import androidx.leanback.widget.ArrayObjectAdapter
 import androidx.leanback.widget.HeaderItem
@@ -91,12 +92,31 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 		
-		// Configure vertical grid view for up navigation to toolbar
 		verticalGridView?.apply {
+			// Intercept DPAD_LEFT before HorizontalGridView consumes it.
+			// HorizontalGridView eats DPAD_LEFT even at position 0, so the only
+			// way to transfer focus to the sidebar is to intercept first.
+			setOnKeyInterceptListener { event ->
+				if (event.action == KeyEvent.ACTION_DOWN &&
+					event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+					val focusedView = findFocus()
+					val horizontalGrid = findParentHorizontalGridView(focusedView)
+					if (horizontalGrid != null && horizontalGrid.selectedPosition == 0) {
+						try {
+							val sidebar = activity?.findViewById<View>(R.id.sidebar_overlay)
+							if (sidebar != null && sidebar.isVisible) {
+								sidebar.requestFocus()
+								return@setOnKeyInterceptListener true
+							}
+						} catch (_: Throwable) { }
+					}
+				}
+				false
+			}
+
 			setOnKeyListener { _, keyCode, event ->
 				if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_UP) {
 					if (selectedPosition == 0) {
-						// Navigate to toolbar in parent fragment
 						val toolbarContainer = activity?.findViewById<View>(R.id.toolbar_actions)
 						if (toolbarContainer != null) {
 							toolbarContainer.requestFocus()
@@ -113,7 +133,8 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 		super.onResume()
 		
 		// Refresh content from Jellyseerr server when returning to screen
-		if (!isReturningFromDetail) {
+		// Skip if data is already loaded (e.g. returning from settings)
+		if (!isReturningFromDetail && !viewModel.hasContent()) {
 			loadContent()
 		}
 		
@@ -523,6 +544,18 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 		Timber.d("JellyseerrDiscoverRowsFragment: Loading more upcoming TV via API")
 		viewModel.loadNextUpcomingTvPage()
 		isLoadingUpcomingTv = false
+	}
+
+	/**
+	 * Walk up the view hierarchy from the focused view to find the containing HorizontalGridView.
+	 */
+	private fun findParentHorizontalGridView(view: View?): androidx.leanback.widget.HorizontalGridView? {
+		var current = view?.parent
+		while (current != null) {
+			if (current is androidx.leanback.widget.HorizontalGridView) return current
+			current = current.parent
+		}
+		return null
 	}
 
 	private fun loadContent() {

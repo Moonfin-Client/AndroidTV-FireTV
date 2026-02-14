@@ -2,6 +2,9 @@ package org.jellyfin.androidtv.ui.jellyseerr
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -229,6 +232,15 @@ class JellyseerrViewModel(
 		return jellyseerrRepository.regenerateApiKey()
 	}
 
+	/** Returns true if discover content has already been loaded (avoids redundant API calls on resume). */
+	fun hasContent(): Boolean {
+		return _trending.value.isNotEmpty() ||
+			_trendingMovies.value.isNotEmpty() ||
+			_trendingTv.value.isNotEmpty() ||
+			_upcomingMovies.value.isNotEmpty() ||
+			_upcomingTv.value.isNotEmpty()
+	}
+
 	fun loadTrendingContent() {
 		viewModelScope.launch {
 			if (!isAvailable.value) {
@@ -242,52 +254,33 @@ class JellyseerrViewModel(
 			val itemsPerPage = prefs?.get(JellyseerrPreferences.fetchLimit)?.limit ?: JellyseerrFetchLimit.MEDIUM.limit
 			val blockNsfw = prefs?.get(JellyseerrPreferences.blockNsfw) ?: false
 			
-			// Fetch multiple pages to get more content for searching
-			// Filter out already-available content since users can watch those in the main Moonfin app
-			val allTrending = mutableListOf<JellyseerrDiscoverItemDto>()
-			val allTrendingMovies = mutableListOf<JellyseerrDiscoverItemDto>()
-			val allTrendingTv = mutableListOf<JellyseerrDiscoverItemDto>()
-			val allUpcomingMovies = mutableListOf<JellyseerrDiscoverItemDto>()
-			val allUpcomingTv = mutableListOf<JellyseerrDiscoverItemDto>()
 			var hasPermissionError = false
 			
-			// Fetch first 3 pages initially, more can be loaded via pagination
-				for (page in 1..3) {
-				val offset = (page - 1) * itemsPerPage
-				val trendingResult = jellyseerrRepository.getTrending(limit = itemsPerPage, offset = offset)
-				val trendingMoviesResult = jellyseerrRepository.getTrendingMovies(limit = itemsPerPage, offset = offset)
-				val trendingTvResult = jellyseerrRepository.getTrendingTv(limit = itemsPerPage, offset = offset)
-				val upcomingMoviesResult = jellyseerrRepository.getUpcomingMovies(limit = itemsPerPage, offset = offset)
-				val upcomingTvResult = jellyseerrRepository.getUpcomingTv(limit = itemsPerPage, offset = offset)
+			val results = coroutineScope {
+				listOf(
+					async { jellyseerrRepository.getTrending(limit = itemsPerPage, offset = 0) },
+					async { jellyseerrRepository.getTrendingMovies(limit = itemsPerPage, offset = 0) },
+					async { jellyseerrRepository.getTrendingTv(limit = itemsPerPage, offset = 0) },
+					async { jellyseerrRepository.getUpcomingMovies(limit = itemsPerPage, offset = 0) },
+					async { jellyseerrRepository.getUpcomingTv(limit = itemsPerPage, offset = 0) },
+				).awaitAll()
+			}
+			
+			val trendingResult = results[0]
+			val trendingMoviesResult = results[1]
+			val trendingTvResult = results[2]
+			val upcomingMoviesResult = results[3]
+			val upcomingTvResult = results[4]
+			
+			if (trendingResult.isFailure && trendingResult.exceptionOrNull()?.message?.contains("403") == true) {
+				hasPermissionError = true
+			}
 
-					// Check for 403 permission errors
-					if (trendingResult.isFailure && trendingResult.exceptionOrNull()?.message?.contains("403") == true) {
-						hasPermissionError = true
-					}
-
-					// Check if ALL results failed (session likely dead) — skip remaining pages
-					val allFailed = listOf(trendingResult, trendingMoviesResult, trendingTvResult, upcomingMoviesResult, upcomingTvResult).all { it.isFailure }
-					if (allFailed && page == 1) {
-						Timber.w("Jellyseerr: All page 1 requests failed, skipping remaining pages")
-						break
-					}
-					
-					if (trendingResult.isSuccess) {
-						allTrending.addAll(trendingResult.getOrNull()?.results ?: emptyList())
-					}
-					if (trendingMoviesResult.isSuccess) {
-						allTrendingMovies.addAll(trendingMoviesResult.getOrNull()?.results ?: emptyList())
-					}
-					if (trendingTvResult.isSuccess) {
-						allTrendingTv.addAll(trendingTvResult.getOrNull()?.results ?: emptyList())
-					}
-					if (upcomingMoviesResult.isSuccess) {
-						allUpcomingMovies.addAll(upcomingMoviesResult.getOrNull()?.results ?: emptyList())
-					}
-					if (upcomingTvResult.isSuccess) {
-						allUpcomingTv.addAll(upcomingTvResult.getOrNull()?.results ?: emptyList())
-					}
-				}
+			val allTrending = trendingResult.getOrNull()?.results ?: emptyList()
+			val allTrendingMovies = trendingMoviesResult.getOrNull()?.results ?: emptyList()
+			val allTrendingTv = trendingTvResult.getOrNull()?.results ?: emptyList()
+			val allUpcomingMovies = upcomingMoviesResult.getOrNull()?.results ?: emptyList()
+			val allUpcomingTv = upcomingTvResult.getOrNull()?.results ?: emptyList()
 
 			if (allTrending.isNotEmpty() || allTrendingMovies.isNotEmpty() || allTrendingTv.isNotEmpty()) {
 				// Filter out already-available content, blacklisted items (server-side status), NSFW content
@@ -330,12 +323,11 @@ class JellyseerrViewModel(
 				_upcomingTv.emit(upcomingTv)
 				_loadingState.emit(JellyseerrLoadingState.Success())
 				
-				// Reset page counters
-				trendingCurrentPage = 3
-				trendingMoviesCurrentPage = 3
-				trendingTvCurrentPage = 3
-				upcomingMoviesCurrentPage = 3
-				upcomingTvCurrentPage = 3
+				trendingCurrentPage = 1
+				trendingMoviesCurrentPage = 1
+				trendingTvCurrentPage = 1
+				upcomingMoviesCurrentPage = 1
+				upcomingTvCurrentPage = 1
 				} else if (hasPermissionError) {
 					val errorMessage = "Permission Denied: Your Jellyfin account needs Jellyseerr permissions.\n\n" +
 						"To fix this:\n" +
@@ -395,53 +387,55 @@ class JellyseerrViewModel(
 					val userRequests = result.getOrNull()?.results ?: emptyList()
 					Timber.d("JellyseerrViewModel: Fetched ${userRequests.size} requests for user ${currentUser.id}")
 					
-					// Enrich each request with full media details
-					val enrichedRequests = userRequests.mapNotNull { request ->
-						val tmdbId = request.media?.tmdbId
-						if (tmdbId == null) {
-							Timber.w("JellyseerrViewModel: Request ${request.id} has no tmdbId, skipping enrichment")
-							return@mapNotNull request
-						}
-						
-						// Fetch full movie or TV details based on media type
-						val enrichedMedia = when (request.type) {
-							"movie" -> {
-								val result = jellyseerrRepository.getMovieDetails(tmdbId)
-								if (result.isSuccess) {
-									val movieDetails = result.getOrNull()
-									request.media?.copy(
-										title = movieDetails?.title,
-										posterPath = movieDetails?.posterPath,
-										backdropPath = movieDetails?.backdropPath,
-										overview = movieDetails?.overview
-									)
-								} else {
-									Timber.w("JellyseerrViewModel: Failed to fetch movie details for request ${request.id}, tmdbId: $tmdbId")
-									request.media
+					val enrichedRequests = coroutineScope {
+						userRequests.map { request ->
+							async {
+								val tmdbId = request.media?.tmdbId
+								if (tmdbId == null) {
+									Timber.w("JellyseerrViewModel: Request ${request.id} has no tmdbId, skipping enrichment")
+									return@async request
 								}
-							}
-							"tv" -> {
-								val result = jellyseerrRepository.getTvDetails(tmdbId)
-								if (result.isSuccess) {
-									val tvDetails = result.getOrNull()
-									request.media?.copy(
-										name = tvDetails?.name ?: tvDetails?.title,
-										posterPath = tvDetails?.posterPath,
-										backdropPath = tvDetails?.backdropPath,
-										overview = tvDetails?.overview
-									)
-								} else {
-									Timber.w("JellyseerrViewModel: Failed to fetch TV details for request ${request.id}, tmdbId: $tmdbId")
-									request.media
+								
+								val enrichedMedia = when (request.type) {
+									"movie" -> {
+										val result = jellyseerrRepository.getMovieDetails(tmdbId)
+										if (result.isSuccess) {
+											val movieDetails = result.getOrNull()
+											request.media?.copy(
+												title = movieDetails?.title,
+												posterPath = movieDetails?.posterPath,
+												backdropPath = movieDetails?.backdropPath,
+												overview = movieDetails?.overview
+											)
+										} else {
+											Timber.w("JellyseerrViewModel: Failed to fetch movie details for request ${request.id}, tmdbId: $tmdbId")
+											request.media
+										}
+									}
+									"tv" -> {
+										val result = jellyseerrRepository.getTvDetails(tmdbId)
+										if (result.isSuccess) {
+											val tvDetails = result.getOrNull()
+											request.media?.copy(
+												name = tvDetails?.name ?: tvDetails?.title,
+												posterPath = tvDetails?.posterPath,
+												backdropPath = tvDetails?.backdropPath,
+												overview = tvDetails?.overview
+											)
+										} else {
+											Timber.w("JellyseerrViewModel: Failed to fetch TV details for request ${request.id}, tmdbId: $tmdbId")
+											request.media
+										}
+									}
+									else -> {
+										Timber.w("JellyseerrViewModel: Unknown media type: ${request.type}")
+										request.media
+									}
 								}
+								
+								request.copy(media = enrichedMedia)
 							}
-							else -> {
-								Timber.w("JellyseerrViewModel: Unknown media type: ${request.type}")
-								request.media
-							}
-						}
-						
-						request.copy(media = enrichedMedia)
+						}.awaitAll()
 					}
 					
 					enrichedRequests.forEach { request ->
@@ -485,20 +479,23 @@ class JellyseerrViewModel(
 				return@launch
 			}
 			try {
-				// Fetch movie genres
-				val movieGenresResult = jellyseerrRepository.getGenreSliderMovies()
-				if (movieGenresResult.isSuccess) {
-					val genres = movieGenresResult.getOrNull() ?: emptyList()
-					_movieGenres.emit(genres)
-					Timber.d("JellyseerrViewModel: Loaded ${genres.size} movie genres")
-				}
-
-				// Fetch TV genres
-				val tvGenresResult = jellyseerrRepository.getGenreSliderTv()
-				if (tvGenresResult.isSuccess) {
-					val genres = tvGenresResult.getOrNull() ?: emptyList()
-					_tvGenres.emit(genres)
-					Timber.d("JellyseerrViewModel: Loaded ${genres.size} TV genres")
+				coroutineScope {
+					val movieGenresDeferred = async { jellyseerrRepository.getGenreSliderMovies() }
+					val tvGenresDeferred = async { jellyseerrRepository.getGenreSliderTv() }
+					
+					val movieGenresResult = movieGenresDeferred.await()
+					val tvGenresResult = tvGenresDeferred.await()
+					
+					if (movieGenresResult.isSuccess) {
+						val genres = movieGenresResult.getOrNull() ?: emptyList()
+						_movieGenres.emit(genres)
+						Timber.d("JellyseerrViewModel: Loaded ${genres.size} movie genres")
+					}
+					if (tvGenresResult.isSuccess) {
+						val genres = tvGenresResult.getOrNull() ?: emptyList()
+						_tvGenres.emit(genres)
+						Timber.d("JellyseerrViewModel: Loaded ${genres.size} TV genres")
+					}
 				}
 			} catch (error: Exception) {
 				Timber.e(error, "Failed to load genres")
