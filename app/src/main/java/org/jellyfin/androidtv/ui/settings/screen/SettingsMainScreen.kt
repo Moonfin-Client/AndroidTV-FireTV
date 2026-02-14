@@ -9,17 +9,13 @@ import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -74,16 +70,10 @@ fun SettingsMainScreen() {
 
 		item {
 			ListButton(
-				leadingContent = {
-					Icon(
-						painterResource(R.drawable.ic_jellyseerr_jellyfish),
-						contentDescription = null,
-						modifier = Modifier.size(24.dp)
-					)
-				},
-				headingContent = { Text(stringResource(R.string.jellyseerr)) },
-				captionContent = { Text("Jellyseerr integration settings") },
-				onClick = { router.push(Routes.JELLYSEERR) }
+				leadingContent = { Icon(painterResource(R.drawable.ic_moonfin), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_plugin_settings)) },
+				captionContent = { Text(stringResource(R.string.pref_plugin_description)) },
+				onClick = { router.push(Routes.PLUGIN) }
 			)
 		}
 
@@ -97,18 +87,18 @@ fun SettingsMainScreen() {
 
 		item {
 			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_syncplay), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.syncplay)) },
-				captionContent = { Text(stringResource(R.string.syncplay_description)) },
-				onClick = { router.push(Routes.SYNCPLAY) }
+				leadingContent = { Icon(painterResource(R.drawable.ic_next), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_playback)) },
+				onClick = { router.push(Routes.PLAYBACK) }
 			)
 		}
 
 		item {
 			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_next), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.pref_playback)) },
-				onClick = { router.push(Routes.PLAYBACK) }
+				leadingContent = { Icon(painterResource(R.drawable.ic_syncplay), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.syncplay)) },
+				captionContent = { Text(stringResource(R.string.syncplay_description)) },
+				onClick = { router.push(Routes.MOONFIN_SYNCPLAY) }
 			)
 		}
 

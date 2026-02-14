@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jellyfin.androidtv.auth.repository.UserRepository
-import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrBlacklistPageDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrCreateRequestDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverPageDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrGenreDto
@@ -24,13 +23,19 @@ import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrServiceServerDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrSonarrSettingsDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrTvDetailsDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrUserDto
+import org.jellyfin.androidtv.data.service.jellyseerr.MoonfinLoginResponse
+import org.jellyfin.androidtv.data.service.jellyseerr.MoonfinProxyConfig
+import org.jellyfin.androidtv.data.service.jellyseerr.MoonfinStatusResponse
 import org.jellyfin.androidtv.data.service.jellyseerr.Seasons
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
+import org.jellyfin.sdk.api.client.ApiClient
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import timber.log.Timber
 
 interface JellyseerrRepository {
 	val isAvailable: StateFlow<Boolean>
+	val isMoonfinMode: StateFlow<Boolean>
 
 	suspend fun ensureInitialized()
 	suspend fun initialize(serverUrl: String, apiKey: String): Result<Unit>
@@ -82,7 +87,6 @@ interface JellyseerrRepository {
 	suspend fun getRecommendationsTv(tmdbId: Int, page: Int = 1): Result<JellyseerrDiscoverPageDto>
 	suspend fun getPersonDetails(personId: Int): Result<JellyseerrPersonDetailsDto>
 	suspend fun getPersonCombinedCredits(personId: Int): Result<JellyseerrPersonCombinedCreditsDto>
-	suspend fun getBlacklist(): Result<JellyseerrBlacklistPageDto>
 	suspend fun getGenreSliderMovies(): Result<List<JellyseerrGenreDto>>
 	suspend fun getGenreSliderTv(): Result<List<JellyseerrGenreDto>>
 
@@ -112,6 +116,11 @@ interface JellyseerrRepository {
 	suspend fun getSonarrSettings(): Result<List<JellyseerrSonarrSettingsDto>>
 	suspend fun logout()
 	fun close()
+
+	suspend fun configureWithMoonfin(jellyfinBaseUrl: String, jellyfinToken: String): Result<MoonfinStatusResponse>
+	suspend fun checkMoonfinStatus(): Result<MoonfinStatusResponse>
+	suspend fun loginWithMoonfin(username: String, password: String, authType: String): Result<MoonfinLoginResponse>
+	suspend fun logoutMoonfin(): Result<Unit>
 }
 
 class JellyseerrRepositoryImpl(
@@ -119,9 +128,12 @@ class JellyseerrRepositoryImpl(
 	private val globalPreferences: JellyseerrPreferences, // Global preferences (UI settings only)
 	private val userRepository: UserRepository,
 ) : JellyseerrRepository, KoinComponent {
+	private val api: ApiClient by inject()
 	private var httpClient: JellyseerrHttpClient? = null
 	private val _isAvailable = MutableStateFlow(false)
 	override val isAvailable: StateFlow<Boolean> = _isAvailable.asStateFlow()
+	private val _isMoonfinMode = MutableStateFlow(false)
+	override val isMoonfinMode: StateFlow<Boolean> = _isMoonfinMode.asStateFlow()
 	private var initialized = false
 	private var lastUserId: String? = null // Track which user we're initialized for
 	
@@ -195,6 +207,50 @@ class JellyseerrRepositoryImpl(
 				
 				val storedApiKey = userPrefs?.get(JellyseerrPreferences.apiKey) ?: ""
 				val authMethod = userPrefs?.get(JellyseerrPreferences.authMethod) ?: ""
+				val moonfinMode = userPrefs?.get(JellyseerrPreferences.moonfinMode) ?: false
+
+				if (moonfinMode) {
+					val baseUrl = api.baseUrl
+					val token = api.accessToken
+					if (!baseUrl.isNullOrBlank() && !token.isNullOrBlank()) {
+						Timber.d("Jellyseerr: Auto-initializing in Moonfin proxy mode for user $lastUserId")
+						val proxyConfig = MoonfinProxyConfig(
+							jellyfinBaseUrl = baseUrl,
+							jellyfinToken = token
+						)
+						val result = initialize(baseUrl, "")
+						if (result.isSuccess) {
+							httpClient?.proxyConfig = proxyConfig
+							_isMoonfinMode.emit(true)
+							val statusResult = httpClient?.getMoonfinStatus()
+							if (statusResult != null && statusResult.isSuccess) {
+								val status = statusResult.getOrNull()
+								if (status?.authenticated == true) {
+									// Trust the Status check like Tizen does.
+									// Do NOT call getCurrentUser() through the proxy here - it can
+									// cause Express.js cookie rotation which the plugin doesn't save,
+									// invalidating the session for subsequent API calls.
+									Timber.d("Jellyseerr: Moonfin session authenticated (via Status)")
+									_isAvailable.emit(true)
+								} else {
+									Timber.d("Jellyseerr: Moonfin session not authenticated, user needs to login")
+									_isAvailable.emit(false)
+								}
+							} else {
+								_isAvailable.emit(false)
+								Timber.w("Jellyseerr: Failed to check Moonfin status")
+							}
+						} else {
+							_isAvailable.emit(false)
+							Timber.w("Jellyseerr: Failed to initialize for Moonfin proxy")
+						}
+					} else {
+						_isAvailable.emit(false)
+						Timber.w("Jellyseerr: Moonfin mode enabled but no Jellyfin API credentials")
+					}
+					initialized = true
+					return@withContext
+				}
 
 				if (enabled && serverUrl.isNotEmpty()) {
 					Timber.d("Jellyseerr: Auto-initializing from saved preferences for user $lastUserId")
@@ -366,8 +422,6 @@ class JellyseerrRepositoryImpl(
 	override suspend fun getPersonDetails(personId: Int): Result<JellyseerrPersonDetailsDto> = withClient { it.getPersonDetails(personId) }
 
 	override suspend fun getPersonCombinedCredits(personId: Int): Result<JellyseerrPersonCombinedCreditsDto> = withClient { it.getPersonCombinedCredits(personId) }
-
-	override suspend fun getBlacklist(): Result<JellyseerrBlacklistPageDto> = withClient { it.getBlacklist() }
 
 	override suspend fun getGenreSliderMovies(): Result<List<JellyseerrGenreDto>> = withClient { it.getGenreSliderMovies() }
 
@@ -567,7 +621,127 @@ class JellyseerrRepositoryImpl(
 		result
 	}
 
+	override suspend fun configureWithMoonfin(
+		jellyfinBaseUrl: String,
+		jellyfinToken: String,
+	): Result<MoonfinStatusResponse> = withContext(Dispatchers.IO) {
+		val currentUserId = userRepository.currentUser.value?.id?.toString()
+		if (currentUserId.isNullOrEmpty()) {
+			return@withContext Result.failure(IllegalStateException("No active Jellyfin user"))
+		}
+
+		JellyseerrHttpClient.switchCookieStorage(currentUserId)
+		lastUserId = currentUserId
+
+		val proxyConfig = MoonfinProxyConfig(
+			jellyfinBaseUrl = jellyfinBaseUrl,
+			jellyfinToken = jellyfinToken
+		)
+
+		initialize(jellyfinBaseUrl, "")
+
+		val client = httpClient ?: return@withContext Result.failure(
+			IllegalStateException("Failed to initialize HTTP client")
+		)
+
+		client.proxyConfig = proxyConfig
+
+		val statusResult = client.getMoonfinStatus()
+		statusResult.onSuccess { status ->
+			val userPrefs = getPreferences()
+			userPrefs?.apply {
+				set(JellyseerrPreferences.moonfinMode, true)
+				set(JellyseerrPreferences.enabled, true)
+				set(JellyseerrPreferences.authMethod, "moonfin")
+			}
+			_isMoonfinMode.emit(true)
+			if (status.authenticated) {
+				// Trust the Status check like Tizen does.
+				// Do NOT call getCurrentUser() through the proxy here - it can
+				// cause Express.js cookie rotation which the plugin doesn't save,
+				// invalidating the session for subsequent API calls and destroying
+				// sessions on other devices.
+				Timber.d("Jellyseerr: Moonfin session authenticated in configureWithMoonfin")
+				userPrefs?.apply {
+					set(JellyseerrPreferences.moonfinDisplayName, status.displayName ?: "")
+					set(JellyseerrPreferences.moonfinJellyseerrUserId, status.jellyseerrUserId?.toString() ?: "")
+				}
+				_isAvailable.emit(true)
+			} else {
+				Timber.d("Jellyseerr: Moonfin session not authenticated, user needs to login")
+				_isAvailable.emit(false)
+			}
+		}.onFailure {
+			_isAvailable.emit(false)
+		}
+
+		statusResult
+	}
+
+	override suspend fun checkMoonfinStatus(): Result<MoonfinStatusResponse> = withClient { client ->
+		client.getMoonfinStatus()
+	}
+
+	override suspend fun loginWithMoonfin(
+		username: String,
+		password: String,
+		authType: String,
+	): Result<MoonfinLoginResponse> = withContext(Dispatchers.IO) {
+		ensureInitialized()
+
+		val client = httpClient ?: return@withContext Result.failure(
+			IllegalStateException("HTTP client not initialized")
+		)
+
+		if (!client.isProxyMode) {
+			return@withContext Result.failure(IllegalStateException("Not in Moonfin proxy mode"))
+		}
+
+		val result = client.moonfinLogin(username, password, authType)
+		result.onSuccess { response ->
+			if (response.success) {
+				val userPrefs = getPreferences()
+				userPrefs?.apply {
+					set(JellyseerrPreferences.moonfinDisplayName, response.displayName ?: "")
+					set(JellyseerrPreferences.moonfinJellyseerrUserId, response.jellyseerrUserId?.toString() ?: "")
+				}
+				_isAvailable.emit(true)
+				Timber.i("Jellyseerr: Moonfin login successful")
+			}
+		}
+
+		result
+	}
+
+	override suspend fun logoutMoonfin(): Result<Unit> = withContext(Dispatchers.IO) {
+		val client = httpClient
+		if (client != null && client.isProxyMode) {
+			client.moonfinLogout()
+		}
+
+		val userPrefs = getPreferences()
+		userPrefs?.apply {
+			set(JellyseerrPreferences.moonfinMode, false)
+			set(JellyseerrPreferences.moonfinDisplayName, "")
+			set(JellyseerrPreferences.moonfinJellyseerrUserId, "")
+			set(JellyseerrPreferences.enabled, false)
+			set(JellyseerrPreferences.authMethod, "")
+		}
+
+		httpClient?.proxyConfig = null
+		_isMoonfinMode.emit(false)
+		_isAvailable.emit(false)
+		initialized = false
+
+		Result.success(Unit)
+	}
+
 	override suspend fun logout() {
+		if (httpClient?.isProxyMode == true) {
+			logoutMoonfin()
+			return
+		}
+
 		val userPrefs = getPreferences()
 		userPrefs?.apply {
 			set(JellyseerrPreferences.serverUrl, "")

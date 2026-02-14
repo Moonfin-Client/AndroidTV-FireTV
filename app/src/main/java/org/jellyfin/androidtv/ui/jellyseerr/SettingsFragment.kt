@@ -51,8 +51,6 @@ class SettingsFragment : BaseFragment(R.layout.fragment_jellyseerr_settings) {
 		// Enable/disable toggle
 		binding.enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
 			globalPreferences[JellyseerrPreferences.enabled] = isChecked
-			// Update per-user showInToolbar preference
-			userJellyseerrPrefs[JellyseerrPreferences.showInToolbar] = isChecked
 			binding.settingsGroup.alpha = if (isChecked) 1f else 0.5f
 		}
 

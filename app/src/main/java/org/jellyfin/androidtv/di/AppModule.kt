@@ -187,7 +187,7 @@ val appModule = module {
 	// Jellyseerr - User-specific preferences (auth data, API keys) - scoped per user
 	factory(named("user")) { (userId: String) -> JellyseerrPreferences(androidContext(), userId) }
 	single<JellyseerrRepository> { JellyseerrRepositoryImpl(androidContext(), get(named("global")), get()) }
-	single { MdbListRepository(get<OkHttpFactory>().createClient(get())) }
+	single { MdbListRepository(get<OkHttpFactory>().createClient(get()), get()) }
 	single { TmdbRepository(get<OkHttpFactory>().createClient(get()), get()) }
 
 	viewModel { StartupViewModel(get(), get(), get(), get()) }

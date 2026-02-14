@@ -327,6 +327,7 @@ class MediaBarSlideshowViewModel(
 					communityRating = item.communityRating,
 					tmdbId = item.providerIds?.get("Tmdb"),
 					imdbId = item.providerIds?.get("Imdb"),
+					itemType = item.type ?: BaseItemKind.MOVIE,
 				)
 			}
 
@@ -630,6 +631,7 @@ class MediaBarSlideshowViewModel(
 						communityRating = item.communityRating,
 						tmdbId = item.providerIds?.get("Tmdb"),
 						imdbId = item.providerIds?.get("Imdb"),
+						itemType = item.type ?: BaseItemKind.MOVIE,
 					)
 				}
 				

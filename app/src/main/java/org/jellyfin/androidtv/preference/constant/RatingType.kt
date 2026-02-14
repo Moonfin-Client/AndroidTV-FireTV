@@ -12,14 +12,12 @@ enum class RatingType(
 	RATING_IMDB(R.string.pref_rating_source_imdb),
 	RATING_TMDB(R.string.pref_rating_source_tmdb),
 	RATING_METACRITIC(R.string.pref_rating_source_metacritic),
+	RATING_METACRITIC_USER(R.string.pref_rating_source_metacritic_user),
 	RATING_TRAKT(R.string.pref_rating_source_trakt),
 	RATING_LETTERBOXD(R.string.pref_rating_source_letterboxd),
 	RATING_ROGER_EBERT(R.string.pref_rating_source_rogerebert),
 	RATING_MYANIMELIST(R.string.pref_rating_source_myanimelist),
 	RATING_ANILIST(R.string.pref_rating_source_anilist),
-	RATING_KINOPOISK(R.string.pref_rating_source_kinopoisk),
-	RATING_ALLOCINE(R.string.pref_rating_source_allocine),
-	RATING_DOUBAN(R.string.pref_rating_source_douban),
 	RATING_HIDDEN(R.string.lbl_hidden),
 }
 

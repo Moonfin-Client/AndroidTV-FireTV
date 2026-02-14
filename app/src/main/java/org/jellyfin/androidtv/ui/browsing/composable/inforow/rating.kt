@@ -1,6 +1,5 @@
 package org.jellyfin.androidtv.ui.browsing.composable.inforow
 
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -16,17 +15,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.repository.MdbListRepository
+import org.jellyfin.androidtv.data.repository.RatingIconProvider
 import org.jellyfin.androidtv.data.repository.TmdbRepository
 import org.jellyfin.androidtv.preference.UserSettingPreferences
-import org.jellyfin.androidtv.preference.constant.RatingType
 import org.jellyfin.androidtv.ui.base.Text
+import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.koin.compose.koinInject
@@ -35,7 +35,7 @@ import java.text.NumberFormat
 
 @Composable
 private fun RatingItemWithLogo(
-	logoRes: Int,
+	icon: RatingIconProvider.RatingIcon,
 	contentDescription: String,
 	rating: String
 ) {
@@ -44,12 +44,28 @@ private fun RatingItemWithLogo(
 		verticalAlignment = Alignment.CenterVertically,
 		modifier = Modifier.fillMaxHeight(),
 	) {
-		Image(
-			painter = painterResource(logoRes),
-			contentDescription = contentDescription,
-			modifier = Modifier.size(18.dp)
-		)
+		RatingIconImage(icon = icon, contentDescription = contentDescription, modifier = Modifier.size(18.dp))
 		Text(rating, color = Color.White)
+	}
+}
+
+@Composable
+private fun RatingIconImage(
+	icon: RatingIconProvider.RatingIcon,
+	contentDescription: String,
+	modifier: Modifier = Modifier,
+) {
+	when (icon) {
+		is RatingIconProvider.RatingIcon.ServerUrl -> AsyncImage(
+			model = icon.url,
+			contentDescription = contentDescription,
+			modifier = modifier,
+		)
+		is RatingIconProvider.RatingIcon.LocalDrawable -> Image(
+			painter = painterResource(icon.resId),
+			contentDescription = contentDescription,
+			modifier = modifier,
+		)
 	}
 }
 
@@ -69,71 +85,33 @@ fun InfoRowCommunityRating(communityRating: Float) {
 	}
 }
 
-private const val CRITIC_RATING_FRESH = 0.6f
-
-/**
- * A critic rating item in the [BaseItemInfoRow].
- *
- * @param criticRating Between 0f and 1f.
- */
-@Composable
-fun InfoRowCriticRating(criticRating: Float) {
-	InfoRowItem(
-		icon = when {
-			criticRating >= CRITIC_RATING_FRESH -> ImageVector.vectorResource(R.drawable.ic_rt_fresh)
-			else -> ImageVector.vectorResource(R.drawable.ic_rt_rotten)
-		},
-		iconTint = Color.Unspecified,
-		contentDescription = stringResource(R.string.lbl_critic_rating),
-	) {
-		Text(NumberFormat.getPercentInstance().format(criticRating), color = Color.White)
-	}
-}
-
 /**
  * Display multiple ratings based on user's enabled rating types.
- * Shows all enabled ratings in a row.
  */
 @Composable
 fun InfoRowMultipleRatings(item: BaseItemDto) {
-	val context = LocalContext.current
 	val userSettingPreferences = koinInject<UserSettingPreferences>()
 	val mdbListRepository = koinInject<MdbListRepository>()
 	val tmdbRepository = koinInject<TmdbRepository>()
+	val apiClient = koinInject<ApiClient>()
+	val baseUrl = apiClient.baseUrl
 	val enableAdditionalRatings = userSettingPreferences[UserSettingPreferences.enableAdditionalRatings]
-	val apiKey = userSettingPreferences[UserSettingPreferences.mdblistApiKey]
-	val enabledRatingsStr = userSettingPreferences[UserSettingPreferences.enabledRatings]
 	val enableEpisodeRatings = userSettingPreferences[UserSettingPreferences.enableEpisodeRatings]
-	val tmdbApiKey = userSettingPreferences[UserSettingPreferences.tmdbApiKey]
 
-	val enabledRatings = remember(enabledRatingsStr) {
-		enabledRatingsStr.split(",")
-			.filter { it.isNotBlank() }
-			.mapNotNull { name -> RatingType.entries.find { it.name == name } }
-			.filter { it != RatingType.RATING_HIDDEN }
-			.toSet()
-	}
-
-	if (enabledRatings.isEmpty()) return
-
-	var hasShownToast by remember { mutableStateOf(false) }
 	var apiRatings by remember { mutableStateOf<Map<String, Float>?>(null) }
 	var isLoading by remember { mutableStateOf(false) }
 	var episodeRating by remember { mutableStateOf<Float?>(null) }
 	var isLoadingEpisode by remember { mutableStateOf(false) }
+	var seriesCommunityRating by remember { mutableStateOf<Float?>(null) }
 
 	val isEpisode = item.type == BaseItemKind.EPISODE
 
-	val needsApiRatings = enabledRatings.any { 
-		it !in listOf(RatingType.RATING_TOMATOES, RatingType.RATING_STARS) 
-	}
-
 	// Fetch episode rating from TMDB if enabled
-	if (enableEpisodeRatings && isEpisode && tmdbApiKey.isNotBlank()) {
-		LaunchedEffect(item.id, tmdbApiKey) {
+	if (enableEpisodeRatings && isEpisode) {
+		LaunchedEffect(item.id) {
 			isLoadingEpisode = true
 			try {
-				episodeRating = tmdbRepository.getEpisodeRating(item, tmdbApiKey)
+				episodeRating = tmdbRepository.getEpisodeRating(item)
 			} catch (e: Exception) {
 				Timber.e(e, "Failed to fetch episode rating for item ${item.id}")
 			} finally {
@@ -142,22 +120,21 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 		}
 	}
 
-	if (enableAdditionalRatings && needsApiRatings) {
-		LaunchedEffect(item.id, apiKey) {
-			if (apiKey.isBlank()) {
-				if (!hasShownToast) {
-					Toast.makeText(
-						context,
-						context.getString(R.string.pref_additional_ratings_no_api_key),
-						Toast.LENGTH_LONG
-					).show()
-					hasShownToast = true
-				}
-				return@LaunchedEffect
+	if (isEpisode && item.communityRating == null) {
+		LaunchedEffect(item.seriesId) {
+			try {
+				seriesCommunityRating = tmdbRepository.getSeriesCommunityRating(item)
+			} catch (e: Exception) {
+				Timber.e(e, "Failed to fetch series community rating for item ${item.id}")
 			}
+		}
+	}
+
+	if (enableAdditionalRatings) {
+		LaunchedEffect(item.id) {
 			isLoading = true
 			try {
-				apiRatings = mdbListRepository.getRatings(item, apiKey)
+				apiRatings = mdbListRepository.getRatings(item)
 			} catch (e: Exception) {
 				Timber.e(e, "Failed to fetch MDBList ratings for item ${item.id}")
 			} finally {
@@ -166,33 +143,39 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 		}
 	}
 
-	val allRatings = remember(apiRatings, item.criticRating, item.communityRating, episodeRating) {
+	val allRatings = remember(apiRatings, item.criticRating, item.communityRating, episodeRating, seriesCommunityRating) {
 		buildMap {
-			item.criticRating?.let { put("RT", it / 100f) }
-			apiRatings?.get("tomatoes_audience")?.let { put("RT_AUDIENCE", it / 100f) }
-			item.communityRating?.let { put("STARS", it / 10f) }
-			
-			// Episode rating from TMDB (already 0-10 scale)
+			val starsRating = item.communityRating ?: seriesCommunityRating
+			starsRating?.let { put("stars", it / 10f) }
+
 			episodeRating?.let { put("tmdb_episode", it / 10f) }
 
-			apiRatings?.let { ratings ->
-				ratings["imdb"]?.let { put("imdb", it / 10f) }
-				ratings["tmdb"]?.let { put("tmdb", it / 100f) }
-				ratings["metacritic"]?.let { put("metacritic", it / 100f) }
-				ratings["trakt"]?.let { put("trakt", it / 100f) }
-				ratings["letterboxd"]?.let { put("letterboxd", it / 5f) }
-				ratings["rogerebert"]?.let { put("rogerebert", it / 4f) }
-				ratings["myanimelist"]?.let { put("myanimelist", it / 10f) }
-				ratings["anilist"]?.let { put("anilist", it / 100f) }
-				ratings["kinopoisk"]?.let { put("kinopoisk", it / 10f) }
-				ratings["allocine"]?.let { put("allocine", it / 5f) }
-				ratings["douban"]?.let { put("douban", it / 10f) }
+			// Jellyfin-provided critic rating (typically RT from OMDb)
+			item.criticRating?.let { put("tomatoes", it / 100f) }
+
+			// Normalize MDBList ratings to 0–1
+			apiRatings?.forEach { (source, value) ->
+				val normalized = when (source) {
+					"tomatoes" -> item.criticRating?.let { it / 100f } ?: (value / 100f)
+					"popcorn" -> value / 100f
+					"imdb" -> value / 10f
+					"tmdb" -> value / 100f
+					"metacritic" -> value / 100f
+					"metacriticuser" -> value / 100f
+					"trakt" -> value / 100f
+					"letterboxd" -> value / 5f
+					"rogerebert" -> value / 4f
+					"myanimelist" -> value / 10f
+					"anilist" -> value / 100f
+					else -> value / 10f
+				}
+				put(source, normalized)
 			}
 		}
 	}
 
-	if ((needsApiRatings && enableAdditionalRatings && isLoading && apiKey.isNotBlank()) ||
-		(enableEpisodeRatings && isEpisode && isLoadingEpisode && tmdbApiKey.isNotBlank())) {
+	if ((enableAdditionalRatings && isLoading) ||
+		(enableEpisodeRatings && isEpisode && isLoadingEpisode)) {
 		return
 	}
 
@@ -202,79 +185,66 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 	) {
 		// Show TMDB episode rating
 		if (enableEpisodeRatings && isEpisode && episodeRating != null) {
-			RatingDisplay("tmdb_episode", allRatings["tmdb_episode"]!!)
+			RatingDisplay("tmdb_episode", allRatings["tmdb_episode"]!!, baseUrl)
 		}
-		
-		enabledRatings.forEach { ratingType ->
-			// Skip TMDB for episodes if episode ratings are enabled
-			if (isEpisode && enableEpisodeRatings && ratingType == RatingType.RATING_TMDB && episodeRating != null) {
-				return@forEach
-			}
-			
-			val (sourceKey, rating) = when (ratingType) {
-				RatingType.RATING_TOMATOES -> "RT" to allRatings["RT"]
-				RatingType.RATING_RT_AUDIENCE -> "RT_AUDIENCE" to allRatings["RT_AUDIENCE"]
-				RatingType.RATING_STARS -> "STARS" to allRatings["STARS"]
-				RatingType.RATING_IMDB -> "imdb" to allRatings["imdb"]
-				RatingType.RATING_TMDB -> "tmdb" to allRatings["tmdb"]
-				RatingType.RATING_METACRITIC -> "metacritic" to allRatings["metacritic"]
-				RatingType.RATING_TRAKT -> "trakt" to allRatings["trakt"]
-				RatingType.RATING_LETTERBOXD -> "letterboxd" to allRatings["letterboxd"]
-				RatingType.RATING_ROGER_EBERT -> "rogerebert" to allRatings["rogerebert"]
-				RatingType.RATING_MYANIMELIST -> "myanimelist" to allRatings["myanimelist"]
-				RatingType.RATING_ANILIST -> "anilist" to allRatings["anilist"]
-				RatingType.RATING_KINOPOISK -> "kinopoisk" to allRatings["kinopoisk"]
-				RatingType.RATING_ALLOCINE -> "allocine" to allRatings["allocine"]
-				RatingType.RATING_DOUBAN -> "douban" to allRatings["douban"]
-				RatingType.RATING_HIDDEN -> return@forEach
-			}
-			
-			rating?.let { value ->
-				RatingDisplay(sourceKey, value)
+
+		allRatings["stars"]?.let { RatingDisplay("stars", it, baseUrl) }
+		allRatings["tomatoes"]?.let { RatingDisplay("tomatoes", it, baseUrl) }
+
+		if (enableAdditionalRatings) {
+			apiRatings?.keys?.forEach { source ->
+				if (source == "tomatoes") return@forEach
+				if (isEpisode && enableEpisodeRatings && source == "tmdb" && episodeRating != null) {
+					return@forEach
+				}
+				allRatings[source]?.let { RatingDisplay(source, it, baseUrl) }
 			}
 		}
 	}
 }
 
 /**
- * Display a single rating with appropriate icon and formatting
+ * Display a single rating with icon and formatted value.
+ * All rating values are expected in 0–1 normalized scale.
  */
 @Composable
-private fun RatingDisplay(sourceKey: String, rating: Float) {
+private fun RatingDisplay(sourceKey: String, rating: Float, baseUrl: String?) {
+	val scorePercent = (rating * 100f).toInt()
+
 	when (sourceKey) {
-		"RT" -> InfoRowItem(
-			icon = when {
-				rating >= CRITIC_RATING_FRESH -> ImageVector.vectorResource(R.drawable.ic_rt_fresh)
-				else -> ImageVector.vectorResource(R.drawable.ic_rt_rotten)
-			},
-			iconTint = Color.Unspecified,
-			contentDescription = "Rotten Tomatoes",
-		) {
-			Text(NumberFormat.getPercentInstance().format(rating), color = Color.White)
+		"stars" -> InfoRowCommunityRating(rating)
+		else -> {
+			val icon = RatingIconProvider.getIcon(baseUrl, sourceKey, scorePercent) ?: return
+			val formattedRating = when (sourceKey) {
+				"tomatoes" -> NumberFormat.getPercentInstance().format(rating)
+				"popcorn" -> NumberFormat.getPercentInstance().format(rating)
+				"imdb" -> String.format("%.1f", rating * 10f)
+				"tmdb", "tmdb_episode" -> "${(rating * 100f).toInt()}%"
+				"metacritic" -> "${(rating * 100f).toInt()}%"
+				"metacriticuser" -> "${(rating * 100f).toInt()}%"
+				"trakt" -> "${(rating * 100f).toInt()}%"
+				"letterboxd" -> String.format("%.1f", rating * 5f)
+				"rogerebert" -> String.format("%.1f", rating * 4f)
+				"myanimelist" -> String.format("%.1f", rating * 10f)
+				"anilist" -> "${(rating * 100f).toInt()}%"
+				else -> String.format("%.1f", rating * 10f)
+			}
+			val label = when (sourceKey) {
+				"tomatoes" -> "Rotten Tomatoes"
+				"popcorn" -> "RT Audience"
+				"imdb" -> "IMDB"
+				"tmdb", "tmdb_episode" -> "TMDB"
+				"metacritic" -> "Metacritic"
+				"metacriticuser" -> "Metacritic User"
+				"trakt" -> "Trakt"
+				"letterboxd" -> "Letterboxd"
+				"rogerebert" -> "Roger Ebert"
+				"myanimelist" -> "MyAnimeList"
+				"anilist" -> "AniList"
+				else -> sourceKey
+			}
+			RatingItemWithLogo(icon, label, formattedRating)
 		}
-		"RT_AUDIENCE" -> InfoRowItem(
-			icon = when {
-				rating >= CRITIC_RATING_FRESH -> ImageVector.vectorResource(R.drawable.ic_rt_audience_fresh)
-				else -> ImageVector.vectorResource(R.drawable.ic_rt_audience_rotten)
-			},
-			iconTint = Color.Unspecified,
-			contentDescription = "RT Audience",
-		) {
-			Text(NumberFormat.getPercentInstance().format(rating), color = Color.White)
-		}
-		"STARS" -> InfoRowCommunityRating(rating)
-		"imdb" -> RatingItemWithLogo(R.drawable.ic_imdb, "IMDB", String.format("%.1f", rating * 10f))
-		"tmdb" -> RatingItemWithLogo(R.drawable.ic_tmdb, "TMDB", "${(rating * 100f).toInt()}%")
-		"tmdb_episode" -> RatingItemWithLogo(R.drawable.ic_tmdb, "TMDB", "${(rating * 100f).toInt()}%")
-		"metacritic" -> RatingItemWithLogo(R.drawable.ic_metacritic, "Metacritic", "${(rating * 100f).toInt()}%")
-		"trakt" -> RatingItemWithLogo(R.drawable.ic_trakt, "Trakt", "${(rating * 100f).toInt()}%")
-		"letterboxd" -> RatingItemWithLogo(R.drawable.ic_letterboxd, "Letterboxd", String.format("%.1f", rating * 5f))
-		"rogerebert" -> RatingItemWithLogo(R.drawable.ic_roger_ebert, "Roger Ebert", String.format("%.1f", rating * 4f))
-		"myanimelist" -> RatingItemWithLogo(R.drawable.ic_myanimelist, "MyAnimeList", String.format("%.1f", rating * 10f))
-		"anilist" -> RatingItemWithLogo(R.drawable.ic_anilist, "AniList", "${(rating * 100f).toInt()}%")
-		"kinopoisk" -> RatingItemWithLogo(R.drawable.ic_kinopoisk, "Kinopoisk", String.format("%.1f", rating * 10f))
-		"allocine" -> RatingItemWithLogo(R.drawable.ic_allocine, "AlloCiné", String.format("%.1f", rating * 5f))
-		"douban" -> RatingItemWithLogo(R.drawable.ic_douban, "Douban", String.format("%.1f", rating * 10f))
 	}
 }
 

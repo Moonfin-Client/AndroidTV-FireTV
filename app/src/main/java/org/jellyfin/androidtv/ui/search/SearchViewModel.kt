@@ -89,7 +89,7 @@ class SearchViewModel(
 				}
 			}.awaitAll()
 
-		val allResults = if (jellyseerrPreferences[JellyseerrPreferences.enabled]) {
+		val allResults = if (jellyseerrRepository.isAvailable.value) {
 			val jellyseerrResult = ErrorHandler.catchingWarning("search Jellyseerr") {
 				jellyseerrRepository.search(trimmed)
 			}

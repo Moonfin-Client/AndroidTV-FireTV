@@ -797,6 +797,7 @@
     <string name="home">Home</string>
     <string name="search">Search</string>
     <string name="jellyseerr_settings">Jellyseerr</string>
+    <string name="jellyseerr_settings_description">Authentication, rows &amp; full configuration</string>
     <string name="jellyseerr_server_settings">Server Configuration</string>
     <string name="jellyseerr_enabled">Enable Jellyseerr</string>
     <string name="jellyseerr_enabled_description">Show Jellyseerr integration in the app</string>
@@ -823,6 +824,12 @@
     <string name="jellyseerr_fetch_limit_75">75 items</string>
     <string name="jellyseerr_block_nsfw">Block Adult Content</string>
     <string name="jellyseerr_block_nsfw_description">Hide content tagged as adult/NSFW from Jellyseerr results</string>
+
+    <!-- Plugin Settings -->
+    <string name="pref_plugin_settings">Plugin</string>
+    <string name="pref_plugin_description">Settings synced via Moonfin server plugin</string>
+    <string name="pref_plugin_sync_enable">Enable Plugin Sync</string>
+    <string name="pref_plugin_sync_description">Sync settings with the Moonfin server plugin</string>
 
     <!-- Moonfin Settings -->
     <string name="moonfin_settings">Moonfin Settings</string>
@@ -861,6 +868,19 @@
     <string name="jellyseerr_logout_confirm_title">Log Out of Jellyseerr?</string>
     <string name="jellyseerr_logout_confirm_message">This will clear all authentication data and cookies. You will need to log in again to use Jellyseerr.</string>
     
+    <!-- Jellyseerr Moonfin Proxy -->
+    <string name="jellyseerr_moonfin_proxy">Moonfin Proxy</string>
+    <string name="jellyseerr_moonfin_proxy_status">Connection managed by Moonfin server plugin</string>
+    <string name="jellyseerr_moonfin_connected">Connected as %s</string>
+    <string name="jellyseerr_moonfin_not_authenticated">Not authenticated — login required on server</string>
+    <string name="jellyseerr_moonfin_disconnect">Disconnect Moonfin Proxy</string>
+    <string name="jellyseerr_moonfin_disconnect_description">Stop using the server plugin proxy and return to direct connection mode</string>
+    <string name="jellyseerr_moonfin_reconnect">Connect via Moonfin Plugin</string>
+    <string name="jellyseerr_moonfin_reconnect_description">Reconnect Jellyseerr through the Moonfin server plugin proxy</string>
+    <string name="jellyseerr_moonfin_reconnect_success">Connected via Moonfin plugin</string>
+    <string name="jellyseerr_moonfin_reconnect_failed">Failed to connect via Moonfin plugin</string>
+    <string name="jellyseerr_moonfin_not_enabled">Jellyseerr not enabled on server plugin</string>
+
     <!-- Jellyseerr Advanced Settings -->
     <string name="jellyseerr_advanced_settings">Advanced Request Settings</string>
     <string name="jellyseerr_advanced_settings_description">Configure custom quality profiles, root folders, and servers for requests</string>
@@ -920,14 +940,12 @@
     <string name="pref_rating_source_rt_audience">Rotten Tomatoes Audience</string>
     <string name="pref_rating_source_tmdb">The Movie Database</string>
     <string name="pref_rating_source_metacritic">Metacritic</string>
+    <string name="pref_rating_source_metacritic_user">Metacritic User</string>
     <string name="pref_rating_source_trakt">Trakt</string>
     <string name="pref_rating_source_letterboxd">Letterboxd</string>
     <string name="pref_rating_source_rogerebert">Roger Ebert</string>
     <string name="pref_rating_source_myanimelist">MyAnimeList</string>
     <string name="pref_rating_source_anilist">AniList</string>
-    <string name="pref_rating_source_kinopoisk">Kinopoisk</string>
-    <string name="pref_rating_source_allocine">AlloCiné</string>
-    <string name="pref_rating_source_douban">Douban</string>
     
     <!-- Episode Ratings -->
     <string name="pref_episode_ratings">Episode Ratings</string>

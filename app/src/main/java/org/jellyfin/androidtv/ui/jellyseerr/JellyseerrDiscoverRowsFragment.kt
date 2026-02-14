@@ -78,7 +78,6 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 		
 		setupRows()
 		setupObservers()
-		loadContent()
 	}
 	
 	override fun onSaveInstanceState(outState: Bundle) {

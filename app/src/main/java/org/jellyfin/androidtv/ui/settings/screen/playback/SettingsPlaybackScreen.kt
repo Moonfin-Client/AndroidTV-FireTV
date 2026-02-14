@@ -19,6 +19,7 @@ import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.LocalShapes
 import org.jellyfin.androidtv.ui.base.Text
+import org.jellyfin.androidtv.ui.base.form.Checkbox
 import org.jellyfin.androidtv.ui.base.list.ListButton
 import org.jellyfin.androidtv.ui.base.list.ListSection
 import org.jellyfin.androidtv.ui.navigation.LocalRouter
@@ -94,6 +95,16 @@ fun SettingsPlaybackScreen() {
 				leadingContent = { Icon(painterResource(R.drawable.ic_subtitles), contentDescription = null) },
 				headingContent = { Text(stringResource(R.string.pref_customization_subtitles)) },
 				onClick = { router.push(Routes.CUSTOMIZATION_SUBTITLES) }
+			)
+		}
+
+		item {
+			var subtitlesDefaultToNone by rememberPreference(userPreferences, UserPreferences.subtitlesDefaultToNone)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_subtitles_default_to_none)) },
+				captionContent = { Text(stringResource(R.string.pref_subtitles_default_to_none_description)) },
+				trailingContent = { Checkbox(checked = subtitlesDefaultToNone) },
+				onClick = { subtitlesDefaultToNone = !subtitlesDefaultToNone }
 			)
 		}
 

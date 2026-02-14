@@ -44,20 +44,30 @@ Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted 
 Moonfin is the first Android TV client with native Jellyseerr support.
 
 - Browse trending, popular, and recommended movies/shows and filter content by Series/Movie Genres, Studio, Network, and keywords
-- Request content in HD or 4K directly from your Roku  
+- Request content in HD or 4K directly from your TV  
+- **Moonfin Proxy Mode** — route all Jellyseerr requests through the Moonfin server plugin (no direct connection needed)  
 - **NSFW Content Filtering** (optional) using Jellyseerr/TMDB metadata  
 - Smart season selection when requesting TV shows  
 - View all your pending, approved, and available requests  
-- Authenticate using your Jellyfin login (permanent local API key saved)  
+- Authenticate via Moonfin plugin (recommended) or direct Jellyfin/local login  
 - Global search includes Jellyseerr results  
 - Rich backdrop images for a more cinematic discovery experience  
 
+> **Deprecation Notice:** In **v1.6.0**, the legacy authentication methods (Jellyfin auth and local account login from within the app) will be removed. All Jellyseerr connections will be managed exclusively through the Moonfin server plugin.
+
+### Plugin Sync
+- **Bidirectional Settings Sync** — sync preferences between the app and the Moonfin server plugin
+- Three-way merge strategy ensures no settings are lost during sync
+- Settings push automatically on change with debounced uploads
+- Consolidated **Plugin Settings** screen for all synced preferences
+
 ### MDBList Ratings Integration
-- **Multiple Rating Sources** - Display ratings from various platforms:
-  - AlloCine, AniList, Douban, IMDB, Kinopoisk
-  - Letterboxd, Metacritic, MyAnimeList, Roger Ebert
-  - TMDB, Trakt
-- TMDB episode ratings support with configurable settings
+- **Multiple Rating Sources** — display ratings from various platforms:
+  - AniList, IMDB, Letterboxd, Metacritic, Metacritic User
+  - MyAnimeList, Roger Ebert, Rotten Tomatoes, RT Audience, TMDB, Trakt
+- **Server-hosted rating icons** — icons served from the Moonfin plugin (no bundled assets needed)
+- No client-side API keys required — all requests routed through the server plugin
+- TMDB episode ratings with series community rating fallback
 - Episode ratings displayed in library views
 
 ### 🛠️ Customizable Toolbar
@@ -92,6 +102,7 @@ Moonfin is the first Android TV client with native Jellyseerr support.
 - **Theme Music Playback** - Background theme music support for TV shows and movies with volume control
 - **Pre-Playback Track Selection** - Choose your preferred audio track and subtitle before playback starts (configurable in settings)
 - **Next Episode Countdown** - Skip button shows countdown timer when next episode is available
+- **Subtitles Default to None** - Option to default subtitle selection to none instead of auto-selecting
 - **Automatic Screensaver Dimming** - Reduces brightness after 90 seconds of playback inactivity to prevent screen burn-in with dynamic logo/clock movement
 - **Exit Confirmation Dialog** - Optional confirmation prompt when exiting the app (configurable in settings)
 - **OTA Update System** - Automatic check for new Moonfin versions with in-app update notifications
@@ -145,11 +156,16 @@ Download the latest APK from the [Releases page](https://github.com/Moonfin-Clie
 ### Jellyseerr Setup (Optional)
 To enable media discovery and requesting:
 
+**Recommended (via Moonfin Plugin):**
+1. Install the Moonfin plugin on your Jellyfin server and configure Jellyseerr in the plugin settings
+2. In Moonfin, go to **Settings → Plugin** and enable **Plugin Sync**
+3. Jellyseerr will be configured automatically via the server plugin proxy
+
+**Legacy (Direct Connection) — will be removed in v1.6.0:**
 1. Install and configure Jellyseerr on your network ([jellyseerr.dev](https://jellyseerr.dev))
-2. In Moonfin, go to **Settings → Jellyseerr**
+2. In Moonfin, go to **Settings → Plugin → Jellyseerr**
 3. Enter your Jellyseerr server URL (e.g., `http://192.168.1.100:5055`)
 4. Click **Connect with Jellyfin** and enter your Jellyfin password
-5. Test the connection, then start discovering!
 
 Your session is saved securely and will reconnect automatically.
 

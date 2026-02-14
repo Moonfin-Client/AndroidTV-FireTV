@@ -102,4 +102,34 @@ abstract class SharedPreferenceStore(
 		 */
 		val VERSION = intPreference("store_version", -1)
 	}
+
+	/**
+	 * Register a listener for preference changes.
+	 * Callers are responsible for unregistering via [unregisterChangeListener].
+	 */
+	fun registerChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+		sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
+	}
+
+	/**
+	 * Unregister a previously registered change listener.
+	 */
+	fun unregisterChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+		sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener)
+	}
+
+	/**
+	 * Read a raw string value from the underlying SharedPreferences by key.
+	 * Useful for reading enum preferences as their serialized string form.
+	 */
+	fun getRawString(key: String, defaultValue: String): String =
+		sharedPreferences.getString(key, defaultValue) ?: defaultValue
+
+	/**
+	 * Write a raw string value to the underlying SharedPreferences by key.
+	 * Useful for writing enum preferences from their serialized string form.
+	 */
+	fun putRawString(key: String, value: String) {
+		sharedPreferences.edit().putString(key, value).apply()
+	}
 }

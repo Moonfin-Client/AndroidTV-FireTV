@@ -227,6 +227,11 @@ class AuthenticationRepositoryImpl(
 	 * to prevent excessive login attempts that can trigger rate limiting/lockouts on Jellyseerr.
 	 */
 	private fun tryJellyseerrAutoLogin(server: Server, username: String, password: String) {
+		if (jellyseerrRepository.isMoonfinMode.value) {
+			Timber.d("Jellyseerr auto-login skipped: using Moonfin proxy mode")
+			return
+		}
+
 		// Check if Jellyseerr is enabled and configured
 		val enabled = jellyseerrPreferences[JellyseerrPreferences.enabled]
 		val jellyseerrUrl = jellyseerrPreferences[JellyseerrPreferences.serverUrl]

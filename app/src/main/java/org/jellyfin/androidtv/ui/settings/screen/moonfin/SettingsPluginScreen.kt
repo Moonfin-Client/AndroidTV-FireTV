@@ -2,10 +2,13 @@ package org.jellyfin.androidtv.ui.settings.screen.moonfin
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.data.service.pluginsync.PluginSyncService
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.base.Icon
@@ -25,20 +28,43 @@ import org.jellyfin.androidtv.ui.settings.screen.customization.getShuffleContent
 import org.koin.compose.koinInject
 
 @Composable
-fun SettingsMoonfinScreen() {
+fun SettingsPluginScreen() {
 	val router = LocalRouter.current
+	val coroutineScope = rememberCoroutineScope()
 	val userPreferences = koinInject<UserPreferences>()
 	val userSettingPreferences = koinInject<UserSettingPreferences>()
+	val pluginSyncService = koinInject<PluginSyncService>()
 
 	SettingsColumn {
 		item {
 			ListSection(
 				overlineContent = { Text(stringResource(R.string.settings).uppercase()) },
-				headingContent = { Text(stringResource(R.string.moonfin_settings)) },
+				headingContent = { Text(stringResource(R.string.pref_plugin_settings)) },
+				captionContent = { Text(stringResource(R.string.pref_plugin_description)) },
 			)
 		}
 
-		// Toolbar Section
+		item {
+			var pluginSyncEnabled by rememberPreference(userPreferences, UserPreferences.pluginSyncEnabled)
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_moonfin), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_plugin_sync_enable)) },
+				captionContent = { Text(stringResource(R.string.pref_plugin_sync_description)) },
+				trailingContent = { Checkbox(checked = pluginSyncEnabled) },
+				onClick = {
+					pluginSyncEnabled = !pluginSyncEnabled
+					if (pluginSyncEnabled) {
+						coroutineScope.launch {
+							pluginSyncService.pushCurrentSettings()
+							pluginSyncService.configureJellyseerrProxy()
+						}
+					} else {
+						pluginSyncService.unregisterChangeListeners()
+					}
+				}
+			)
+		}
+
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_toolbar_customization)) }) }
 
 		item {
@@ -103,7 +129,6 @@ fun SettingsMoonfinScreen() {
 			)
 		}
 
-		// Home Screen Section
 		item { ListSection(headingContent = { Text(stringResource(R.string.home_section_settings)) }) }
 
 		item {
@@ -146,7 +171,6 @@ fun SettingsMoonfinScreen() {
 			)
 		}
 
-		// Media Bar Section
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_media_bar_title)) }) }
 
 		item {
@@ -215,7 +239,6 @@ fun SettingsMoonfinScreen() {
 			)
 		}
 
-		// Theme Music Section
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_theme_music_title)) }) }
 
 		item {
@@ -251,7 +274,6 @@ fun SettingsMoonfinScreen() {
 			)
 		}
 
-		// Appearance Section
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_appearance)) }) }
 
 		item {
@@ -289,7 +311,6 @@ fun SettingsMoonfinScreen() {
 			)
 		}
 
-		// Ratings Section
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_enable_additional_ratings)) }) }
 
 		item {
@@ -303,18 +324,31 @@ fun SettingsMoonfinScreen() {
 			)
 		}
 
-		// Playback Section
-		item { ListSection(headingContent = { Text(stringResource(R.string.pref_playback)) }) }
+		item { ListSection(headingContent = { Text(stringResource(R.string.pref_episode_ratings)) }) }
 
 		item {
-			var subtitlesDefaultToNone by rememberPreference(userPreferences, UserPreferences.subtitlesDefaultToNone)
+			var enableEpisodeRatings by rememberPreference(userSettingPreferences, UserSettingPreferences.enableEpisodeRatings)
 			ListButton(
-				headingContent = { Text(stringResource(R.string.pref_subtitles_default_to_none)) },
-				captionContent = { Text(stringResource(R.string.pref_subtitles_default_to_none_description)) },
-				trailingContent = { Checkbox(checked = subtitlesDefaultToNone) },
-				onClick = { subtitlesDefaultToNone = !subtitlesDefaultToNone }
+				leadingContent = { Icon(painterResource(R.drawable.ic_star), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_episode_ratings)) },
+				captionContent = { Text(stringResource(R.string.pref_episode_ratings_description)) },
+				trailingContent = { Checkbox(checked = enableEpisodeRatings) },
+				onClick = { enableEpisodeRatings = !enableEpisodeRatings }
 			)
 		}
+
+		item { ListSection(headingContent = { Text(stringResource(R.string.jellyseerr)) }) }
+
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_jellyseerr_jellyfish), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.jellyseerr_settings)) },
+				captionContent = { Text(stringResource(R.string.jellyseerr_settings_description)) },
+				onClick = { router.push(Routes.JELLYSEERR) }
+			)
+		}
+
+		item { ListSection(headingContent = { Text(stringResource(R.string.pref_parental_controls)) }) }
 
 		item {
 			ListButton(
@@ -322,18 +356,6 @@ fun SettingsMoonfinScreen() {
 				headingContent = { Text(stringResource(R.string.pref_parental_controls)) },
 				captionContent = { Text(stringResource(R.string.pref_parental_controls_description)) },
 				onClick = { router.push(Routes.MOONFIN_PARENTAL_CONTROLS) }
-			)
-		}
-
-		// SyncPlay Section
-		item { ListSection(headingContent = { Text(stringResource(R.string.syncplay)) }) }
-
-		item {
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_syncplay), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.pref_syncplay_settings)) },
-				captionContent = { Text(stringResource(R.string.pref_syncplay_description)) },
-				onClick = { router.push(Routes.MOONFIN_SYNCPLAY) }
 			)
 		}
 	}

@@ -142,9 +142,7 @@ fun LeftSidebarNavigation(
 		if (currentUser != null) {
 			// All Jellyseerr settings are now per-user
 			val userJellyseerrPrefs = JellyseerrPreferences.migrateToUserPreferences(context, currentUser!!.id.toString())
-			val enabled = userJellyseerrPrefs[JellyseerrPreferences.enabled]
-			val showInToolbar = userJellyseerrPrefs[JellyseerrPreferences.showInToolbar]
-			jellyseerrEnabled = enabled && showInToolbar
+			jellyseerrEnabled = userJellyseerrPrefs[JellyseerrPreferences.enabled]
 		} else {
 			jellyseerrEnabled = false
 		}

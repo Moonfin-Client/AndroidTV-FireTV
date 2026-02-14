@@ -45,6 +45,12 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var backdropEnabled = booleanPreference("pref_show_backdrop", true)
 
+		/* Plugin Sync */
+		/**
+		 * Enable syncing settings with the Moonfin server plugin
+		 */
+		var pluginSyncEnabled = booleanPreference("pref_plugin_sync_enabled", false)
+
 		/* Toolbar Customization */
 		/**
 		 * Show shuffle button in toolbar

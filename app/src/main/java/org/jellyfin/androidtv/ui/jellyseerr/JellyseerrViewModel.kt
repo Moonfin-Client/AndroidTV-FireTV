@@ -116,8 +116,6 @@ class JellyseerrViewModel(
 	private val _studios = MutableStateFlow(POPULAR_STUDIOS)
 	val studios: StateFlow<List<JellyseerrStudioDto>> = _studios.asStateFlow()
 
-	private var blacklistedTmdbIds = setOf<Int>()
-
 	private var trendingCurrentPage = 3
 	private var trendingMoviesCurrentPage = 3
 	private var trendingTvCurrentPage = 3
@@ -128,29 +126,6 @@ class JellyseerrViewModel(
 	private var isLoadingMoreTrendingTv = false
 	private var isLoadingMoreUpcomingMovies = false
 	private var isLoadingMoreUpcomingTv = false
-
-	private suspend fun fetchBlacklist() {
-		val result = ErrorHandler.catchingWarning("fetch Jellyseerr blacklist") {
-			jellyseerrRepository.getBlacklist()
-		}
-		if (result.isSuccess) {
-			val blacklist = result.getOrNull()?.getOrNull()?.results ?: emptyList()
-			blacklistedTmdbIds = blacklist.map { it.tmdbId }.toSet()
-			Timber.d("Jellyseerr: Loaded ${blacklistedTmdbIds.size} blacklisted items")
-		}
-	}
-
-	private fun List<JellyseerrDiscoverItemDto>.filterBlacklist(): List<JellyseerrDiscoverItemDto> {
-		return filter { item ->
-			// Always block if in blacklist
-			if (blacklistedTmdbIds.contains(item.id)) {
-				val title = item.title ?: item.name ?: "Unknown"
-				Timber.d("Jellyseerr Filter: Blocked '$title' (blacklisted)")
-				return@filter false
-			}
-			true
-		}
-	}
 
 	private fun List<JellyseerrDiscoverItemDto>.filterNsfw(blockNsfw: Boolean): List<JellyseerrDiscoverItemDto> {
 		return if (blockNsfw) {
@@ -207,6 +182,7 @@ class JellyseerrViewModel(
 	val searchResults: StateFlow<List<JellyseerrDiscoverItemDto>> = _searchResults.asStateFlow()
 
 	val isAvailable: StateFlow<Boolean> = jellyseerrRepository.isAvailable
+	val isMoonfinMode: StateFlow<Boolean> = jellyseerrRepository.isMoonfinMode
 
 	init {
 		// Auto-initialize from saved preferences when ViewModel is created
@@ -255,11 +231,12 @@ class JellyseerrViewModel(
 
 	fun loadTrendingContent() {
 		viewModelScope.launch {
+			if (!isAvailable.value) {
+				Timber.d("JellyseerrViewModel: Skipping loadTrendingContent - not available")
+				return@launch
+			}
 			_loadingState.emit(JellyseerrLoadingState.Loading)
 		try {
-			// Fetch blacklist first
-			fetchBlacklist()
-			
 			// Get preferences for fetch limit and NSFW filter
 			val prefs = getPreferences()
 			val itemsPerPage = prefs?.get(JellyseerrPreferences.fetchLimit)?.limit ?: JellyseerrFetchLimit.MEDIUM.limit
@@ -281,9 +258,18 @@ class JellyseerrViewModel(
 				val trendingMoviesResult = jellyseerrRepository.getTrendingMovies(limit = itemsPerPage, offset = offset)
 				val trendingTvResult = jellyseerrRepository.getTrendingTv(limit = itemsPerPage, offset = offset)
 				val upcomingMoviesResult = jellyseerrRepository.getUpcomingMovies(limit = itemsPerPage, offset = offset)
-				val upcomingTvResult = jellyseerrRepository.getUpcomingTv(limit = itemsPerPage, offset = offset)					// Check for 403 permission errors
+				val upcomingTvResult = jellyseerrRepository.getUpcomingTv(limit = itemsPerPage, offset = offset)
+
+					// Check for 403 permission errors
 					if (trendingResult.isFailure && trendingResult.exceptionOrNull()?.message?.contains("403") == true) {
 						hasPermissionError = true
+					}
+
+					// Check if ALL results failed (session likely dead) — skip remaining pages
+					val allFailed = listOf(trendingResult, trendingMoviesResult, trendingTvResult, upcomingMoviesResult, upcomingTvResult).all { it.isFailure }
+					if (allFailed && page == 1) {
+						Timber.w("Jellyseerr: All page 1 requests failed, skipping remaining pages")
+						break
 					}
 					
 					if (trendingResult.isSuccess) {
@@ -304,35 +290,30 @@ class JellyseerrViewModel(
 				}
 
 			if (allTrending.isNotEmpty() || allTrendingMovies.isNotEmpty() || allTrendingTv.isNotEmpty()) {
-				// Filter out already-available content, blacklisted items, NSFW content, and prepare data
+				// Filter out already-available content, blacklisted items (server-side status), NSFW content
 				val trending = allTrending
 					.filterNot { it.isAvailable() }
 					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
 					.filter { (it.mediaType ?: "").lowercase() in listOf("movie", "tv") }
 					.filterNsfw(blockNsfw)
 				val trendingMovies = allTrendingMovies
 					.filterNot { it.isAvailable() }
 					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
 					.filter { (it.mediaType ?: "").lowercase() == "movie" }
 					.filterNsfw(blockNsfw)
 				val trendingTv = allTrendingTv
 					.filterNot { it.isAvailable() }
 					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
 					.filter { (it.mediaType ?: "").lowercase() == "tv" }
 					.filterNsfw(blockNsfw)
 				val upcomingMovies = allUpcomingMovies
 					.filterNot { it.isAvailable() }
 					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
 					.filter { (it.mediaType ?: "").lowercase() == "movie" }
 					.filterNsfw(blockNsfw)
 				val upcomingTv = allUpcomingTv
 					.filterNot { it.isAvailable() }
 					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
 					.filter { (it.mediaType ?: "").lowercase() == "tv" }
 					.filterNsfw(blockNsfw)
 				
@@ -374,8 +355,14 @@ class JellyseerrViewModel(
 			_loadingState.emit(JellyseerrLoadingState.Error(errorMessage))
 		}
 	}
-}	fun loadRequests() {
+}
+
+	fun loadRequests() {
 		viewModelScope.launch {
+			if (!isAvailable.value) {
+				Timber.d("JellyseerrViewModel: Skipping loadRequests - not available")
+				return@launch
+			}
 			loadRequestsSuspend()
 		}
 	}
@@ -493,6 +480,10 @@ class JellyseerrViewModel(
 
 	fun loadGenres() {
 		viewModelScope.launch {
+			if (!isAvailable.value) {
+				Timber.d("JellyseerrViewModel: Skipping loadGenres - not available")
+				return@launch
+			}
 			try {
 				// Fetch movie genres
 				val movieGenresResult = jellyseerrRepository.getGenreSliderMovies()
@@ -532,7 +523,6 @@ class JellyseerrViewModel(
 					val filtered = newItems
 						.filterNot { it.isAvailable() }
 						.filterNot { it.isBlacklisted() }
-						.filterBlacklist()
 						.filter { (it.mediaType ?: "").lowercase() in listOf("movie", "tv") }
 						.filterNsfw(blockNsfw)
 					val currentList = _trending.value.toMutableList()
@@ -565,7 +555,6 @@ class JellyseerrViewModel(
 					val filtered = newItems
 						.filterNot { it.isAvailable() }
 						.filterNot { it.isBlacklisted() }
-						.filterBlacklist()
 						.filter { (it.mediaType ?: "").lowercase() == "movie" }
 						.filterNsfw(blockNsfw)
 					val currentList = _trendingMovies.value.toMutableList()
@@ -598,7 +587,6 @@ class JellyseerrViewModel(
 					val filtered = newItems
 						.filterNot { it.isAvailable() }
 						.filterNot { it.isBlacklisted() }
-						.filterBlacklist()
 						.filter { (it.mediaType ?: "").lowercase() == "tv" }
 						.filterNsfw(blockNsfw)
 					val currentList = _trendingTv.value.toMutableList()
@@ -631,7 +619,6 @@ class JellyseerrViewModel(
 					val filtered = newItems
 						.filterNot { it.isAvailable() }
 						.filterNot { it.isBlacklisted() }
-						.filterBlacklist()
 						.filter { (it.mediaType ?: "").lowercase() == "movie" }
 						.filterNsfw(blockNsfw)
 					val currentList = _upcomingMovies.value.toMutableList()
@@ -664,7 +651,6 @@ class JellyseerrViewModel(
 					val filtered = newItems
 						.filterNot { it.isAvailable() }
 						.filterNot { it.isBlacklisted() }
-						.filterBlacklist()
 						.filter { (it.mediaType ?: "").lowercase() == "tv" }
 						.filterNsfw(blockNsfw)
 					val currentList = _upcomingTv.value.toMutableList()
@@ -828,9 +814,6 @@ class JellyseerrViewModel(
 
 			_loadingState.emit(JellyseerrLoadingState.Loading)
 			try {
-				// Fetch blacklist first to ensure we have the latest blocked items
-				fetchBlacklist()
-				
 				// Get preferences for fetch limit and NSFW filter
 				val prefs = getPreferences()
 				val searchLimit = prefs?.get(JellyseerrPreferences.fetchLimit)?.limit ?: JellyseerrFetchLimit.MEDIUM.limit
@@ -841,11 +824,10 @@ class JellyseerrViewModel(
 				val results = result.getOrNull()?.results ?: emptyList()
 				Timber.d("Jellyseerr Search: Raw results count: ${results.size}")
 				
-				// Filter out already-available content, blacklisted items, and NSFW content from search results
+				// Filter out already-available content, blacklisted items (server-side status), and NSFW content
 				val filteredResults = results
 					.filterNot { it.isAvailable() }
 					.filterNot { it.isBlacklisted() }
-					.filterBlacklist()
 					.filterNsfw(blockNsfw)
 				
 				Timber.d("Jellyseerr Search: Filtered results count: ${filteredResults.size}")

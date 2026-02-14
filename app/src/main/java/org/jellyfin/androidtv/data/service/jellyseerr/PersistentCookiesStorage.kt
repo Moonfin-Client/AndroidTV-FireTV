@@ -3,6 +3,7 @@ package org.jellyfin.androidtv.data.service.jellyseerr
 import android.content.Context
 import io.ktor.client.plugins.cookies.CookiesStorage
 import io.ktor.http.Cookie
+import io.ktor.http.CookieEncoding
 import io.ktor.http.Url
 import io.ktor.util.date.GMTDate
 import kotlinx.coroutines.sync.Mutex
@@ -98,7 +99,12 @@ class PersistentCookiesStorage(context: Context, userId: String? = null) : Cooki
 
 	override suspend fun addCookie(requestUrl: Url, cookie: Cookie): Unit = mutex.withLock {
 		val key = "${cookie.name}_${requestUrl.host}"
-		cookies[key] = cookie
+		// Force RAW encoding to prevent Ktor from double-encoding cookie values.
+		// Jellyseerr (Express.js) sends connect.sid values already URL-encoded (e.g. s%3A...).
+		// Without RAW encoding, Ktor re-encodes on send, turning %3A into %253A,
+		// which Jellyseerr doesn't recognize → 401 Unauthorized on API calls.
+		val rawCookie = cookie.copy(encoding = CookieEncoding.RAW)
+		cookies[key] = rawCookie
 		saveCookies()
 	}
 
@@ -115,7 +121,9 @@ class PersistentCookiesStorage(context: Context, userId: String? = null) : Cooki
 	 */
 	suspend fun clearAll() = mutex.withLock {
 		cookies.clear()
-		preferences.edit().clear().apply()
+		// Use commit() (synchronous) instead of apply() (async) to ensure
+		// cookies are removed from disk before any new storage instance can load them
+		preferences.edit().clear().commit()
 	}
 
 	private fun isExpired(cookie: Cookie): Boolean {
@@ -170,6 +178,7 @@ class PersistentCookiesStorage(context: Context, userId: String? = null) : Cooki
 			Cookie(
 				name = parts[0],
 				value = parts[1],
+				encoding = CookieEncoding.RAW,
 				domain = parts[2].ifEmpty { null },
 				path = parts[3].ifEmpty { null },
 				expires = parts[4].toLongOrNull()?.let { GMTDate(it) },

@@ -144,8 +144,18 @@ class SessionRepositoryImpl(
 				val user = withContext(Dispatchers.IO) {
 					userApiClient.userApi.getCurrentUser().content
 				}
+
+				// Sync settings BEFORE publishing user — HomeRowsFragment observes
+				// currentUser and immediately reads preferences like mediaBarEnabled.
+				// If sync hasn't applied server values yet, the home screen uses stale local values.
+				preferencesRepository.onSessionChanged()
+
 				userRepository.setCurrentUser(user)
 				serverRepository.setCurrentServer(server)
+
+				// Configure Jellyseerr proxy AFTER publishing user — configureWithMoonfin
+				// needs the active user for cookie storage isolation.
+				preferencesRepository.configureJellyseerr()
 			} catch (err: ApiClientException) {
 				Timber.e(err, "Unable to authenticate: bad response when getting user info")
 				destroyCurrentSession()
@@ -159,8 +169,8 @@ class SessionRepositoryImpl(
 		} else {
 			userRepository.setCurrentUser(null)
 			serverRepository.setCurrentServer(null)
+			preferencesRepository.onSessionChanged()
 		}
-		preferencesRepository.onSessionChanged()
 		_currentSession.value = session
 
 		return true

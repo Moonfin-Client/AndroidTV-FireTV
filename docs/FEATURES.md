@@ -34,7 +34,7 @@ Settings unique to Moonfin that are **not available in upstream Jellyfin Android
  *Settings → Customization*
 
 - **Enable Additional Ratings** 
-  - Show ratings from external sources (AlloCiné, AniList ,Douban, IMDB, Kinopoisk, Letterboxd, Metacritic, MyAnimeList, Roger Ebert, TMDB, Trakt)
+  - Show ratings from external sources (AniList, IMDB, Letterboxd, Metacritic, MyAnimeList, Roger Ebert, TMDB, Trakt)
 - **MDBList API Key**  ⚠️
   - Obtain from https://mdblist.com/ → Account Settings → API Key
   - Required for fetching additional metadata and ratings

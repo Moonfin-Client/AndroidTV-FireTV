@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.ui.home.mediabar
 
+import org.jellyfin.sdk.model.api.BaseItemKind
 import java.util.UUID
 
 /**
@@ -31,6 +32,7 @@ data class MediaBarSlideItem(
 	val communityRating: Float?,
 	val tmdbId: String? = null,
 	val imdbId: String? = null,
+	val itemType: BaseItemKind = BaseItemKind.MOVIE,
 )
 
 /**

@@ -15,7 +15,6 @@ import org.jellyfin.androidtv.ui.settings.screen.authentication.SettingsAuthenti
 import org.jellyfin.androidtv.ui.settings.screen.authentication.SettingsAuthenticationServerUserScreen
 import org.jellyfin.androidtv.ui.settings.screen.authentication.SettingsAuthenticationSortByScreen
 import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsCustomizationClockScreen
-import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsCustomizationRatingTypeScreen
 import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsCustomizationScreen
 import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsCustomizationThemeScreen
 import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsCustomizationWatchedIndicatorScreen
@@ -45,9 +44,8 @@ import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMediaBar
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMediaBarItemCountScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMediaBarOpacityScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinNavbarPositionScreen
-import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMdblistApiKeyScreen
-import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinTmdbApiKeyScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinParentalControlsScreen
+import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsPluginScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinSeasonalSurpriseScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinShuffleContentTypeScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinSyncPlayScreen
@@ -87,7 +85,6 @@ object Routes {
 	const val CUSTOMIZATION = "/customization"
 	const val CUSTOMIZATION_THEME = "/customization/theme"
 	const val CUSTOMIZATION_CLOCK = "/customization/clock"
-	const val CUSTOMIZATION_RATING_TYPE = "/customization/rating-type"
 	const val CUSTOMIZATION_WATCHED_INDICATOR = "/customization/watch-indicators"
 	const val CUSTOMIZATION_SCREENSAVER = "/customization/screensaver"
 	const val CUSTOMIZATION_SCREENSAVER_TIMEOUT = "/customization/screensaver/timeout"
@@ -125,6 +122,7 @@ object Routes {
 	const val PLAYBACK_AUDIO_BEHAVIOR = "/playback/audio-behavior"
 	const val JELLYSEERR = "/jellyseerr"
 	const val JELLYSEERR_ROWS = "/jellyseerr/rows"
+	const val PLUGIN = "/plugin"
 	const val MOONFIN_NAVBAR_POSITION = "/moonfin/navbar-position"
 	const val MOONFIN_SHUFFLE_CONTENT_TYPE = "/moonfin/shuffle-content-type"
 	const val MOONFIN_MEDIA_BAR_CONTENT_TYPE = "/moonfin/media-bar-content-type"
@@ -136,8 +134,6 @@ object Routes {
 	const val MOONFIN_HOME_ROWS_IMAGE = "/moonfin/home-rows-image"
 	const val MOONFIN_DETAILS_BLUR = "/moonfin/details-blur"
 	const val MOONFIN_BROWSING_BLUR = "/moonfin/browsing-blur"
-	const val MOONFIN_MDBLIST_API_KEY = "/moonfin/mdblist-api-key"
-	const val MOONFIN_TMDB_API_KEY = "/moonfin/tmdb-api-key"
 	const val MOONFIN_PARENTAL_CONTROLS = "/moonfin/parental-controls"
 	const val MOONFIN_SYNCPLAY = "/moonfin/syncplay"
 	const val MOONFIN_SYNCPLAY_MIN_DELAY = "/moonfin/syncplay/min-delay-speed-to-sync"
@@ -199,9 +195,6 @@ val routes = mapOf<String, RouteComposable>(
 	},
 	Routes.CUSTOMIZATION_WATCHED_INDICATOR to {
 		SettingsCustomizationWatchedIndicatorScreen()
-	},
-	Routes.CUSTOMIZATION_RATING_TYPE to {
-		SettingsCustomizationRatingTypeScreen()
 	},
 	Routes.CUSTOMIZATION_SCREENSAVER to {
 		SettingsScreensaverScreen()
@@ -365,6 +358,9 @@ val routes = mapOf<String, RouteComposable>(
 	Routes.JELLYSEERR_ROWS to {
 		SettingsJellyseerrRowsScreen()
 	},
+	Routes.PLUGIN to {
+		SettingsPluginScreen()
+	},
 	Routes.MOONFIN_NAVBAR_POSITION to {
 		SettingsMoonfinNavbarPositionScreen()
 	},
@@ -397,12 +393,6 @@ val routes = mapOf<String, RouteComposable>(
 	},
 	Routes.MOONFIN_BROWSING_BLUR to {
 		SettingsMoonfinBrowsingBlurScreen()
-	},
-	Routes.MOONFIN_MDBLIST_API_KEY to {
-		SettingsMoonfinMdblistApiKeyScreen()
-	},
-	Routes.MOONFIN_TMDB_API_KEY to {
-		SettingsMoonfinTmdbApiKeyScreen()
 	},
 	Routes.MOONFIN_PARENTAL_CONTROLS to {
 		SettingsMoonfinParentalControlsScreen()

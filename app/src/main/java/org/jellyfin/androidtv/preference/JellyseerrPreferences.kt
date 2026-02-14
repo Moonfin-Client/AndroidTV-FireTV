@@ -40,7 +40,12 @@ class JellyseerrPreferences(context: Context, userId: String? = null) : SharedPr
 		val autoGenerateApiKey = booleanPreference("jellyseerr_auto_generate_api_key", true)
 		val lastVerifiedTime = stringPreference("jellyseerr_last_verified", "")
 		val lastConnectionSuccess = booleanPreference("jellyseerr_last_connection_success", false)
-		
+
+		// Moonfin plugin proxy mode
+		val moonfinMode = booleanPreference("jellyseerr_moonfin_mode", false)
+		val moonfinDisplayName = stringPreference("jellyseerr_moonfin_display_name", "")
+		val moonfinJellyseerrUserId = stringPreference("jellyseerr_moonfin_user_id", "")
+
 		val showInNavigation = booleanPreference("jellyseerr_show_in_navigation", true)
 		val showInToolbar = booleanPreference("jellyseerr_show_in_toolbar", true)
 		val showRequestStatus = booleanPreference("jellyseerr_show_request_status", true)

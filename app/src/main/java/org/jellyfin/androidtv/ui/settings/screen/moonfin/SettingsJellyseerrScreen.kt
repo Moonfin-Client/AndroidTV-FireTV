@@ -10,6 +10,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,7 +23,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.UserRepository
@@ -38,6 +38,7 @@ import org.jellyfin.androidtv.ui.navigation.LocalRouter
 import org.jellyfin.androidtv.ui.settings.Routes
 import org.jellyfin.androidtv.ui.settings.composable.SettingsColumn
 import org.jellyfin.androidtv.ui.settings.compat.rememberPreference
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.sdk.api.client.ApiClient
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
@@ -51,6 +52,7 @@ fun SettingsJellyseerrScreen() {
 	
 	val jellyseerrPreferences = koinInject<JellyseerrPreferences>(named("global"))
 	val jellyseerrRepository = koinInject<JellyseerrRepository>()
+	val userPreferences = koinInject<UserPreferences>()
 	val apiClient = koinInject<ApiClient>()
 	val userRepository = koinInject<UserRepository>()
 	
@@ -73,18 +75,16 @@ fun SettingsJellyseerrScreen() {
 	
 	var apiKey by remember { mutableStateOf(userPrefs?.get(JellyseerrPreferences.apiKey) ?: "") }
 	var authMethod by remember { mutableStateOf(userPrefs?.get(JellyseerrPreferences.authMethod) ?: "") }
+
+	val isMoonfinMode by jellyseerrRepository.isMoonfinMode.collectAsState()
+	val moonfinDisplayName = remember(userPrefs, isMoonfinMode) {
+		userPrefs?.get(JellyseerrPreferences.moonfinDisplayName) ?: ""
+	}
+	var showMoonfinDisconnectDialog by remember { mutableStateOf(false) }
 	
 	LaunchedEffect(userPrefs) {
 		apiKey = userPrefs?.get(JellyseerrPreferences.apiKey) ?: ""
 		authMethod = userPrefs?.get(JellyseerrPreferences.authMethod) ?: ""
-	}
-	
-	LaunchedEffect(Unit) {
-		while (true) {
-			delay(500)
-			apiKey = userPrefs?.get(JellyseerrPreferences.apiKey) ?: ""
-			authMethod = userPrefs?.get(JellyseerrPreferences.authMethod) ?: ""
-		}
 	}
 	
 	val apiKeyStatus = when {
@@ -94,102 +94,170 @@ fun SettingsJellyseerrScreen() {
 	}
 	
 	val serverUrl = remember { userPrefs?.get(JellyseerrPreferences.serverUrl) ?: "" }
+	var isReconnecting by remember { mutableStateOf(false) }
 
 	SettingsColumn {
-		// Server Configuration
-		item {
-			ListSection(
-				overlineContent = { Text(stringResource(R.string.jellyseerr_settings).uppercase()) },
-				headingContent = { Text(stringResource(R.string.jellyseerr_server_settings)) },
-			)
-		}
+		if (isMoonfinMode) {
+			// Moonfin Proxy Status
+			item {
+				ListSection(
+					overlineContent = { Text(stringResource(R.string.jellyseerr_settings).uppercase()) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_moonfin_proxy)) },
+					captionContent = { Text(stringResource(R.string.jellyseerr_moonfin_proxy_status)) },
+				)
+			}
 
-		item {
-			ListButton(
-				headingContent = { Text(stringResource(R.string.jellyseerr_enabled)) },
-				captionContent = { Text(stringResource(R.string.jellyseerr_enabled_description)) },
-				trailingContent = { Checkbox(checked = enabled) },
-				onClick = { enabled = !enabled }
-			)
-		}
-
-		item {
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_settings), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.jellyseerr_server_url)) },
-				captionContent = { Text(if (serverUrl.isNotEmpty()) serverUrl else stringResource(R.string.jellyseerr_server_url_description)) },
-				onClick = { showServerUrlDialog = true }
-			)
-		}
-
-		// Authentication Methods
-		item {
-			ListSection(
-				headingContent = { Text(stringResource(R.string.jellyseerr_auth_method)) },
-			)
-		}
-
-		item {
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_jellyseerr_jellyfish), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.jellyseerr_connect_jellyfin)) },
-				captionContent = { Text(stringResource(R.string.jellyseerr_connect_jellyfin_description)) },
-				onClick = { 
-					if (enabled) {
-						showJellyfinLoginDialog = true
-					} else {
-						Toast.makeText(context, "Please enable Jellyseerr first", Toast.LENGTH_SHORT).show()
-					}
+			item {
+				val statusCaption = if (moonfinDisplayName.isNotEmpty()) {
+					stringResource(R.string.jellyseerr_moonfin_connected, moonfinDisplayName)
+				} else {
+					stringResource(R.string.jellyseerr_moonfin_not_authenticated)
 				}
-			)
-		}
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_moonfin), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_moonfin_proxy)) },
+					captionContent = { Text(statusCaption) },
+					onClick = { }
+				)
+			}
 
-		item {
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_user), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.jellyseerr_login_local)) },
-				captionContent = { Text(stringResource(R.string.jellyseerr_login_local_description)) },
-				onClick = { 
-					if (enabled) {
-						showLocalLoginDialog = true
-					} else {
-						Toast.makeText(context, "Please enable Jellyseerr first", Toast.LENGTH_SHORT).show()
-					}
+			item {
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_logout), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_moonfin_disconnect)) },
+					captionContent = { Text(stringResource(R.string.jellyseerr_moonfin_disconnect_description)) },
+					onClick = { showMoonfinDisconnectDialog = true }
+				)
+			}
+		} else {
+			// Reconnect via Moonfin Plugin option (shown when plugin sync is enabled)
+			if (userPreferences[UserPreferences.pluginSyncEnabled]) {
+				item {
+					ListButton(
+						leadingContent = { Icon(painterResource(R.drawable.ic_moonfin), contentDescription = null) },
+						headingContent = { Text(stringResource(R.string.jellyseerr_moonfin_reconnect)) },
+						captionContent = { Text(stringResource(R.string.jellyseerr_moonfin_reconnect_description)) },
+						onClick = {
+							if (!isReconnecting) {
+								isReconnecting = true
+								scope.launch {
+									val baseUrl = apiClient.baseUrl
+									val token = apiClient.accessToken
+									if (!baseUrl.isNullOrBlank() && !token.isNullOrBlank()) {
+										val result = jellyseerrRepository.configureWithMoonfin(baseUrl, token)
+										result.onSuccess { status ->
+											if (status.authenticated || status.enabled) {
+												Toast.makeText(context, context.getString(R.string.jellyseerr_moonfin_reconnect_success), Toast.LENGTH_SHORT).show()
+											} else {
+												Toast.makeText(context, context.getString(R.string.jellyseerr_moonfin_not_enabled), Toast.LENGTH_SHORT).show()
+											}
+										}.onFailure {
+											Toast.makeText(context, context.getString(R.string.jellyseerr_moonfin_reconnect_failed), Toast.LENGTH_SHORT).show()
+										}
+									}
+									isReconnecting = false
+								}
+							}
+						}
+					)
 				}
-			)
-		}
+			}
 
-		item {
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_lightbulb), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.jellyseerr_login_api_key)) },
-				captionContent = { Text(stringResource(R.string.jellyseerr_login_api_key_description)) },
-				onClick = { 
-					if (enabled) {
-						showApiKeyLoginDialog = true
-					} else {
-						Toast.makeText(context, "Please enable Jellyseerr first", Toast.LENGTH_SHORT).show()
+			// Direct Mode — Server Configuration
+			item {
+				ListSection(
+					overlineContent = { Text(stringResource(R.string.jellyseerr_settings).uppercase()) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_server_settings)) },
+				)
+			}
+
+			item {
+				ListButton(
+					headingContent = { Text(stringResource(R.string.jellyseerr_enabled)) },
+					captionContent = { Text(stringResource(R.string.jellyseerr_enabled_description)) },
+					trailingContent = { Checkbox(checked = enabled) },
+					onClick = { enabled = !enabled }
+				)
+			}
+
+			item {
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_settings), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_server_url)) },
+					captionContent = { Text(if (serverUrl.isNotEmpty()) serverUrl else stringResource(R.string.jellyseerr_server_url_description)) },
+					onClick = { showServerUrlDialog = true }
+				)
+			}
+
+			// Authentication Methods
+			item {
+				ListSection(
+					headingContent = { Text(stringResource(R.string.jellyseerr_auth_method)) },
+				)
+			}
+
+			item {
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_jellyseerr_jellyfish), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_connect_jellyfin)) },
+					captionContent = { Text(stringResource(R.string.jellyseerr_connect_jellyfin_description)) },
+					onClick = { 
+						if (enabled) {
+							showJellyfinLoginDialog = true
+						} else {
+							Toast.makeText(context, "Please enable Jellyseerr first", Toast.LENGTH_SHORT).show()
+						}
 					}
-				}
-			)
-		}
+				)
+			}
 
-		item {
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_lock), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.jellyseerr_api_key_status)) },
-				captionContent = { Text(apiKeyStatus) },
-				onClick = { }
-			)
-		}
+			item {
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_user), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_login_local)) },
+					captionContent = { Text(stringResource(R.string.jellyseerr_login_local_description)) },
+					onClick = { 
+						if (enabled) {
+							showLocalLoginDialog = true
+						} else {
+							Toast.makeText(context, "Please enable Jellyseerr first", Toast.LENGTH_SHORT).show()
+						}
+					}
+				)
+			}
 
-		item {
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_logout), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.jellyseerr_logout)) },
-				captionContent = { Text(stringResource(R.string.jellyseerr_logout_description)) },
-				onClick = { showLogoutConfirmDialog = true }
-			)
+			item {
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_lightbulb), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_login_api_key)) },
+					captionContent = { Text(stringResource(R.string.jellyseerr_login_api_key_description)) },
+					onClick = { 
+						if (enabled) {
+							showApiKeyLoginDialog = true
+						} else {
+							Toast.makeText(context, "Please enable Jellyseerr first", Toast.LENGTH_SHORT).show()
+						}
+					}
+				)
+			}
+
+			item {
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_lock), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_api_key_status)) },
+					captionContent = { Text(apiKeyStatus) },
+					onClick = { }
+				)
+			}
+
+			item {
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_logout), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_logout)) },
+					captionContent = { Text(stringResource(R.string.jellyseerr_logout_description)) },
+					onClick = { showLogoutConfirmDialog = true }
+				)
+			}
 		}
 
 		// Content Preferences
@@ -345,6 +413,33 @@ fun SettingsJellyseerrScreen() {
 			},
 			dismissButton = {
 				TextButton(onClick = { showLogoutConfirmDialog = false }) {
+					Text("Cancel")
+				}
+			}
+		)
+	}
+
+	// Moonfin Disconnect Confirmation Dialog
+	if (showMoonfinDisconnectDialog) {
+		AlertDialog(
+			onDismissRequest = { showMoonfinDisconnectDialog = false },
+			title = { Text(stringResource(R.string.jellyseerr_moonfin_disconnect)) },
+			text = { Text(stringResource(R.string.jellyseerr_moonfin_disconnect_description)) },
+			confirmButton = {
+				TextButton(
+					onClick = {
+						showMoonfinDisconnectDialog = false
+						scope.launch {
+							jellyseerrRepository.logoutMoonfin()
+							Toast.makeText(context, context.getString(R.string.jellyseerr_logout_success), Toast.LENGTH_SHORT).show()
+						}
+					}
+				) {
+					Text("Disconnect")
+				}
+			},
+			dismissButton = {
+				TextButton(onClick = { showMoonfinDisconnectDialog = false }) {
 					Text("Cancel")
 				}
 			}
