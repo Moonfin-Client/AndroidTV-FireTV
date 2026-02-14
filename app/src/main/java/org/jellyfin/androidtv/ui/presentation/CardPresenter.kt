@@ -45,12 +45,14 @@ import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.composable.AsyncImage
 import org.jellyfin.androidtv.ui.composable.item.ItemCard
 import org.jellyfin.androidtv.ui.composable.item.ItemCardBaseItemOverlay
+import org.jellyfin.androidtv.ui.composable.item.ItemCardJellyseerrOverlay
 import org.jellyfin.androidtv.ui.composable.item.ItemPreview
 import org.jellyfin.androidtv.ui.itemhandling.BaseItemDtoBaseRowItem
 import org.jellyfin.androidtv.ui.itemhandling.BaseRowItem
 import org.jellyfin.androidtv.ui.itemhandling.BaseRowType
 import org.jellyfin.androidtv.ui.itemhandling.ChapterItemInfoBaseRowItem
 import org.jellyfin.androidtv.ui.itemhandling.GridButtonBaseRowItem
+import org.jellyfin.androidtv.ui.itemhandling.JellyseerrMediaBaseRowItem
 import org.jellyfin.androidtv.util.ImageHelper
 import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.androidtv.util.apiclient.JellyfinImage
@@ -404,35 +406,39 @@ private fun CardViewHolderContent(
 			},
 			overlay = {
 				val showInfo = !usePreview && item.showCardInfoOverlay
-				item.baseItem?.let { baseItem ->
-					ItemCardBaseItemOverlay(
-						item = baseItem,
-						footer = {
-							if (showInfo && title != null) {
-								val focusModifier = if (focused) Modifier.basicMarquee(
-									iterations = Int.MAX_VALUE,
-									initialDelayMillis = 0,
-								) else Modifier
+				if (item is JellyseerrMediaBaseRowItem) {
+					ItemCardJellyseerrOverlay(item = item.item)
+				} else {
+					item.baseItem?.let { baseItem ->
+						ItemCardBaseItemOverlay(
+							item = baseItem,
+							footer = {
+								if (showInfo && title != null) {
+									val focusModifier = if (focused) Modifier.basicMarquee(
+										iterations = Int.MAX_VALUE,
+										initialDelayMillis = 0,
+									) else Modifier
 
-								Box(
-									modifier = Modifier
-										.fillMaxWidth()
-										.background(Tokens.Color.colorBluegrey900.copy(alpha = 0.6f), JellyfinTheme.shapes.extraSmall),
-								) {
-									Text(
-										text = title,
-										maxLines = 1,
-										overflow = TextOverflow.Ellipsis,
-										textAlign = TextAlign.Center,
-										color = Tokens.Color.colorWhite,
+									Box(
 										modifier = Modifier
-											.then(focusModifier)
-											.padding(Tokens.Space.spaceXs),
-									)
+											.fillMaxWidth()
+											.background(Tokens.Color.colorBluegrey900.copy(alpha = 0.6f), JellyfinTheme.shapes.extraSmall),
+									) {
+										Text(
+											text = title,
+											maxLines = 1,
+											overflow = TextOverflow.Ellipsis,
+											textAlign = TextAlign.Center,
+											color = Tokens.Color.colorWhite,
+											modifier = Modifier
+												.then(focusModifier)
+												.padding(Tokens.Space.spaceXs),
+										)
+									}
 								}
 							}
-						}
-					)
+						)
+					}
 				}
 			},
 			shape = if (displayConfig.isCircular) CircleShape else JellyfinTheme.shapes.medium,

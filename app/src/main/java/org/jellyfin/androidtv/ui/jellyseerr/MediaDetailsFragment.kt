@@ -2,14 +2,12 @@ package org.jellyfin.androidtv.ui.jellyseerr
 
 import android.graphics.Color
 import android.graphics.drawable.Drawable
-import android.graphics.Outline
 import android.os.Bundle
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewOutlineProvider
 import androidx.core.view.isVisible
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -23,7 +21,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import coil3.ImageLoader
 import coil3.asDrawable
-import coil3.load
 import coil3.request.ImageRequest
 import coil3.toBitmap
 import kotlinx.coroutines.launch
@@ -36,8 +33,11 @@ import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrMovieDetailsDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrRequestDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrTvDetailsDto
+import org.jellyfin.androidtv.ui.itemhandling.JellyseerrMediaBaseRowItem
+import org.jellyfin.androidtv.ui.itemhandling.JellyseerrPersonBaseRowItem
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
+import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.TextUnderButton
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.NavbarPosition
@@ -226,11 +226,12 @@ class MediaDetailsFragment : Fragment() {
 	 * or for views that are the first focusable child in their row.
 	 */
 	private fun isAtLeftEdge(view: View): Boolean {
-		// Check if inside a HorizontalScrollView that is scrolled to the start
 		val hsv = findParentOfType<android.widget.HorizontalScrollView>(view)
 		if (hsv != null) {
-			// Only transfer if scrolled to the very start
-			return hsv.scrollX == 0
+			if (hsv.scrollX != 0) return false
+			val rowContainer = hsv.getChildAt(0) as? ViewGroup ?: return true
+			val firstChild = rowContainer.getChildAt(0) ?: return true
+			return view === firstChild || isDescendantOf(view, firstChild)
 		}
 		// For non-scrolling containers (e.g. button row), check if this is the leftmost focusable
 		val parent = view.parent as? ViewGroup ?: return true
@@ -241,6 +242,15 @@ class MediaDetailsFragment : Fragment() {
 			}
 		}
 		return true
+	}
+
+	private fun isDescendantOf(view: View, ancestor: View): Boolean {
+		var current: android.view.ViewParent? = view.parent
+		while (current != null) {
+			if (current === ancestor) return true
+			current = current.parent
+		}
+		return false
 	}
 
 	private inline fun <reified T : View> findParentOfType(view: View): T? {
@@ -1176,7 +1186,7 @@ class MediaDetailsFragment : Fragment() {
 				LinearLayout.LayoutParams.MATCH_PARENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
 			).apply {
-				topMargin = (-24.dp(context) * 0.7).toInt() // Raised by 30% (from 0.4 to 0.7)
+				topMargin = (-24.dp(context) * 0.7).toInt()
 			}
 			setPadding(24.dp(context), 0, 24.dp(context), 24.dp(context))
 			clipChildren = false
@@ -1220,11 +1230,30 @@ class MediaDetailsFragment : Fragment() {
 					LinearLayout.LayoutParams.WRAP_CONTENT,
 					LinearLayout.LayoutParams.WRAP_CONTENT
 				)
+				clipChildren = false
+				clipToPadding = false
 			}
 			
+			val castPresenter = CardPresenter(true, 130)
 			castList.forEach { cast ->
-				val castCard = createCastCard(cast.id, cast.name ?: "Unknown", cast.character ?: "Unknown", cast.profilePath)
-				castRow.addView(castCard)
+				val rowItem = JellyseerrPersonBaseRowItem(cast)
+				val vh = castPresenter.onCreateViewHolder(castRow)
+				castPresenter.onBindViewHolder(vh, rowItem)
+				vh.view.apply {
+					setOnClickListener {
+						navigationRepository.navigate(Destinations.jellyseerrPersonDetails(cast.id))
+					}
+					val lp = layoutParams as? ViewGroup.MarginLayoutParams
+					if (lp != null) {
+						lp.marginEnd = 12.dp(context)
+					} else {
+						layoutParams = LinearLayout.LayoutParams(
+							LinearLayout.LayoutParams.WRAP_CONTENT,
+							LinearLayout.LayoutParams.WRAP_CONTENT
+						).apply { marginEnd = 12.dp(context) }
+					}
+				}
+				castRow.addView(vh.view)
 			}
 			
 			horizontalScrollView.addView(castRow)
@@ -1235,7 +1264,7 @@ class MediaDetailsFragment : Fragment() {
 			val noCast = TextView(requireContext()).apply {
 				text = "Cast information not available"
 				textSize = 14f
-				setTextColor(Color.parseColor("#9CA3AF")) // gray-400
+				setTextColor(Color.parseColor("#9CA3AF"))
 				layoutParams = LinearLayout.LayoutParams(
 					LinearLayout.LayoutParams.MATCH_PARENT,
 					LinearLayout.LayoutParams.WRAP_CONTENT
@@ -1247,97 +1276,6 @@ class MediaDetailsFragment : Fragment() {
 		return container
 	}
 	
-	private fun createCastCard(personId: Int, name: String, character: String, profilePath: String?): View {
-		val cardWidth = 130.dp(requireContext())
-		val imageSize = 100.dp(requireContext())
-		
-		val card = LinearLayout(requireContext()).apply {
-			orientation = LinearLayout.VERTICAL
-			layoutParams = LinearLayout.LayoutParams(cardWidth, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-				rightMargin = 12.dp(context)
-			}
-			gravity = Gravity.CENTER_HORIZONTAL
-			isFocusable = true
-			isFocusableInTouchMode = true
-			setPadding(8.dp(context), 8.dp(context), 8.dp(context), 8.dp(context))
-			
-			setOnFocusChangeListener { view, hasFocus ->
-				if (hasFocus) {
-					view.scaleX = 1.1f
-					view.scaleY = 1.1f
-					view.setBackgroundColor(Color.parseColor("#374151")) // gray-700
-				} else {
-					view.scaleX = 1.0f
-					view.scaleY = 1.0f
-					view.setBackgroundColor(Color.TRANSPARENT)
-				}
-			}
-
-		setOnClickListener {
-			// Navigate to person details
-			navigationRepository.navigate(Destinations.jellyseerrPersonDetails(personId))
-		}
-	}
-
-	val imageContainer = FrameLayout(requireContext()).apply {
-			layoutParams = LinearLayout.LayoutParams(imageSize, imageSize).apply {
-				gravity = Gravity.CENTER_HORIZONTAL
-				bottomMargin = 8.dp(context)
-			}
-		}
-		
-		val profileImage = ImageView(requireContext()).apply {
-			layoutParams = FrameLayout.LayoutParams(imageSize, imageSize)
-			scaleType = ImageView.ScaleType.CENTER_CROP
-			setBackgroundColor(Color.parseColor("#1F2937"))
-			
-			clipToOutline = true
-			outlineProvider = object : ViewOutlineProvider() {
-				override fun getOutline(view: View, outline: Outline) {
-					outline.setOval(0, 0, view.width, view.height)
-				}
-			}
-		}
-		
-		if (!profilePath.isNullOrEmpty()) {
-			val imageUrl = "https://image.tmdb.org/t/p/w185$profilePath"
-			profileImage.load(imageUrl)
-		}
-		
-		imageContainer.addView(profileImage)
-		card.addView(imageContainer)
-		
-		val nameText = TextView(requireContext()).apply {
-			text = name
-			textSize = 14f
-			setTextColor(Color.WHITE)
-			maxLines = 2
-			gravity = Gravity.CENTER
-			layoutParams = LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.MATCH_PARENT,
-				LinearLayout.LayoutParams.WRAP_CONTENT
-			).apply {
-				bottomMargin = 4.dp(context)
-			}
-		}
-		card.addView(nameText)
-		
-		val characterText = TextView(requireContext()).apply {
-			text = character
-			textSize = 12f
-			setTextColor(Color.parseColor("#9CA3AF")) // gray-400
-			maxLines = 2
-			gravity = Gravity.CENTER
-			layoutParams = LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.MATCH_PARENT,
-				LinearLayout.LayoutParams.WRAP_CONTENT
-			)
-		}
-		card.addView(characterText)
-		
-		return card
-	}
-
 	private fun createRecommendationsSection(): View {
 		val container = LinearLayout(requireContext()).apply {
 			orientation = LinearLayout.VERTICAL
@@ -1365,10 +1303,8 @@ class MediaDetailsFragment : Fragment() {
 		}
 		container.addView(recommendationsHeading)
 
-		// Load recommendations content
 		lifecycleScope.launch {
 			try {
-				// Load first 3 pages to get ~60 items (after filtering)
 				val allRecommendations = mutableListOf<JellyseerrDiscoverItemDto>()
 				for (page in 1..3) {
 					val recommendationsResult = when {
@@ -1405,9 +1341,27 @@ class MediaDetailsFragment : Fragment() {
 						clipToPadding = false
 					}
 
+					val posterPresenter = CardPresenter()
 					recommendationsList.forEach { item ->
-						val posterCard = createPosterCard(item)
-						recommendationsRow.addView(posterCard)
+						val rowItem = JellyseerrMediaBaseRowItem(item)
+						val vh = posterPresenter.onCreateViewHolder(recommendationsRow)
+						posterPresenter.onBindViewHolder(vh, rowItem)
+						vh.view.apply {
+							setOnClickListener {
+								val itemJson = Json.encodeToString(JellyseerrDiscoverItemDto.serializer(), item)
+								navigationRepository.navigate(Destinations.jellyseerrMediaDetails(itemJson))
+							}
+							val lp = layoutParams as? ViewGroup.MarginLayoutParams
+							if (lp != null) {
+								lp.marginEnd = 12.dp(context)
+							} else {
+								layoutParams = LinearLayout.LayoutParams(
+									LinearLayout.LayoutParams.WRAP_CONTENT,
+									LinearLayout.LayoutParams.WRAP_CONTENT
+								).apply { marginEnd = 12.dp(context) }
+							}
+						}
+						recommendationsRow.addView(vh.view)
 					}
 
 					scrollView.addView(recommendationsRow)
@@ -1445,7 +1399,6 @@ class MediaDetailsFragment : Fragment() {
 			clipToPadding = false
 		}
 
-		// Dynamic title based on media type
 		val similarTitle = when {
 			tvDetails != null -> "Similar Series"
 			else -> "Similar Titles"
@@ -1465,10 +1418,8 @@ class MediaDetailsFragment : Fragment() {
 		}
 		container.addView(similarHeading)
 
-		// Load similar content
 		lifecycleScope.launch {
 			try {
-				// Load first 3 pages to get ~60 items (after filtering)
 				val allSimilar = mutableListOf<JellyseerrDiscoverItemDto>()
 				for (page in 1..3) {
 					val similarResult = when {
@@ -1505,9 +1456,27 @@ class MediaDetailsFragment : Fragment() {
 						clipToPadding = false
 					}
 
+					val posterPresenter = CardPresenter()
 					similarList.forEach { item ->
-						val posterCard = createPosterCard(item)
-						similarRow.addView(posterCard)
+						val rowItem = JellyseerrMediaBaseRowItem(item)
+						val vh = posterPresenter.onCreateViewHolder(similarRow)
+						posterPresenter.onBindViewHolder(vh, rowItem)
+						vh.view.apply {
+							setOnClickListener {
+								val itemJson = Json.encodeToString(JellyseerrDiscoverItemDto.serializer(), item)
+								navigationRepository.navigate(Destinations.jellyseerrMediaDetails(itemJson))
+							}
+							val lp = layoutParams as? ViewGroup.MarginLayoutParams
+							if (lp != null) {
+								lp.marginEnd = 12.dp(context)
+							} else {
+								layoutParams = LinearLayout.LayoutParams(
+									LinearLayout.LayoutParams.WRAP_CONTENT,
+									LinearLayout.LayoutParams.WRAP_CONTENT
+								).apply { marginEnd = 12.dp(context) }
+							}
+						}
+						similarRow.addView(vh.view)
 					}
 
 					scrollView.addView(similarRow)
@@ -1670,75 +1639,6 @@ class MediaDetailsFragment : Fragment() {
 
 		container.addView(keywordsContainer)
 		return container
-	}
-
-	private fun createPosterCard(item: JellyseerrDiscoverItemDto): View {
-		val cardWidth = 150.dp(requireContext())
-		val imageHeight = 225.dp(requireContext())
-
-		val card = LinearLayout(requireContext()).apply {
-			orientation = LinearLayout.VERTICAL
-			layoutParams = LinearLayout.LayoutParams(cardWidth, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-				marginEnd = 16.dp(context)
-			}
-			setPadding(0, 0, 0, 16.dp(context))
-			isFocusable = true
-			isFocusableInTouchMode = true
-
-			setOnFocusChangeListener { view, hasFocus ->
-				if (hasFocus) {
-					view.scaleX = 1.05f
-					view.scaleY = 1.05f
-				} else {
-					view.scaleX = 1.0f
-					view.scaleY = 1.0f
-				}
-			}
-
-			setOnClickListener {
-				// Navigate to the details of this similar item
-				val itemJson = Json.encodeToString(JellyseerrDiscoverItemDto.serializer(), item)
-				navigationRepository.navigate(Destinations.jellyseerrMediaDetails(itemJson))
-			}
-		}
-
-		val imageContainer = FrameLayout(requireContext()).apply {
-			layoutParams = LinearLayout.LayoutParams(cardWidth, imageHeight).apply {
-				bottomMargin = 8.dp(context)
-			}
-		}
-
-		val posterImage = ImageView(requireContext()).apply {
-			layoutParams = FrameLayout.LayoutParams(
-				FrameLayout.LayoutParams.MATCH_PARENT,
-				FrameLayout.LayoutParams.MATCH_PARENT
-			)
-			scaleType = ImageView.ScaleType.CENTER_CROP
-			setBackgroundColor(Color.parseColor("#1F2937"))
-
-			item.posterPath?.let { path ->
-				val imageUrl = "https://image.tmdb.org/t/p/w500$path"
-				load(imageUrl)
-			}
-		}
-		imageContainer.addView(posterImage)
-		PosterBadges.addToContainer(requireContext(), imageContainer, item)
-		card.addView(imageContainer)
-
-		val titleText = TextView(requireContext()).apply {
-			text = item.title ?: item.name ?: "Unknown"
-			textSize = 14f
-			setTextColor(Color.WHITE)
-			maxLines = 2
-			ellipsize = android.text.TextUtils.TruncateAt.END
-			layoutParams = LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.MATCH_PARENT,
-				LinearLayout.LayoutParams.WRAP_CONTENT
-			)
-		}
-		card.addView(titleText)
-
-		return card
 	}
 
 	private fun formatDate(dateString: String): String? {

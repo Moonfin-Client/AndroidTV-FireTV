@@ -24,8 +24,10 @@ import org.jellyfin.androidtv.constant.JellyseerrRowType
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrMediaInfoDto
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
+import org.jellyfin.androidtv.ui.itemhandling.JellyseerrMediaBaseRowItem
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
+import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.PositionableListRowPresenter
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -195,11 +197,11 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 		hasSetupRows = true
 
 		onItemViewClickedListener = OnItemViewClickedListener { _, item, _, _ ->
-			if (item is JellyseerrDiscoverItemDto) {
-				// Mark that we're navigating to detail screen (for focus restoration on back)
+			val discoverItem = (item as? JellyseerrMediaBaseRowItem)?.item
+			if (discoverItem != null) {
 				isReturningFromDetail = true
 				Timber.d("JellyseerrDiscoverRowsFragment: Item clicked - capturing position: row=$lastFocusedPosition, col=$lastFocusedSubPosition, currentSelectedPosition=${selectedPosition}")
-				onContentSelected(item)
+				onContentSelected(discoverItem)
 			} else if (item is org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrGenreDto) {
 				// Genre card clicked - navigate to browse by genre
 				// Determine media type based on row type
@@ -223,8 +225,9 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 		}
 		
 		onItemViewSelectedListener = OnItemViewSelectedListener { itemViewHolder, item, rowViewHolder, row ->
-			if (item is JellyseerrDiscoverItemDto) {
-				_selectedItemStateFlow.value = item
+			val discoverItem = (item as? JellyseerrMediaBaseRowItem)?.item
+			if (discoverItem != null) {
+				_selectedItemStateFlow.value = discoverItem
 			}
 			
 			Timber.d("JellyseerrDiscoverRowsFragment: onItemViewSelectedListener - selectedPosition=$selectedPosition, isRestoringPosition=$isRestoringPosition, isReturningFromDetail=$isReturningFromDetail")
@@ -239,7 +242,7 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 				Timber.d("JellyseerrDiscoverRowsFragment: Updated lastFocusedPosition to $newPosition")
 				
 				// Store the sub-position within the row (horizontal position)
-				if (row is ListRow && item is JellyseerrDiscoverItemDto) {
+				if (row is ListRow && item is JellyseerrMediaBaseRowItem) {
 					// Get the position of this item within its row
 					val rowAdapter = row.adapter as? ArrayObjectAdapter
 					if (rowAdapter != null) {
@@ -317,15 +320,15 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 			indexToRowType[index] = rowType
 			
 			val (headerTitle, presenter) = when (rowType) {
-				JellyseerrRowType.RECENT_REQUESTS -> getString(R.string.jellyseerr_row_recent_requests) to MediaCardPresenter()
-				JellyseerrRowType.TRENDING -> getString(R.string.jellyseerr_row_trending) to MediaCardPresenter()
-				JellyseerrRowType.POPULAR_MOVIES -> getString(R.string.jellyseerr_row_popular_movies) to MediaCardPresenter()
+				JellyseerrRowType.RECENT_REQUESTS -> getString(R.string.jellyseerr_row_recent_requests) to CardPresenter()
+				JellyseerrRowType.TRENDING -> getString(R.string.jellyseerr_row_trending) to CardPresenter()
+				JellyseerrRowType.POPULAR_MOVIES -> getString(R.string.jellyseerr_row_popular_movies) to CardPresenter()
 				JellyseerrRowType.MOVIE_GENRES -> getString(R.string.jellyseerr_row_movie_genres) to GenreCardPresenter()
-				JellyseerrRowType.UPCOMING_MOVIES -> getString(R.string.jellyseerr_row_upcoming_movies) to MediaCardPresenter()
+				JellyseerrRowType.UPCOMING_MOVIES -> getString(R.string.jellyseerr_row_upcoming_movies) to CardPresenter()
 				JellyseerrRowType.STUDIOS -> getString(R.string.jellyseerr_row_studios) to NetworkStudioCardPresenter()
-				JellyseerrRowType.POPULAR_SERIES -> getString(R.string.jellyseerr_row_popular_series) to MediaCardPresenter()
+				JellyseerrRowType.POPULAR_SERIES -> getString(R.string.jellyseerr_row_popular_series) to CardPresenter()
 				JellyseerrRowType.SERIES_GENRES -> getString(R.string.jellyseerr_row_series_genres) to GenreCardPresenter()
-				JellyseerrRowType.UPCOMING_SERIES -> getString(R.string.jellyseerr_row_upcoming_series) to MediaCardPresenter()
+				JellyseerrRowType.UPCOMING_SERIES -> getString(R.string.jellyseerr_row_upcoming_series) to CardPresenter()
 				JellyseerrRowType.NETWORKS -> getString(R.string.jellyseerr_row_networks) to NetworkStudioCardPresenter()
 			}
 			
@@ -468,15 +471,14 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 				if (rowAdapter is ArrayObjectAdapter) {
 					Timber.d("JellyseerrDiscoverRowsFragment: Setting row $index - showing ${items.size} items")
 					
-					// If view is available, defer update to avoid modifying RecyclerView during layout
-					// Otherwise, set items directly (needed for initial load before view is created)
+					val wrappedItems = items.map { JellyseerrMediaBaseRowItem(it) }
 					val currentView = view
 					if (currentView != null) {
 						currentView.post {
-							rowAdapter.setItems(items, null)
+							rowAdapter.setItems(wrappedItems, null)
 						}
 					} else {
-						rowAdapter.setItems(items, null)
+						rowAdapter.setItems(wrappedItems, null)
 					}
 				}
 			}

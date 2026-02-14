@@ -23,8 +23,10 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.databinding.HorizontalGridBrowseBinding
+import org.jellyfin.androidtv.ui.itemhandling.JellyseerrMediaBaseRowItem
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.navigation.Destinations
+import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.util.Utils
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -267,17 +269,17 @@ class JellyseerrBrowseByFragment : Fragment() {
 			shadowEnabled = false
 		}
 		
-		gridAdapter = ArrayObjectAdapter(MediaCardPresenter(cardWidth = 250, cardHeight = 375))
+		gridAdapter = ArrayObjectAdapter(CardPresenter())
 		
-		gridPresenter.setOnItemViewSelectedListener(OnItemViewSelectedListener { 
+gridPresenter.setOnItemViewSelectedListener(OnItemViewSelectedListener { 
 			itemViewHolder: Presenter.ViewHolder?,
 			item: Any?,
 			rowViewHolder: RowPresenter.ViewHolder?,
 			row: Row? ->
-			if (item is JellyseerrDiscoverItemDto) {
-				onItemSelected(item)
+			val discoverItem = (item as? JellyseerrMediaBaseRowItem)?.item
+			if (discoverItem != null) {
+				onItemSelected(discoverItem)
 				
-				// Load more when near the end
 				val position = gridAdapter.indexOf(item)
 				if (position >= gridAdapter.size() - 10 && !isLoading && currentPage < totalPages) {
 					loadMoreContent()
@@ -290,8 +292,9 @@ class JellyseerrBrowseByFragment : Fragment() {
 			item: Any?,
 			rowViewHolder: RowPresenter.ViewHolder?,
 			row: Row? ->
-			if (item is JellyseerrDiscoverItemDto) {
-				onItemClicked(item)
+			val discoverItem = (item as? JellyseerrMediaBaseRowItem)?.item
+			if (discoverItem != null) {
+				onItemClicked(discoverItem)
 			}
 		})
 		
@@ -348,7 +351,6 @@ class JellyseerrBrowseByFragment : Fragment() {
 		// Clear existing views
 		infoRow.removeAllViews()
 		
-		// Add metadata items similar to MediaCardPresenter
 		val metadataItems = mutableListOf<String>()
 		
 		// Year
@@ -440,7 +442,7 @@ class JellyseerrBrowseByFragment : Fragment() {
 					items = applyFilter(items)
 					
 					gridAdapter.clear()
-					gridAdapter.addAll(0, items)
+					gridAdapter.addAll(0, items.map { JellyseerrMediaBaseRowItem(it) })
 					
 					// Update UI
 					updateCounter(if (items.isNotEmpty()) 1 else 0)
@@ -469,7 +471,7 @@ class JellyseerrBrowseByFragment : Fragment() {
 					// Apply availability filter
 					items = applyFilter(items)
 					
-					gridAdapter.addAll(gridAdapter.size(), items)
+					gridAdapter.addAll(gridAdapter.size(), items.map { JellyseerrMediaBaseRowItem(it) })
 				}
 			} catch (e: Exception) {
 				Timber.e(e, "Failed to load more content for $filterType: $filterName")

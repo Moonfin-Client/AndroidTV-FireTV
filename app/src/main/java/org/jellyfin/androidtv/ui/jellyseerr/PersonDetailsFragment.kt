@@ -30,8 +30,10 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrPersonDetailsDto
+import org.jellyfin.androidtv.ui.itemhandling.JellyseerrMediaBaseRowItem
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
+import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.NavbarPosition
 import org.jellyfin.androidtv.ui.shared.toolbar.LeftSidebarNavigation
@@ -465,15 +467,13 @@ class PersonDetailsFragment : Fragment() {
 		}
 		container.addView(heading)
 
-		// Create a grid layout for movies (3 columns)
 		val itemsPerRow = 5
-		val cardWidth = 150.dp(requireContext())
 		val cardSpacing = 16.dp(requireContext())
 
 		var currentRow: LinearLayout? = null
+		val posterPresenter = CardPresenter()
 		appearances.forEachIndexed { index, item ->
 			if (index % itemsPerRow == 0) {
-				// Create new row
 				currentRow = LinearLayout(requireContext()).apply {
 					orientation = LinearLayout.HORIZONTAL
 					layoutParams = LinearLayout.LayoutParams(
@@ -482,84 +482,34 @@ class PersonDetailsFragment : Fragment() {
 					).apply {
 						bottomMargin = cardSpacing
 					}
+					clipChildren = false
+					clipToPadding = false
 				}
 				container.addView(currentRow)
 			}
 
-			val card = createMovieCard(item)
-			currentRow?.addView(card)
+			val rowItem = JellyseerrMediaBaseRowItem(item)
+			val vh = posterPresenter.onCreateViewHolder(currentRow!!)
+			posterPresenter.onBindViewHolder(vh, rowItem)
+			vh.view.apply {
+				setOnClickListener {
+					val itemJson = Json.encodeToString(JellyseerrDiscoverItemDto.serializer(), item)
+					navigationRepository.navigate(Destinations.jellyseerrMediaDetails(itemJson))
+				}
+				val lp = layoutParams as? ViewGroup.MarginLayoutParams
+				if (lp != null) {
+					lp.marginEnd = 12.dp(context)
+				} else {
+					layoutParams = LinearLayout.LayoutParams(
+						LinearLayout.LayoutParams.WRAP_CONTENT,
+						LinearLayout.LayoutParams.WRAP_CONTENT
+					).apply { marginEnd = 12.dp(context) }
+				}
+			}
+			currentRow?.addView(vh.view)
 		}
 
 		return container
-	}
-
-	private fun createMovieCard(item: JellyseerrDiscoverItemDto): View {
-		val cardWidth = 150.dp(requireContext())
-		val imageHeight = 225.dp(requireContext())
-
-		val card = LinearLayout(requireContext()).apply {
-			orientation = LinearLayout.VERTICAL
-			layoutParams = LinearLayout.LayoutParams(cardWidth, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-				marginEnd = 16.dp(context)
-			}
-			setPadding(0, 0, 0, 16.dp(context))
-			isFocusable = true
-			isFocusableInTouchMode = true
-
-			setOnFocusChangeListener { view, hasFocus ->
-				if (hasFocus) {
-					view.scaleX = 1.05f
-					view.scaleY = 1.05f
-				} else {
-					view.scaleX = 1.0f
-					view.scaleY = 1.0f
-				}
-			}
-
-			setOnClickListener {
-				// Navigate to the media details
-				val itemJson = Json.encodeToString(JellyseerrDiscoverItemDto.serializer(), item)
-				navigationRepository.navigate(Destinations.jellyseerrMediaDetails(itemJson))
-			}
-		}
-
-		val imageContainer = FrameLayout(requireContext()).apply {
-			layoutParams = LinearLayout.LayoutParams(cardWidth, imageHeight).apply {
-				bottomMargin = 8.dp(context)
-			}
-		}
-
-		val posterImage = ImageView(requireContext()).apply {
-			layoutParams = FrameLayout.LayoutParams(
-				FrameLayout.LayoutParams.MATCH_PARENT,
-				FrameLayout.LayoutParams.MATCH_PARENT
-			)
-			scaleType = ImageView.ScaleType.CENTER_CROP
-			setBackgroundColor(Color.parseColor("#1F2937"))
-
-			item.posterPath?.let { path ->
-				val imageUrl = "https://image.tmdb.org/t/p/w500$path"
-				load(imageUrl)
-			}
-		}
-		imageContainer.addView(posterImage)
-		PosterBadges.addToContainer(requireContext(), imageContainer, item)
-		card.addView(imageContainer)
-
-		val titleText = TextView(requireContext()).apply {
-			text = item.title ?: item.name ?: "Unknown"
-			textSize = 14f
-			setTextColor(Color.WHITE)
-			maxLines = 2
-			ellipsize = android.text.TextUtils.TruncateAt.END
-			layoutParams = LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.MATCH_PARENT,
-				LinearLayout.LayoutParams.WRAP_CONTENT
-			)
-		}
-		card.addView(titleText)
-
-		return card
 	}
 
 	private fun formatDate(dateString: String): String? {
