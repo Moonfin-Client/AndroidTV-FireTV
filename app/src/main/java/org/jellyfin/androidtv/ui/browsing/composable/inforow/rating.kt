@@ -42,7 +42,8 @@ import java.text.NumberFormat
 private fun RatingItemWithLogo(
 	icon: RatingIconProvider.RatingIcon,
 	contentDescription: String,
-	rating: String
+	rating: String,
+	showLabel: Boolean = true,
 ) {
 	Row(
 		horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -57,7 +58,9 @@ private fun RatingItemWithLogo(
 		RatingIconImage(icon = icon, contentDescription = contentDescription, modifier = Modifier.size(22.dp))
 		Column {
 			Text(rating, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.W700)
-			Text(contentDescription, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+			if (showLabel) {
+				Text(contentDescription, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+			}
 		}
 	}
 }
@@ -94,6 +97,7 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 	val baseUrl = apiClient.baseUrl
 	val enableAdditionalRatings = userSettingPreferences[UserSettingPreferences.enableAdditionalRatings]
 	val enableEpisodeRatings = userSettingPreferences[UserSettingPreferences.enableEpisodeRatings]
+	val showRatingLabels = userSettingPreferences[UserSettingPreferences.showRatingLabels]
 
 	var apiRatings by remember { mutableStateOf<Map<String, Float>?>(null) }
 	var isLoading by remember { mutableStateOf(false) }
@@ -180,10 +184,10 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 	) {
 		// Show TMDB episode rating
 		if (enableEpisodeRatings && isEpisode && episodeRating != null) {
-			RatingDisplay("tmdb_episode", allRatings["tmdb_episode"]!!, baseUrl)
+			RatingDisplay("tmdb_episode", allRatings["tmdb_episode"]!!, baseUrl, showRatingLabels)
 		}
 
-		allRatings["tomatoes"]?.let { RatingDisplay("tomatoes", it, baseUrl) }
+		allRatings["tomatoes"]?.let { RatingDisplay("tomatoes", it, baseUrl, showRatingLabels) }
 
 		if (enableAdditionalRatings) {
 			apiRatings?.keys?.forEach { source ->
@@ -191,7 +195,7 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 				if (isEpisode && enableEpisodeRatings && source == "tmdb" && episodeRating != null) {
 					return@forEach
 				}
-				allRatings[source]?.let { RatingDisplay(source, it, baseUrl) }
+				allRatings[source]?.let { RatingDisplay(source, it, baseUrl, showRatingLabels) }
 			}
 		}
 	}
@@ -202,7 +206,7 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
  * All rating values are expected in 0–1 normalized scale.
  */
 @Composable
-private fun RatingDisplay(sourceKey: String, rating: Float, baseUrl: String?) {
+private fun RatingDisplay(sourceKey: String, rating: Float, baseUrl: String?, showLabel: Boolean = true) {
 	val scorePercent = (rating * 100f).toInt()
 
 	val icon = RatingIconProvider.getIcon(baseUrl, sourceKey, scorePercent) ?: return
@@ -227,7 +231,7 @@ private fun RatingDisplay(sourceKey: String, rating: Float, baseUrl: String?) {
 		"anilist" -> "AniList"
 		else -> sourceKey
 	}
-	RatingItemWithLogo(icon, label, formattedRating)
+	RatingItemWithLogo(icon, label, formattedRating, showLabel)
 }
 
 /**

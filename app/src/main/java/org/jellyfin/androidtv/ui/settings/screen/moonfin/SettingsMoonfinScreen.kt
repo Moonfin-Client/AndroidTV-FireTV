@@ -303,6 +303,16 @@ fun SettingsMoonfinScreen() {
 			)
 		}
 
+		item {
+			var showRatingLabels by rememberPreference(userSettingPreferences, UserSettingPreferences.showRatingLabels)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_show_rating_labels)) },
+				captionContent = { Text(stringResource(R.string.pref_show_rating_labels_description)) },
+				trailingContent = { Checkbox(checked = showRatingLabels) },
+				onClick = { showRatingLabels = !showRatingLabels }
+			)
+		}
+
 		// Playback Section
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_playback)) }) }
 

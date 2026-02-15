@@ -947,6 +947,9 @@
     <string name="pref_rating_source_myanimelist">MyAnimeList</string>
     <string name="pref_rating_source_anilist">AniList</string>
     
+    <string name="pref_show_rating_labels">Show Rating Labels</string>
+    <string name="pref_show_rating_labels_description">Display source name below each rating value</string>
+
     <!-- Episode Ratings -->
     <string name="pref_episode_ratings">Episode Ratings</string>
     <string name="pref_episode_ratings_description">Show TMDB ratings for individual TV episodes</string>
