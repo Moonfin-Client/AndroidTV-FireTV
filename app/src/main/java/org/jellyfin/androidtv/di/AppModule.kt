@@ -201,6 +201,7 @@ val appModule = module {
 	viewModel { SettingsViewModel() }
 	viewModel { SyncPlayViewModel() }
 	viewModel { org.jellyfin.androidtv.ui.jellyseerr.JellyseerrViewModel(get()) }
+	viewModel { org.jellyfin.androidtv.ui.itemdetail.v2.ItemDetailsViewModel(get(), get(), get(), get()) }
 	single { MediaBarSlideshowViewModel(get(), get(), get(), get(), androidContext(), get(), get(), get(), get()) }
 
 	// SyncPlay

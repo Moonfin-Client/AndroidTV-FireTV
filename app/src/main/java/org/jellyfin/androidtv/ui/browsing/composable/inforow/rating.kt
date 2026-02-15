@@ -1,10 +1,15 @@
 package org.jellyfin.androidtv.ui.browsing.composable.inforow
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -14,11 +19,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.repository.MdbListRepository
@@ -40,12 +45,20 @@ private fun RatingItemWithLogo(
 	rating: String
 ) {
 	Row(
-		horizontalArrangement = Arrangement.spacedBy(3.dp),
+		horizontalArrangement = Arrangement.spacedBy(6.dp),
 		verticalAlignment = Alignment.CenterVertically,
-		modifier = Modifier.fillMaxHeight(),
+		modifier = Modifier
+			.background(
+				Color.White.copy(alpha = 0.1f),
+				RoundedCornerShape(6.dp),
+			)
+			.padding(horizontal = 10.dp, vertical = 6.dp),
 	) {
-		RatingIconImage(icon = icon, contentDescription = contentDescription, modifier = Modifier.size(18.dp))
-		Text(rating, color = Color.White)
+		RatingIconImage(icon = icon, contentDescription = contentDescription, modifier = Modifier.size(22.dp))
+		Column {
+			Text(rating, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.W700)
+			Text(contentDescription, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+		}
 	}
 }
 
@@ -66,22 +79,6 @@ private fun RatingIconImage(
 			contentDescription = contentDescription,
 			modifier = modifier,
 		)
-	}
-}
-
-/**
- * A community rating item in the [BaseItemInfoRow].
- *
- * @param communityRating Between 0f and 1f.
- */
-@Composable
-fun InfoRowCommunityRating(communityRating: Float) {
-	InfoRowItem(
-		icon = ImageVector.vectorResource(R.drawable.ic_star),
-		iconTint = Color(0xFFEECE55),
-		contentDescription = stringResource(R.string.lbl_community_rating),
-	) {
-		Text(String.format("%.1f", communityRating * 10f), color = Color.White)
 	}
 }
 
@@ -145,9 +142,6 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 
 	val allRatings = remember(apiRatings, item.criticRating, item.communityRating, episodeRating, seriesCommunityRating) {
 		buildMap {
-			val starsRating = item.communityRating ?: seriesCommunityRating
-			starsRating?.let { put("stars", it / 10f) }
-
 			episodeRating?.let { put("tmdb_episode", it / 10f) }
 
 			// Jellyfin-provided critic rating (typically RT from OMDb)
@@ -179,16 +173,16 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 		return
 	}
 
-	Row(
+	@OptIn(ExperimentalLayoutApi::class)
+	FlowRow(
 		horizontalArrangement = Arrangement.spacedBy(8.dp),
-		verticalAlignment = Alignment.CenterVertically,
+		verticalArrangement = Arrangement.spacedBy(8.dp),
 	) {
 		// Show TMDB episode rating
 		if (enableEpisodeRatings && isEpisode && episodeRating != null) {
 			RatingDisplay("tmdb_episode", allRatings["tmdb_episode"]!!, baseUrl)
 		}
 
-		allRatings["stars"]?.let { RatingDisplay("stars", it, baseUrl) }
 		allRatings["tomatoes"]?.let { RatingDisplay("tomatoes", it, baseUrl) }
 
 		if (enableAdditionalRatings) {
@@ -211,41 +205,29 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 private fun RatingDisplay(sourceKey: String, rating: Float, baseUrl: String?) {
 	val scorePercent = (rating * 100f).toInt()
 
-	when (sourceKey) {
-		"stars" -> InfoRowCommunityRating(rating)
-		else -> {
-			val icon = RatingIconProvider.getIcon(baseUrl, sourceKey, scorePercent) ?: return
-			val formattedRating = when (sourceKey) {
-				"tomatoes" -> NumberFormat.getPercentInstance().format(rating)
-				"popcorn" -> NumberFormat.getPercentInstance().format(rating)
-				"imdb" -> String.format("%.1f", rating * 10f)
-				"tmdb", "tmdb_episode" -> "${(rating * 100f).toInt()}%"
-				"metacritic" -> "${(rating * 100f).toInt()}%"
-				"metacriticuser" -> "${(rating * 100f).toInt()}%"
-				"trakt" -> "${(rating * 100f).toInt()}%"
-				"letterboxd" -> String.format("%.1f", rating * 5f)
-				"rogerebert" -> String.format("%.1f", rating * 4f)
-				"myanimelist" -> String.format("%.1f", rating * 10f)
-				"anilist" -> "${(rating * 100f).toInt()}%"
-				else -> String.format("%.1f", rating * 10f)
-			}
-			val label = when (sourceKey) {
-				"tomatoes" -> "Rotten Tomatoes"
-				"popcorn" -> "RT Audience"
-				"imdb" -> "IMDB"
-				"tmdb", "tmdb_episode" -> "TMDB"
-				"metacritic" -> "Metacritic"
-				"metacriticuser" -> "Metacritic User"
-				"trakt" -> "Trakt"
-				"letterboxd" -> "Letterboxd"
-				"rogerebert" -> "Roger Ebert"
-				"myanimelist" -> "MyAnimeList"
-				"anilist" -> "AniList"
-				else -> sourceKey
-			}
-			RatingItemWithLogo(icon, label, formattedRating)
-		}
+	val icon = RatingIconProvider.getIcon(baseUrl, sourceKey, scorePercent) ?: return
+	val formattedRating = when (sourceKey) {
+		"tomatoes", "popcorn" -> NumberFormat.getPercentInstance().format(rating)
+		"tmdb", "tmdb_episode", "metacritic", "metacriticuser", "trakt", "anilist" -> "${(rating * 100f).toInt()}%"
+		"letterboxd" -> String.format("%.1f", rating * 5f)
+		"rogerebert" -> String.format("%.1f", rating * 4f)
+		else -> String.format("%.1f", rating * 10f)
 	}
+	val label = when (sourceKey) {
+		"tomatoes" -> "Rotten Tomatoes"
+		"popcorn" -> "RT Audience"
+		"imdb" -> "IMDB"
+		"tmdb", "tmdb_episode" -> "TMDB"
+		"metacritic" -> "Metacritic"
+		"metacriticuser" -> "Metacritic User"
+		"trakt" -> "Trakt"
+		"letterboxd" -> "Letterboxd"
+		"rogerebert" -> "Roger Ebert"
+		"myanimelist" -> "MyAnimeList"
+		"anilist" -> "AniList"
+		else -> sourceKey
+	}
+	RatingItemWithLogo(icon, label, formattedRating)
 }
 
 /**

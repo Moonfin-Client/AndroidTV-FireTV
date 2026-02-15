@@ -114,12 +114,9 @@ public class ItemLauncher {
                         return;
                     case SERIES:
                     case MUSIC_ARTIST:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(baseItem.getId(), serverId));
-                        return;
-
                     case MUSIC_ALBUM:
                     case PLAYLIST:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemList(baseItem.getId(), serverId));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(baseItem.getId(), serverId));
                         return;
 
                     case AUDIO:

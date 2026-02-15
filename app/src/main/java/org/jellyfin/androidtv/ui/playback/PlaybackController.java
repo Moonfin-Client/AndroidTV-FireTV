@@ -725,22 +725,21 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             internalOptions.setAudioStreamIndex(mCurrentOptions.getAudioStreamIndex());
         }
         
-        // Apply pre-selected audio track (takes priority over saved language preference)
         if (preSelectedAudio != null && preSelectedAudio >= 0) {
             Timber.i("Applying pre-selected audio track: %d", preSelectedAudio);
             internalOptions.setAudioStreamIndex(preSelectedAudio);
         } else if (forcedAudioLanguage != null) {
-            // fallback to language preference
             MediaSourceInfo currentMediaSource = getCurrentMediaSource();
-            for (MediaStream stream : currentMediaSource.getMediaStreams()) {
-                if (stream.getType() == MediaStreamType.AUDIO && forcedAudioLanguage.equals(stream.getLanguage())) {
-                    internalOptions.setAudioStreamIndex(stream.getIndex());
-                    break;
+            if (currentMediaSource != null && currentMediaSource.getMediaStreams() != null) {
+                for (MediaStream stream : currentMediaSource.getMediaStreams()) {
+                    if (stream.getType() == MediaStreamType.AUDIO && forcedAudioLanguage.equals(stream.getLanguage())) {
+                        internalOptions.setAudioStreamIndex(stream.getIndex());
+                        break;
+                    }
                 }
             }
         }
         
-        // Apply pre-selected subtitle track
         if (preSelectedSubtitle != null) {
             Timber.i("Applying pre-selected subtitle track: %d", preSelectedSubtitle);
             internalOptions.setSubtitleStreamIndex(preSelectedSubtitle);
@@ -748,7 +747,6 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             internalOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
         }
         
-        // Clear pre-selections after applying them (one-time use)
         if (preSelectedAudio != null || preSelectedSubtitle != null) {
             Timber.i("Clearing track pre-selections for next playback");
             trackSelector.getValue().clearSelections();
@@ -841,7 +839,8 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             return;
         }
 
-        mCurrentOptions.setAudioStreamIndex(null); // reset audio stream index to allow auto selection on new item
+        Integer preSelectedAudioIndex = mCurrentOptions.getAudioStreamIndex();
+        mCurrentOptions.setAudioStreamIndex(null);
 
         mStartPosition = position;
         mCurrentStreamInfo = response;
@@ -860,8 +859,12 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         }
 
         // get subtitle info
+        Integer preSelectedSubtitleIndex = mCurrentOptions.getSubtitleStreamIndex();
         boolean subtitlesDefaultToNone = userPreferences.getValue().get(UserPreferences.Companion.getSubtitlesDefaultToNone());
-        if (subtitlesDefaultToNone) {
+        if (preSelectedSubtitleIndex != null) {
+            mCurrentOptions.setSubtitleStreamIndex(preSelectedSubtitleIndex);
+            Timber.i("Using pre-selected subtitle index: %s", preSelectedSubtitleIndex);
+        } else if (subtitlesDefaultToNone) {
             mCurrentOptions.setSubtitleStreamIndex(-1);
             Timber.i("default sub index set to -1 (None) - server default was %s", response.getMediaSource().getDefaultSubtitleStreamIndex());
         } else {
@@ -869,6 +872,10 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             Timber.i("default sub index set to %s remote default %s", mCurrentOptions.getSubtitleStreamIndex(), response.getMediaSource().getDefaultSubtitleStreamIndex());
         }
         setDefaultAudioIndex(response);
+        if (preSelectedAudioIndex != null) {
+            mCurrentOptions.setAudioStreamIndex(preSelectedAudioIndex);
+            Timber.i("Restoring pre-selected audio index: %s (default was %s)", preSelectedAudioIndex, mDefaultAudioIndex);
+        }
         Timber.i("default audio index set to %s remote default %s", mDefaultAudioIndex, response.getMediaSource().getDefaultAudioStreamIndex());
 
         Long mbPos = position * 10000;
@@ -943,7 +950,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         // Otherwise, query the players
         if (mCurrentOptions.getAudioStreamIndex() != null) {
             currIndex = mCurrentOptions.getAudioStreamIndex();
-        } else if (isTranscoding() && getCurrentMediaSource().getDefaultAudioStreamIndex() != null) {
+        } else if (isTranscoding() && getCurrentMediaSource() != null && getCurrentMediaSource().getDefaultAudioStreamIndex() != null) {
             currIndex = getCurrentMediaSource().getDefaultAudioStreamIndex();
         } else if (hasInitializedVideoManager() && !isTranscoding()) {
             currIndex = mVideoManager.getExoPlayerTrack(MediaStreamType.AUDIO, getCurrentlyPlayingItem().getMediaStreams());
@@ -1549,9 +1556,11 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             // otherwise, use the server default
             if (mCurrentOptions.getAudioStreamIndex() != null) {
                 eligibleAudioTrack = mCurrentOptions.getAudioStreamIndex();
-            } else if (getCurrentMediaSource().getDefaultAudioStreamIndex() != null) {
+            } else if (getCurrentMediaSource() != null && getCurrentMediaSource().getDefaultAudioStreamIndex() != null) {
                 eligibleAudioTrack = getCurrentMediaSource().getDefaultAudioStreamIndex();
             }
+            // Clear pre-set index so switchAudioStream queries ExoPlayer's actual track
+            mCurrentOptions.setAudioStreamIndex(null);
             switchAudioStream(eligibleAudioTrack);
         }
 

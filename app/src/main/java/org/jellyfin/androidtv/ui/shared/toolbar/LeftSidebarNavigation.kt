@@ -357,7 +357,25 @@ private fun CollapsibleSidebarContent(
 						}
 					}
 				} else {
-					Modifier
+					// Generic handler for other fragments - allow DPAD_RIGHT to exit sidebar
+					Modifier.onKeyEvent { keyEvent ->
+						if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+							keyEvent.key == Key.DirectionRight) {
+							// Find the currently focused view and search for the next focusable to the right
+							val focused = rootView.findFocus()
+							val focusTarget = focused?.focusSearch(android.view.View.FOCUS_RIGHT)
+							if (focusTarget != null && focusTarget != focused) {
+								focusTarget.requestFocus()
+								true
+							} else {
+								// Fallback: collapse sidebar by clearing focus
+								onExpandedChange(false)
+								false
+							}
+						} else {
+							false
+						}
+					}
 				}
 			)
 			.onFocusChanged { focusState ->

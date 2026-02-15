@@ -18,6 +18,7 @@ import org.jellyfin.androidtv.ui.browsing.genre.GenresGridFragment
 import org.jellyfin.androidtv.ui.home.HomeFragment
 import org.jellyfin.androidtv.ui.itemdetail.FullDetailsFragment
 import org.jellyfin.androidtv.ui.itemdetail.ItemListFragment
+import org.jellyfin.androidtv.ui.itemdetail.v2.ItemDetailsFragment
 import org.jellyfin.androidtv.ui.itemdetail.MusicFavoritesListFragment
 import org.jellyfin.androidtv.ui.jellyseerr.BrowseFilterType
 import org.jellyfin.androidtv.ui.jellyseerr.DiscoverFragment
@@ -137,7 +138,13 @@ object Destinations {
 
 	// Item details
 	@JvmOverloads
-	fun itemDetails(item: UUID, serverId: UUID? = null) = fragmentDestination<FullDetailsFragment>(
+	fun itemDetails(item: UUID, serverId: UUID? = null) = fragmentDestination<ItemDetailsFragment>(
+		"ItemId" to item.toString(),
+		"ServerId" to serverId?.toString(),
+	)
+
+	@JvmOverloads
+	fun itemDetailsLegacy(item: UUID, serverId: UUID? = null) = fragmentDestination<FullDetailsFragment>(
 		"ItemId" to item.toString(),
 		"ServerId" to serverId?.toString(),
 	)
