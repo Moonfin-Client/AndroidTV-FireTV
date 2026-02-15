@@ -663,7 +663,6 @@ class JellyseerrRepositoryImpl(
 				// sessions on other devices.
 				Timber.d("Jellyseerr: Moonfin session authenticated in configureWithMoonfin")
 				userPrefs?.apply {
-					set(JellyseerrPreferences.moonfinDisplayName, status.displayName ?: "")
 					set(JellyseerrPreferences.moonfinJellyseerrUserId, status.jellyseerrUserId?.toString() ?: "")
 				}
 				_isAvailable.emit(true)

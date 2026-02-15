@@ -44,6 +44,7 @@ class JellyseerrPreferences(context: Context, userId: String? = null) : SharedPr
 		// Moonfin plugin proxy mode
 		val moonfinMode = booleanPreference("jellyseerr_moonfin_mode", false)
 		val moonfinDisplayName = stringPreference("jellyseerr_moonfin_display_name", "")
+		val moonfinVariant = stringPreference("jellyseerr_moonfin_variant", "jellyseerr")
 		val moonfinJellyseerrUserId = stringPreference("jellyseerr_moonfin_user_id", "")
 
 		val showInNavigation = booleanPreference("jellyseerr_show_in_navigation", true)

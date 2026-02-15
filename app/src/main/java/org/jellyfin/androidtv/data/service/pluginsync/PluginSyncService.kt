@@ -308,8 +308,16 @@ class PluginSyncService(
 
 			val enabled = (camelCased["enabled"] as? JsonPrimitive)?.booleanOrNull ?: false
 			val url = (camelCased["url"] as? JsonPrimitive)?.content
+			val variant = (camelCased["variant"] as? JsonPrimitive)?.content ?: "jellyseerr"
+			val displayName = (camelCased["displayName"] as? JsonPrimitive)?.content
 
 			val jellyseerrPrefs = getJellyseerrPrefs() ?: return
+
+			jellyseerrPrefs.putRawString(JellyseerrPreferences.moonfinVariant.key, variant)
+			if (!displayName.isNullOrBlank()) {
+				jellyseerrPrefs.putRawString(JellyseerrPreferences.moonfinDisplayName.key, displayName)
+			}
+			Timber.i("$TAG: Jellyseerr variant: $variant, displayName: $displayName")
 
 			if (enabled && !url.isNullOrBlank()) {
 				jellyseerrPrefs.putRawString(JellyseerrPreferences.serverUrl.key, url)

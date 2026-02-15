@@ -122,6 +122,8 @@ fun LeftSidebarNavigation(
 	var enableMultiServer by remember { mutableStateOf(false) }
 	var syncPlayEnabled by remember { mutableStateOf(false) }
 	var jellyseerrEnabled by remember { mutableStateOf(false) }
+	var jellyseerrVariant by remember { mutableStateOf("jellyseerr") }
+	var jellyseerrDisplayName by remember { mutableStateOf("Jellyseerr") }
 	var enableFolderView by remember { mutableStateOf(false) }
 	var clockBehavior by remember { mutableStateOf(ClockBehavior.ALWAYS) }
 	
@@ -140,9 +142,11 @@ fun LeftSidebarNavigation(
 	// Check Jellyseerr settings
 	LaunchedEffect(currentUser) {
 		if (currentUser != null) {
-			// All Jellyseerr settings are now per-user
 			val userJellyseerrPrefs = JellyseerrPreferences.migrateToUserPreferences(context, currentUser!!.id.toString())
 			jellyseerrEnabled = userJellyseerrPrefs[JellyseerrPreferences.enabled]
+			jellyseerrVariant = userJellyseerrPrefs[JellyseerrPreferences.moonfinVariant]
+			val dn = userJellyseerrPrefs[JellyseerrPreferences.moonfinDisplayName]
+			jellyseerrDisplayName = if (dn.isNotBlank()) dn else if (jellyseerrVariant == "seerr") "Seerr" else "Jellyseerr"
 		} else {
 			jellyseerrEnabled = false
 		}
@@ -192,6 +196,8 @@ fun LeftSidebarNavigation(
 		showFavoritesButton = showFavoritesButton,
 		showLibrariesInToolbar = showLibrariesInToolbar,
 		jellyseerrEnabled = jellyseerrEnabled,
+		jellyseerrVariant = jellyseerrVariant,
+		jellyseerrDisplayName = jellyseerrDisplayName,
 		syncPlayEnabled = syncPlayEnabled,
 		enableFolderView = enableFolderView,
 		clockBehavior = clockBehavior,
@@ -218,6 +224,8 @@ private fun CollapsibleSidebarContent(
 	showFavoritesButton: Boolean = true,
 	showLibrariesInToolbar: Boolean = true,
 	jellyseerrEnabled: Boolean = false,
+	jellyseerrVariant: String = "jellyseerr",
+	jellyseerrDisplayName: String = "Jellyseerr",
 	syncPlayEnabled: Boolean = false,
 	enableFolderView: Boolean = false,
 	clockBehavior: ClockBehavior = ClockBehavior.ALWAYS,
@@ -242,7 +250,9 @@ private fun CollapsibleSidebarContent(
 	val shuffleIcon = ImageVector.vectorResource(R.drawable.ic_shuffle)
 	val genresIcon = ImageVector.vectorResource(R.drawable.ic_masks)
 	val favoritesIcon = ImageVector.vectorResource(R.drawable.ic_heart)
-	val jellyseerrIcon = ImageVector.vectorResource(R.drawable.ic_jellyseerr_jellyfish)
+	val jellyseerrIcon = ImageVector.vectorResource(
+		if (jellyseerrVariant == "seerr") R.drawable.ic_seer else R.drawable.ic_jellyseerr_jellyfish
+	)
 	val syncplayIcon = ImageVector.vectorResource(R.drawable.ic_syncplay)
 	val librariesIcon = ImageVector.vectorResource(R.drawable.ic_clapperboard)
 	val settingsIcon = ImageVector.vectorResource(R.drawable.ic_settings)
@@ -484,7 +494,7 @@ private fun CollapsibleSidebarContent(
 				if (jellyseerrEnabled) {
 					SidebarIconItem(
 						icon = jellyseerrIcon,
-						label = "Jellyseerr",
+						label = jellyseerrDisplayName,
 						showLabel = isExpanded,
 						isExpanded = isExpanded,
 						onClick = {

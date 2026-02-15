@@ -130,11 +130,15 @@ fun MainToolbar(
 	}
 
 	var jellyseerrEnabled by remember { mutableStateOf(false) }
+	var jellyseerrVariant by remember { mutableStateOf("jellyseerr") }
+	var jellyseerrDisplayName by remember { mutableStateOf("Jellyseerr") }
 	LaunchedEffect(currentUser) {
 		if (currentUser != null) {
-			// All Jellyseerr settings are now per-user
 			val userJellyseerrPrefs = JellyseerrPreferences.migrateToUserPreferences(context, currentUser!!.id.toString())
 			jellyseerrEnabled = userJellyseerrPrefs[JellyseerrPreferences.enabled]
+			jellyseerrVariant = userJellyseerrPrefs[JellyseerrPreferences.moonfinVariant]
+			val dn = userJellyseerrPrefs[JellyseerrPreferences.moonfinDisplayName]
+			jellyseerrDisplayName = if (dn.isNotBlank()) dn else if (jellyseerrVariant == "seerr") "Seerr" else "Jellyseerr"
 		} else {
 			jellyseerrEnabled = false
 		}
@@ -196,6 +200,8 @@ fun MainToolbar(
 		enableMultiServer = enableMultiServer,
 		currentSession = currentSession,
 		jellyseerrEnabled = jellyseerrEnabled,
+		jellyseerrVariant = jellyseerrVariant,
+		jellyseerrDisplayName = jellyseerrDisplayName,
 		showShuffleButton = showShuffleButton,
 		showGenresButton = showGenresButton,
 		showFavoritesButton = showFavoritesButton,
@@ -217,6 +223,8 @@ private fun MainToolbar(
 	enableMultiServer: Boolean = false,
 	currentSession: Session? = null,
 	jellyseerrEnabled: Boolean = false,
+	jellyseerrVariant: String = "jellyseerr",
+	jellyseerrDisplayName: String = "Jellyseerr",
 	showShuffleButton: Boolean = true,
 	showGenresButton: Boolean = true,
 	showFavoritesButton: Boolean = true,
@@ -414,8 +422,10 @@ private fun MainToolbar(
 
 				if (jellyseerrEnabled) {
 					ExpandableIconButton(
-						icon = ImageVector.vectorResource(R.drawable.ic_jellyseerr_jellyfish),
-						label = "Jellyseerr",
+						icon = ImageVector.vectorResource(
+							if (jellyseerrVariant == "seerr") R.drawable.ic_seer else R.drawable.ic_jellyseerr_jellyfish
+						),
+						label = jellyseerrDisplayName,
 						onClick = {
 							navigationRepository.navigate(Destinations.jellyseerrDiscover)
 						},
