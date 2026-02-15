@@ -37,27 +37,27 @@ object RatingIconProvider {
 
 	private fun getServerIconFile(source: String, scorePercent: Int?): String? = when (source) {
 		"RT", "tomatoes" -> when {
-			scorePercent != null && scorePercent >= 75 -> "rt-certified.png"
-			scorePercent != null && scorePercent < 60 -> "rt-rotten.png"
-			else -> "rt-fresh.png"
+			scorePercent != null && scorePercent >= 75 -> "rt-certified.svg"
+			scorePercent != null && scorePercent < 60 -> "rt-rotten.svg"
+			else -> "rt-fresh.svg"
 		}
 		"RT_AUDIENCE", "tomatoes_audience", "popcorn" -> when {
-			scorePercent != null && scorePercent >= 90 -> "rt-verified.png"
-			scorePercent != null && scorePercent < 60 -> "rt-audience-down.png"
-			else -> "rt-audience-up.png"
+			scorePercent != null && scorePercent >= 90 -> "rt-verified.svg"
+			scorePercent != null && scorePercent < 60 -> "rt-audience-down.svg"
+			else -> "rt-audience-up.svg"
 		}
 		"metacritic" -> when {
-			scorePercent != null && scorePercent >= 81 -> "metacritic-score.png"
-			else -> "metacritic.png"
+			scorePercent != null && scorePercent >= 81 -> "metacritic-score.svg"
+			else -> "metacritic.svg"
 		}
-		"metacriticuser" -> "metacritic-user.png"
-		"imdb" -> "imdb.png"
-		"tmdb", "tmdb_episode" -> "tmdb.png"
-		"trakt" -> "trakt.png"
-		"letterboxd" -> "letterboxd.png"
-		"rogerebert" -> "rogerebert.png"
-		"myanimelist" -> "mal.png"
-		"anilist" -> "anilist.png"
+		"metacriticuser" -> "metacritic-user.svg"
+		"imdb" -> "imdb.svg"
+		"tmdb", "tmdb_episode" -> "tmdb.svg"
+		"trakt" -> "trakt.svg"
+		"letterboxd" -> "letterboxd.svg"
+		"rogerebert" -> "rogerebert.svg"
+		"myanimelist" -> "mal.svg"
+		"anilist" -> "anilist.svg"
 		else -> null
 	}
 }
