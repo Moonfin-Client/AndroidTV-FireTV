@@ -8,21 +8,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jellyfin.androidtv.data.repository.ItemMutationRepository
 import org.jellyfin.androidtv.data.repository.ItemRepository
-import org.jellyfin.androidtv.util.ImageHelper
+import org.jellyfin.androidtv.util.Utils
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.ApiClientException
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.itemsApi
+import org.jellyfin.sdk.api.client.extensions.playStateApi
 import org.jellyfin.sdk.api.client.extensions.tvShowsApi
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.BaseItemPerson
-import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.PersonKind
 import org.jellyfin.sdk.model.api.VideoRangeType
@@ -51,21 +50,24 @@ data class ItemDetailsUiState(
 
 class ItemDetailsViewModel(
 	private val api: ApiClient,
-	private val itemMutationRepository: ItemMutationRepository,
-	private val imageHelper: ImageHelper,
 	private val apiClientFactory: ApiClientFactory,
 ) : ViewModel() {
 
 	private val _uiState = MutableStateFlow(ItemDetailsUiState())
 	val uiState: StateFlow<ItemDetailsUiState> = _uiState.asStateFlow()
 
-	private var effectiveApi: ApiClient = api
+	var effectiveApi: ApiClient = api
+		private set
+
+	var serverId: UUID? = null
+		private set
 
 	fun loadItem(itemId: UUID, serverId: UUID? = null) {
 		viewModelScope.launch {
 			_uiState.value = ItemDetailsUiState(isLoading = true)
 
 			if (serverId != null) {
+				this@ItemDetailsViewModel.serverId = serverId
 				effectiveApi = apiClientFactory.getApiClientForServer(serverId) ?: api
 			}
 
@@ -74,6 +76,18 @@ class ItemDetailsViewModel(
 					effectiveApi.userLibraryApi.getItem(
 						itemId = itemId,
 					).content
+				}
+
+				// If serverId wasn't passed explicitly, try to resolve from the item itself
+				if (this@ItemDetailsViewModel.serverId == null && item.serverId != null) {
+					val itemServerId = Utils.uuidOrNull(item.serverId)
+					if (itemServerId != null) {
+						this@ItemDetailsViewModel.serverId = itemServerId
+						val resolvedApi = apiClientFactory.getApiClientForServer(itemServerId)
+						if (resolvedApi != null) {
+							effectiveApi = resolvedApi
+						}
+					}
 				}
 
 				val cast = item.people
@@ -249,35 +263,56 @@ class ItemDetailsViewModel(
 
 	fun toggleFavorite() {
 		val item = _uiState.value.item ?: return
+		val newFavorite = !(item.userData?.isFavorite ?: false)
+
+		_uiState.value = _uiState.value.copy(
+			item = item.copy(userData = item.userData?.copy(isFavorite = newFavorite))
+		)
+
 		viewModelScope.launch {
 			try {
-				val newFavorite = !(item.userData?.isFavorite ?: false)
-				val userData = itemMutationRepository.setFavorite(item.id, newFavorite)
-				_uiState.value = _uiState.value.copy(
-					item = item.copy(userData = item.userData?.copy(isFavorite = userData.isFavorite))
-				)
+				withContext(Dispatchers.IO) {
+					if (newFavorite) effectiveApi.userLibraryApi.markFavoriteItem(itemId = item.id)
+					else effectiveApi.userLibraryApi.unmarkFavoriteItem(itemId = item.id)
+				}
 			} catch (err: Exception) {
 				Timber.e(err, "Failed to toggle favorite")
+				_uiState.value = _uiState.value.copy(
+					item = _uiState.value.item?.copy(userData = _uiState.value.item?.userData?.copy(isFavorite = !newFavorite))
+				)
 			}
 		}
 	}
 
 	fun toggleWatched() {
 		val item = _uiState.value.item ?: return
+		val newPlayed = !(item.userData?.played ?: false)
+
+		_uiState.value = _uiState.value.copy(
+			item = item.copy(
+				userData = item.userData?.copy(
+					played = newPlayed,
+					playedPercentage = if (newPlayed) 100.0 else 0.0,
+				)
+			)
+		)
+
 		viewModelScope.launch {
 			try {
-				val newPlayed = !(item.userData?.played ?: false)
-				val userData = itemMutationRepository.setPlayed(item.id, newPlayed)
+				withContext(Dispatchers.IO) {
+					if (newPlayed) effectiveApi.playStateApi.markPlayedItem(itemId = item.id)
+					else effectiveApi.playStateApi.markUnplayedItem(itemId = item.id)
+				}
+			} catch (err: Exception) {
+				Timber.e(err, "Failed to toggle watched")
 				_uiState.value = _uiState.value.copy(
-					item = item.copy(
-						userData = item.userData?.copy(
-							played = userData.played,
-							playedPercentage = if (userData.played) 100.0 else 0.0,
+					item = _uiState.value.item?.copy(
+						userData = _uiState.value.item?.userData?.copy(
+							played = !newPlayed,
+							playedPercentage = if (!newPlayed) 100.0 else 0.0,
 						)
 					)
 				)
-			} catch (err: Exception) {
-				Timber.e(err, "Failed to toggle watched")
 			}
 		}
 	}

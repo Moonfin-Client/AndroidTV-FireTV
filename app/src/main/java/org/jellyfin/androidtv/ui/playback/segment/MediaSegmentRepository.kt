@@ -3,6 +3,8 @@ package org.jellyfin.androidtv.ui.playback.segment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.util.UUIDUtils
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.androidtv.util.sdk.duration
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.mediaSegmentsApi
@@ -54,6 +56,7 @@ fun Map<MediaSegmentType, MediaSegmentAction>.toMediaSegmentActionsString() =
 class MediaSegmentRepositoryImpl(
 	private val userPreferences: UserPreferences,
 	private val api: ApiClient,
+	private val apiClientFactory: ApiClientFactory,
 ) : MediaSegmentRepository {
 	private val mediaTypeActions = mutableMapOf<MediaSegmentType, MediaSegmentAction>()
 
@@ -80,32 +83,28 @@ class MediaSegmentRepositoryImpl(
 	}
 
 	override fun getDefaultSegmentTypeAction(type: MediaSegmentType): MediaSegmentAction {
-		// Always return no action for unsupported types
 		if (!MediaSegmentRepository.SupportedTypes.contains(type)) return MediaSegmentAction.NOTHING
-
 		return mediaTypeActions.getOrDefault(type, MediaSegmentAction.NOTHING)
 	}
 
 	override fun setDefaultSegmentTypeAction(type: MediaSegmentType, action: MediaSegmentAction) {
-		// Don't allow modifying actions for unsupported types
 		if (!MediaSegmentRepository.SupportedTypes.contains(type)) return
-
 		mediaTypeActions[type] = action
 		saveMediaTypeActions()
 	}
 
 	override fun getMediaSegmentAction(segment: MediaSegmentDto): MediaSegmentAction {
 		val action = getDefaultSegmentTypeAction(segment.type)
-		// Skip the skip action if timespan is too short
 		if (action == MediaSegmentAction.SKIP && segment.duration < MediaSegmentRepository.SkipMinDuration) return MediaSegmentAction.NOTHING
-		// Skip the ask to skip action if timespan is too short
 		if (action == MediaSegmentAction.ASK_TO_SKIP && segment.duration < MediaSegmentRepository.AskToSkipMinDuration) return MediaSegmentAction.NOTHING
 		return action
 	}
 
 	override suspend fun getSegmentsForItem(item: BaseItemDto): List<MediaSegmentDto> = runCatching {
+		val serverId = UUIDUtils.parseUUID(item.serverId)
+		val effectiveApi = if (serverId != null) apiClientFactory.getApiClientForServer(serverId) ?: api else api
 		withContext(Dispatchers.IO) {
-			api.mediaSegmentsApi.getItemSegments(
+			effectiveApi.mediaSegmentsApi.getItemSegments(
 				itemId = item.id,
 				includeSegmentTypes = MediaSegmentRepository.SupportedTypes,
 			).content.items

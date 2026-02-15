@@ -171,7 +171,7 @@ val appModule = module {
 	single<NavigationRepository> { NavigationRepositoryImpl(Destinations.home) }
 	single { ShuffleManager(get(), get(), get(), get()) }
 	single<SearchRepository> { SearchRepositoryImpl(get(), get()) }
-	single<MediaSegmentRepository> { MediaSegmentRepositoryImpl(get(), get()) }
+	single<MediaSegmentRepository> { MediaSegmentRepositoryImpl(get(), get(), get()) }
 	single<ExternalAppRepository> { ExternalAppRepository(get()) }
 	single { LocalWatchlistRepository(androidContext()) }
 	single<org.jellyfin.androidtv.data.repository.MultiServerRepository> { 
@@ -188,7 +188,7 @@ val appModule = module {
 	factory(named("user")) { (userId: String) -> JellyseerrPreferences(androidContext(), userId) }
 	single<JellyseerrRepository> { JellyseerrRepositoryImpl(androidContext(), get(named("global")), get()) }
 	single { MdbListRepository(get<OkHttpFactory>().createClient(get()), get()) }
-	single { TmdbRepository(get<OkHttpFactory>().createClient(get()), get()) }
+	single { TmdbRepository(get<OkHttpFactory>().createClient(get()), get(), get()) }
 
 	viewModel { StartupViewModel(get(), get(), get(), get()) }
 	viewModel { UserLoginViewModel(get(), get(), get(), get(defaultDeviceInfo)) }
@@ -201,7 +201,7 @@ val appModule = module {
 	viewModel { SettingsViewModel() }
 	viewModel { SyncPlayViewModel() }
 	viewModel { org.jellyfin.androidtv.ui.jellyseerr.JellyseerrViewModel(get()) }
-	viewModel { org.jellyfin.androidtv.ui.itemdetail.v2.ItemDetailsViewModel(get(), get(), get(), get()) }
+	viewModel { org.jellyfin.androidtv.ui.itemdetail.v2.ItemDetailsViewModel(get(), get()) }
 	single { MediaBarSlideshowViewModel(get(), get(), get(), get(), androidContext(), get(), get(), get(), get()) }
 
 	// SyncPlay
@@ -213,7 +213,7 @@ val appModule = module {
 	single { MarkdownRenderer(get()) }
 	single { ItemLauncher() }
 	single { KeyProcessor() }
-	single { ReportingHelper(get(), get(), get(), get()) }
+	single { ReportingHelper(get(), get(), get()) }
 	single<PlaybackHelper> { SdkPlaybackHelper(get(), get(), get(), get(), get()) }
 	single { org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer(androidContext()) }
 

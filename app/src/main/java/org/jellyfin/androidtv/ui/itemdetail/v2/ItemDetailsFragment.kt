@@ -82,7 +82,6 @@ import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.PrePlaybackTrackSelector
 import org.jellyfin.androidtv.ui.playlist.showAddToPlaylistDialog
-import org.jellyfin.androidtv.util.ImageHelper
 import org.jellyfin.androidtv.ui.playback.PlaybackLauncher
 import org.jellyfin.androidtv.util.PlaybackHelper
 import org.jellyfin.androidtv.util.TimeUtils
@@ -105,8 +104,8 @@ import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.constant.NavbarPosition
 import org.jellyfin.androidtv.util.BitmapBlur
 import org.koin.compose.koinInject
-import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.ApiClientException
+import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.tvShowsApi
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
@@ -125,14 +124,12 @@ class ItemDetailsFragment : Fragment() {
 
 	private val viewModel: ItemDetailsViewModel by viewModel()
 	private val navigationRepository: NavigationRepository by inject()
-	private val imageHelper: ImageHelper by inject()
 	private val playbackHelper: PlaybackHelper by inject()
 	private val userPreferences: UserPreferences by inject()
 	private val userSettingPreferences: UserSettingPreferences by inject()
 	private val trackSelector: PrePlaybackTrackSelector by inject()
 	private val playbackLauncher: PlaybackLauncher by inject()
 	private val dataRefreshService: DataRefreshService by inject()
-	private val api: ApiClient by inject()
 
 	private var backdropImage: ImageView? = null
 	private var gradientView: View? = null
@@ -957,7 +954,7 @@ class ItemDetailsFragment : Fragment() {
 						icon = ImageVector.vectorResource(R.drawable.ic_tv),
 						onClick = {
 							item.seriesId?.let { seriesId ->
-								navigationRepository.navigate(Destinations.itemDetails(seriesId))
+								navigationRepository.navigate(Destinations.itemDetails(seriesId, viewModel.serverId))
 							}
 						},
 					)
@@ -1060,7 +1057,7 @@ class ItemDetailsFragment : Fragment() {
 						lifecycleScope.launch {
 							try {
 								val newItem = withContext(Dispatchers.IO) {
-									api.userLibraryApi.getItem(itemId = item.id).content
+									viewModel.effectiveApi.userLibraryApi.getItem(itemId = item.id).content
 								}
 								viewModel.loadItem(newItem.id)
 							} catch (e: ApiClientException) {
@@ -1118,7 +1115,7 @@ class ItemDetailsFragment : Fragment() {
 						isWatched = season.userData?.played == true,
 						unplayedCount = season.userData?.unplayedItemCount,
 						onClick = {
-							navigationRepository.navigate(Destinations.itemDetails(season.id))
+							navigationRepository.navigate(Destinations.itemDetails(season.id, viewModel.serverId))
 						},
 					)
 				}
@@ -1147,7 +1144,7 @@ class ItemDetailsFragment : Fragment() {
 						progress = ep.userData?.playedPercentage ?: 0.0,
 						isCurrent = ep.id == currentEpisodeId,
 						onClick = {
-							navigationRepository.navigate(Destinations.itemDetails(ep.id))
+							navigationRepository.navigate(Destinations.itemDetails(ep.id, viewModel.serverId))
 						},
 					)
 				}
@@ -1167,18 +1164,16 @@ class ItemDetailsFragment : Fragment() {
 					CastCard(
 						name = person.name ?: "",
 						role = person.role ?: person.type.toString(),
-						imageUrl = person.primaryImageTag?.let {
-							imageHelper.getPrimaryImageUrl(
-								org.jellyfin.sdk.model.api.BaseItemDto(
-									id = person.id,
-									type = BaseItemKind.PERSON,
-									imageTags = mapOf(ImageType.PRIMARY to it),
-								),
-								height = 280,
+						imageUrl = person.primaryImageTag?.let { tag ->
+							viewModel.effectiveApi.imageApi.getItemImageUrl(
+								itemId = person.id,
+								imageType = ImageType.PRIMARY,
+								tag = tag,
+								maxHeight = 280,
 							)
 						},
 						onClick = {
-							navigationRepository.navigate(Destinations.itemDetails(person.id))
+							navigationRepository.navigate(Destinations.itemDetails(person.id, viewModel.serverId))
 						},
 					)
 				}
@@ -1212,7 +1207,7 @@ class ItemDetailsFragment : Fragment() {
 							imageUrl = getEpisodeThumbnailUrl(item),
 							subtitle = item.seriesName,
 							onClick = {
-								navigationRepository.navigate(Destinations.itemDetails(item.id))
+								navigationRepository.navigate(Destinations.itemDetails(item.id, viewModel.serverId))
 							},
 							onFocused = onItemFocused?.let { callback -> { callback(item) } },
 							modifier = cardModifier,
@@ -1223,7 +1218,7 @@ class ItemDetailsFragment : Fragment() {
 							imageUrl = getPosterUrl(item),
 							year = item.productionYear,
 							onClick = {
-								navigationRepository.navigate(Destinations.itemDetails(item.id))
+								navigationRepository.navigate(Destinations.itemDetails(item.id, viewModel.serverId))
 							},
 							onFocused = onItemFocused?.let { callback -> { callback(item) } },
 							modifier = cardModifier,
@@ -1380,7 +1375,7 @@ class ItemDetailsFragment : Fragment() {
 						progress = ep.userData?.playedPercentage ?: 0.0,
 						isPlayed = ep.userData?.played == true,
 						onClick = {
-							navigationRepository.navigate(Destinations.itemDetails(ep.id))
+							navigationRepository.navigate(Destinations.itemDetails(ep.id, viewModel.serverId))
 						},
 						modifier = Modifier.padding(bottom = 12.dp),
 					)
@@ -1635,7 +1630,7 @@ class ItemDetailsFragment : Fragment() {
 		val backdropImage = item.itemBackdropImages.firstOrNull()
 			?: item.parentBackdropImages.firstOrNull()
 		return backdropImage?.getUrl(
-			api,
+			viewModel.effectiveApi,
 			maxWidth = 1920,
 		)
 	}
@@ -1645,22 +1640,22 @@ class ItemDetailsFragment : Fragment() {
 			item.type == BaseItemKind.EPISODE -> {
 				val thumbImage = item.itemImages[ImageType.THUMB]
 				val primaryImage = item.itemImages[ImageType.PRIMARY]
-				(thumbImage ?: primaryImage)?.getUrl(api, maxWidth = 500)
+				(thumbImage ?: primaryImage)?.getUrl(viewModel.effectiveApi, maxWidth = 500)
 			}
 			else -> {
-				item.itemImages[ImageType.PRIMARY]?.getUrl(api, maxHeight = 600)
+				item.itemImages[ImageType.PRIMARY]?.getUrl(viewModel.effectiveApi, maxHeight = 600)
 			}
 		}
 	}
 
 	private fun getLogoUrl(item: BaseItemDto): String? {
 		val logoImage = item.getLogoImage()
-		return logoImage?.getUrl(api, maxWidth = 400)
+		return logoImage?.getUrl(viewModel.effectiveApi, maxWidth = 400)
 	}
 
 	private fun getEpisodeThumbnailUrl(ep: BaseItemDto): String? {
 		val primaryImage = ep.itemImages[ImageType.PRIMARY]
-		return primaryImage?.getUrl(api, maxWidth = 400)
+		return primaryImage?.getUrl(viewModel.effectiveApi, maxWidth = 400)
 	}
 
 	private fun formatDuration(ticks: Long): String {
@@ -1712,7 +1707,7 @@ class ItemDetailsFragment : Fragment() {
 				if (uiState.nextUp.isNotEmpty()) {
 					play(uiState.nextUp.first(), 0, false)
 				} else if (uiState.seasons.isNotEmpty()) {
-					navigationRepository.navigate(Destinations.itemDetails(uiState.seasons.first().id))
+					navigationRepository.navigate(Destinations.itemDetails(uiState.seasons.first().id, viewModel.serverId))
 				}
 			}
 			BaseItemKind.SEASON -> {
@@ -1759,7 +1754,7 @@ class ItemDetailsFragment : Fragment() {
 			lifecycleScope.launch {
 				try {
 					val trailers = withContext(Dispatchers.IO) {
-						api.userLibraryApi.getLocalTrailers(itemId = item.id).content
+						viewModel.effectiveApi.userLibraryApi.getLocalTrailers(itemId = item.id).content
 					}
 					if (trailers.isNotEmpty()) {
 						val trailerIds = trailers.map { it.id }
@@ -1788,7 +1783,7 @@ class ItemDetailsFragment : Fragment() {
 		lifecycleScope.launch {
 			try {
 				withContext(Dispatchers.IO) {
-					api.libraryApi.deleteItem(itemId = item.id)
+					viewModel.effectiveApi.libraryApi.deleteItem(itemId = item.id)
 				}
 			} catch (e: ApiClientException) {
 				Timber.e(e, "Failed to delete item ${item.name} (id=${item.id})")

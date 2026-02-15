@@ -5,7 +5,6 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
-import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.data.compat.StreamInfo
 import org.jellyfin.androidtv.data.model.DataRefreshService
 import org.jellyfin.androidtv.ui.playback.PlaybackController
@@ -27,28 +26,11 @@ class ReportingHelper(
 	private val dataRefreshService: DataRefreshService,
 	private val api: ApiClient,
 	private val apiClientFactory: ApiClientFactory,
-	private val sessionRepository: SessionRepository,
 ) {
-	/**
-	 * Get the correct API client for an item, using the current user's context.
-	 * Critical for multi-user scenarios where multiple users are logged into the same server.
-	 */
 	private fun getApiClientForItem(item: BaseItemDto): ApiClient {
-		val serverId = UUIDUtils.parseUUID(item.serverId)
-		val currentSession = sessionRepository.currentSession.value
-		val userId = currentSession?.userId
-		
-		return if (serverId != null && userId != null) {
-			// Use API client for the specific server AND current user
-			apiClientFactory.getApiClient(serverId, userId) ?: run {
-				Timber.w("Failed to create API client for server $serverId user $userId, using fallback")
-				api
-			}
-		} else if (serverId != null) {
-			// Fallback: server only (may pick wrong user in multi-user scenarios)
-			apiClientFactory.getApiClientForServer(serverId) ?: api
-		} else {
-			// Use current session's API client
+		val serverId = UUIDUtils.parseUUID(item.serverId) ?: return api
+		return apiClientFactory.getApiClientForServer(serverId) ?: run {
+			Timber.w("Failed to create API client for server $serverId, using fallback")
 			api
 		}
 	}

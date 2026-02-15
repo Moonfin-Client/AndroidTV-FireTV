@@ -11,6 +11,8 @@ import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
+import org.jellyfin.androidtv.util.UUIDUtils
 import timber.log.Timber
 import java.util.UUID
 
@@ -70,6 +72,7 @@ data class TmdbSeasonResponse(
 class TmdbRepository(
 	private val okHttpClient: OkHttpClient,
 	private val apiClient: ApiClient,
+	private val apiClientFactory: ApiClientFactory,
 ) {
 	private val episodeRatingsCache = mutableMapOf<String, Float>()
 	private val seasonCache = mutableMapOf<String, Map<Int, Float>>()
@@ -82,6 +85,8 @@ class TmdbRepository(
 		ignoreUnknownKeys = true
 		isLenient = true
 	}
+
+	private fun getApiClientForItem(item: BaseItemDto) = resolveApiClient(item.serverId)
 
 	/**
 	 * Fetch individual episode rating from the Moonfin TMDB plugin proxy.
@@ -99,7 +104,7 @@ class TmdbRepository(
 			return@withContext null
 		}
 
-		val tmdbId = getSeriesTmdbId(seriesId)
+		val tmdbId = getSeriesTmdbId(seriesId, item)
 		if (tmdbId == null) {
 			Timber.w("Could not get TMDB ID for series ${item.seriesName} (${seriesId})")
 			return@withContext null
@@ -128,13 +133,14 @@ class TmdbRepository(
 		pendingRequests[cacheKey] = deferred
 
 		try {
-			val baseUrl = apiClient.baseUrl ?: run {
+			val effectiveApi = getApiClientForItem(item)
+			val baseUrl = effectiveApi.baseUrl ?: run {
 				Timber.w("TmdbRepository: No server URL available")
 				deferred.complete(null)
 				pendingRequests.remove(cacheKey)
 				return@withContext null
 			}
-			val accessToken = apiClient.accessToken ?: run {
+			val accessToken = effectiveApi.accessToken ?: run {
 				Timber.w("TmdbRepository: No access token available")
 				deferred.complete(null)
 				pendingRequests.remove(cacheKey)
@@ -197,6 +203,7 @@ class TmdbRepository(
 	suspend fun getSeasonEpisodeRatings(
 		seriesTmdbId: String,
 		seasonNumber: Int,
+		serverId: String? = null,
 	): Map<Int, Float>? = withContext(Dispatchers.IO) {
 		val cacheKey = "$seriesTmdbId:$seasonNumber"
 
@@ -207,12 +214,13 @@ class TmdbRepository(
 		pendingSeasonRequests[cacheKey] = deferred
 
 		try {
-			val baseUrl = apiClient.baseUrl ?: run {
+			val effectiveApi = resolveApiClient(serverId)
+			val baseUrl = effectiveApi.baseUrl ?: run {
 				deferred.complete(null)
 				pendingSeasonRequests.remove(cacheKey)
 				return@withContext null
 			}
-			val accessToken = apiClient.accessToken ?: run {
+			val accessToken = effectiveApi.accessToken ?: run {
 				deferred.complete(null)
 				pendingSeasonRequests.remove(cacheKey)
 				return@withContext null
@@ -281,7 +289,8 @@ class TmdbRepository(
 		seriesCommunityRatingCache[cacheKey]?.let { return@withContext it }
 
 		try {
-			val response = apiClient.userLibraryApi.getItem(itemId = seriesId)
+			val effectiveApi = getApiClientForItem(item)
+			val response = effectiveApi.userLibraryApi.getItem(itemId = seriesId)
 			val rating = response.content.communityRating
 			seriesCommunityRatingCache[cacheKey] = rating
 			rating
@@ -291,13 +300,25 @@ class TmdbRepository(
 		}
 	}
 
-	private suspend fun getSeriesTmdbId(seriesId: UUID): String? {
+	private fun resolveApiClient(serverId: String?): ApiClient {
+		if (serverId != null) {
+			val uuid = UUIDUtils.parseUUID(serverId)
+			if (uuid != null) {
+				val serverApi = apiClientFactory.getApiClientForServer(uuid)
+				if (serverApi != null) return serverApi
+			}
+		}
+		return apiClient
+	}
+
+	private suspend fun getSeriesTmdbId(seriesId: UUID, item: BaseItemDto? = null): String? {
 		val cacheKey = seriesId.toString()
 		seriesTmdbIdCache[cacheKey]?.let { return it }
 
 		try {
+			val effectiveApi = if (item != null) getApiClientForItem(item) else apiClient
 			Timber.d("Fetching series info from Jellyfin for seriesId: $seriesId")
-			val response = apiClient.userLibraryApi.getItem(itemId = seriesId)
+			val response = effectiveApi.userLibraryApi.getItem(itemId = seriesId)
 			val seriesItem = response.content
 
 			val tmdbId = seriesItem.providerIds?.get("Tmdb")
