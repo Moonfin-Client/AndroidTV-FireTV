@@ -19,7 +19,12 @@ class MediaBarPresenter(
 ) : RowPresenter() {
 	
 	override fun createRowViewHolder(parent: ViewGroup): RowPresenter.ViewHolder {
+		parent.clipChildren = false
+		parent.clipToPadding = false
+
 		val container = FrameLayout(parent.context).apply {
+			clipChildren = false
+			clipToPadding = false
 			layoutParams = ViewGroup.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
 				ViewGroup.LayoutParams.WRAP_CONTENT
@@ -27,6 +32,8 @@ class MediaBarPresenter(
 		}
 		
 		val composeView = ComposeView(parent.context).apply {
+			clipChildren = false
+			clipToPadding = false
 			layoutParams = FrameLayout.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
 				ViewGroup.LayoutParams.WRAP_CONTENT
@@ -48,6 +55,13 @@ class MediaBarPresenter(
 		
 		container.addView(composeView)
 		
+		var ancestor: android.view.ViewParent? = parent.parent
+		while (ancestor is ViewGroup) {
+			ancestor.clipChildren = false
+			ancestor.clipToPadding = false
+			ancestor = ancestor.parent
+		}
+
 		return ViewHolder(container)
 	}
 	

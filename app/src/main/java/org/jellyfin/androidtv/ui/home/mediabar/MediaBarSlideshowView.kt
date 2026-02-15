@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -266,12 +267,13 @@ fun MediaBarSlideshowView(
 
 				// Navigation arrows
 				if (currentState.items.size > 1) {
-					// Left arrow is hidden when sidebar is enabled
+					// Left arrow (hidden when sidebar is enabled)
 					if (!isSidebarEnabled) {
 						Box(
 							modifier = Modifier
 								.align(Alignment.TopStart)
-								.padding(start = 16.dp, top = 0.dp)
+								.offset(y = (-70).dp)
+								.padding(start = 5.dp)
 								.size(48.dp)
 								.background(overlayColor.copy(alpha = overlayOpacity), CircleShape),
 							contentAlignment = Alignment.Center
@@ -285,11 +287,12 @@ fun MediaBarSlideshowView(
 						}
 					}
 
-					// Right arrow - closer to right edge
+					// Right arrow
 					Box(
 						modifier = Modifier
 							.align(Alignment.TopEnd)
-							.padding(end = 16.dp, top = 0.dp)
+							.offset(y = (-70).dp)
+							.padding(end = 16.dp)
 							.size(48.dp)
 							.background(overlayColor.copy(alpha = overlayOpacity), CircleShape),
 						contentAlignment = Alignment.Center
