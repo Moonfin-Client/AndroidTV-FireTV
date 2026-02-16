@@ -90,7 +90,7 @@ private fun AvailabilityIndicator(
 	val iconRes = when (status) {
 		5 -> R.drawable.ic_available
 		4 -> R.drawable.ic_partially_available
-		3 -> R.drawable.ic_indigo_spinner_animated
+		3 -> R.drawable.ic_indigo_spinner
 		else -> return
 	}
 
