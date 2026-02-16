@@ -84,6 +84,7 @@ import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.ui.base.CircularProgressIndicator
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
+import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.ui.playback.PrePlaybackTrackSelector
 import org.jellyfin.androidtv.ui.playlist.showAddToPlaylistDialog
 import org.jellyfin.androidtv.ui.playback.PlaybackLauncher
@@ -130,6 +131,7 @@ class ItemDetailsFragment : Fragment() {
 	private val viewModel: ItemDetailsViewModel by viewModel()
 	private val navigationRepository: NavigationRepository by inject()
 	private val playbackHelper: PlaybackHelper by inject()
+	private val mediaManager: MediaManager by inject()
 	private val userPreferences: UserPreferences by inject()
 	private val userSettingPreferences: UserSettingPreferences by inject()
 	private val trackSelector: PrePlaybackTrackSelector by inject()
@@ -515,6 +517,82 @@ class ItemDetailsFragment : Fragment() {
 				DetailBackdrop(imageUrl = backdropUrl, blurAmount = userSettingPreferences[UserSettingPreferences.detailsBackgroundBlurAmount])
 			}
 
+			// Track action dialog state
+			var trackActionIndex by remember { mutableStateOf<Int?>(null) }
+
+			val trackActionIndex2 = trackActionIndex
+			if (trackActionIndex2 != null && trackActionIndex2 in uiState.tracks.indices) {
+				val actionTrack = uiState.tracks[trackActionIndex2]
+				val isPlaylist = item.type == BaseItemKind.PLAYLIST
+				val canRemoveFromPlaylist = isPlaylist && item.canDelete == true
+				val actions = buildList {
+					// Open for non-audio items in playlists (e.g. video items)
+					if (actionTrack.type != BaseItemKind.AUDIO) {
+						add(TrackAction(
+							label = getString(R.string.lbl_open),
+							onClick = {
+								navigationRepository.navigate(
+									Destinations.itemDetails(actionTrack.id, viewModel.serverId)
+								)
+							},
+						))
+					}
+
+					// Play from here plays all tracks starting from the selected index
+					add(TrackAction(
+						label = getString(R.string.lbl_play_from_here),
+						onClick = {
+							val trackIds = uiState.tracks.subList(trackActionIndex2, uiState.tracks.size).map { it.id }
+							playbackHelper.retrieveAndPlay(trackIds, false, null, null, requireContext())
+						},
+					))
+
+					// Play only the selected track
+					add(TrackAction(
+						label = getString(R.string.lbl_play),
+						onClick = {
+							playbackHelper.retrieveAndPlay(actionTrack.id, false, requireContext())
+						},
+					))
+
+					// Add to queue - audio items only
+					if (actionTrack.type == BaseItemKind.AUDIO) {
+						add(TrackAction(
+							label = getString(R.string.lbl_add_to_queue),
+							onClick = {
+								mediaManager.queueAudioItem(actionTrack)
+							},
+						))
+					}
+
+					// Instant mix - audio items only
+					if (actionTrack.type == BaseItemKind.AUDIO) {
+						add(TrackAction(
+							label = getString(R.string.lbl_instant_mix),
+							onClick = {
+								playbackHelper.playInstantMix(requireContext(), actionTrack)
+							},
+						))
+					}
+
+					// Remove from playlist
+					if (canRemoveFromPlaylist && actionTrack.playlistItemId != null) {
+						add(TrackAction(
+							label = getString(R.string.lbl_remove_from_playlist),
+							onClick = {
+								viewModel.removeFromPlaylist(trackActionIndex2)
+							},
+						))
+					}
+				}
+
+				TrackActionDialog(
+					trackTitle = actionTrack.name ?: "",
+					actions = actions,
+					onDismiss = { trackActionIndex = null },
+				)
+			}
+
 			LazyColumn(
 				state = listState,
 				contentPadding = PaddingValues(top = 100.dp, start = 48.dp, end = 48.dp, bottom = 48.dp),
@@ -740,6 +818,9 @@ class ItemDetailsFragment : Fragment() {
 							artist = track.artists?.firstOrNull() ?: track.albumArtist,
 							runtime = track.runTimeTicks?.let { TimeUtils.formatMillis(it / 10_000) },
 							onClick = {
+								trackActionIndex = index
+							},
+							onMenuAction = {
 								playbackHelper.retrieveAndPlay(track.id, false, requireContext())
 							},
 							onFocused = if (isPlaylist) {

@@ -891,6 +891,7 @@ fun TrackItemCard(
 	onClick: () -> Unit,
 	modifier: Modifier = Modifier,
 	onFocused: (() -> Unit)? = null,
+	onMenuAction: (() -> Unit)? = null,
 	onMoveUp: (() -> Unit)? = null,
 	onMoveDown: (() -> Unit)? = null,
 	isFirst: Boolean = false,
@@ -908,22 +909,30 @@ fun TrackItemCard(
 	Row(
 		modifier = modifier
 			.fillMaxWidth()
-			.then(
-				if (canReorder) {
-					Modifier.onKeyEvent { event ->
-						if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
-						when (event.key) {
-							Key.DirectionLeft -> {
-								if (!isFirst) { onMoveUp?.invoke(); true } else false
-							}
-							Key.DirectionRight -> {
-								if (!isLast) { onMoveDown?.invoke(); true } else false
-							}
-							else -> false
-						}
+			.onKeyEvent { event ->
+				if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
+				when {
+					// Menu key opens the track action dialog
+					event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_MENU ||
+						event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_INFO -> {
+						onMenuAction?.invoke(); onMenuAction != null
 					}
-				} else Modifier
-			)
+					// Long-press center/enter also opens the menu
+					event.nativeKeyEvent.isLongPress &&
+						(event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
+							event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_ENTER) -> {
+						onMenuAction?.invoke(); onMenuAction != null
+					}
+					// Reorder with left/right
+					canReorder && event.key == Key.DirectionLeft -> {
+						if (!isFirst) { onMoveUp?.invoke(); true } else false
+					}
+					canReorder && event.key == Key.DirectionRight -> {
+						if (!isLast) { onMoveDown?.invoke(); true } else false
+					}
+					else -> false
+				}
+			}
 			.clickable(
 				interactionSource = interactionSource,
 				indication = null,
@@ -1118,6 +1127,109 @@ fun TrackSelectorDialog(
 								modifier = Modifier.weight(1f),
 							)
 						}
+					}
+				}
+			}
+		}
+
+		LaunchedEffect(Unit) {
+			initialFocusRequester.requestFocus()
+		}
+	}
+}
+
+/**
+ * Data class representing an action in the track context menu.
+ */
+data class TrackAction(
+	val label: String,
+	val onClick: () -> Unit,
+)
+
+/**
+ * Dialog showing available actions for a track item (play from here, play, add to queue, etc.).
+ * Mirrors the old PopupMenu from ItemListFragment.
+ */
+@Composable
+fun TrackActionDialog(
+	trackTitle: String,
+	actions: List<TrackAction>,
+	onDismiss: () -> Unit,
+) {
+	val initialFocusRequester = remember { FocusRequester() }
+
+	Dialog(
+		onDismissRequest = onDismiss,
+		properties = DialogProperties(usePlatformDefaultWidth = false),
+	) {
+		Box(
+			modifier = Modifier.fillMaxSize(),
+			contentAlignment = Alignment.Center,
+		) {
+			Column(
+				modifier = Modifier
+					.widthIn(min = 340.dp, max = 440.dp)
+					.clip(RoundedCornerShape(20.dp))
+					.background(Color(0xE6141414))
+					.border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
+					.padding(vertical = 20.dp),
+			) {
+				Text(
+					text = trackTitle,
+					fontSize = 20.sp,
+					fontWeight = FontWeight.W600,
+					color = Color.White,
+					maxLines = 1,
+					overflow = TextOverflow.Ellipsis,
+					modifier = Modifier
+						.padding(horizontal = 24.dp)
+						.padding(bottom = 12.dp),
+				)
+
+				Box(
+					modifier = Modifier
+						.fillMaxWidth()
+						.height(1.dp)
+						.background(Color.White.copy(alpha = 0.08f)),
+				)
+
+				Spacer(modifier = Modifier.height(8.dp))
+
+				actions.forEachIndexed { index, action ->
+					val interactionSource = remember { MutableInteractionSource() }
+					val isFocused by interactionSource.collectIsFocusedAsState()
+
+					val focusModifier = if (index == 0) {
+						Modifier.focusRequester(initialFocusRequester)
+					} else {
+						Modifier
+					}
+
+					Row(
+						modifier = focusModifier
+							.fillMaxWidth()
+							.clickable(
+								interactionSource = interactionSource,
+								indication = null,
+							) {
+								action.onClick()
+								onDismiss()
+							}
+							.focusable(interactionSource = interactionSource)
+							.background(
+								if (isFocused) Color.White.copy(alpha = 0.12f) else Color.Transparent,
+							)
+							.padding(horizontal = 24.dp, vertical = 14.dp),
+						verticalAlignment = Alignment.CenterVertically,
+					) {
+						Text(
+							text = action.label,
+							fontSize = 16.sp,
+							fontWeight = FontWeight.W400,
+							color = if (isFocused) Color.White else Color.White.copy(alpha = 0.8f),
+							maxLines = 1,
+							overflow = TextOverflow.Ellipsis,
+						)
 					}
 				}
 			}
