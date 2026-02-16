@@ -53,6 +53,7 @@ import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowCompactRatings
+import org.jellyfin.androidtv.util.TimeUtils
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 
@@ -87,12 +88,26 @@ private fun getTypeBadgeColor(kind: BaseItemKind?): Color = when (kind) {
 }
 
 /**
- * Builds a compact metadata string: "2012  R  ★ 6.9"
+ * Builds a compact metadata string: "2012  R  1h 30m  ★ 6.9"
  */
-fun buildMetadataString(item: BaseItemDto): String {
+fun buildMetadataString(item: BaseItemDto, context: android.content.Context? = null): String {
 	val parts = mutableListOf<String>()
 	item.productionYear?.let { parts.add(it.toString()) }
 	item.officialRating?.let { if (it.isNotBlank()) parts.add(it) }
+	if (item.type == BaseItemKind.MOVIE) {
+		item.runTimeTicks?.let { ticks ->
+			val runtimeMs = ticks / 10_000
+			if (context != null) {
+				parts.add(TimeUtils.formatRuntimeHoursMinutes(context, runtimeMs))
+			} else {
+				val totalMinutes = (runtimeMs / 60_000).toInt()
+				val hours = totalMinutes / 60
+				val minutes = totalMinutes % 60
+				if (hours > 0) parts.add("${hours}h ${minutes}m")
+				else parts.add("${minutes}m")
+			}
+		}
+	}
 	item.communityRating?.let { parts.add("★ ${String.format("%.1f", it)}") }
 	return parts.joinToString("  ")
 }
@@ -193,8 +208,9 @@ fun LibraryPosterCard(
 				overflow = TextOverflow.Ellipsis,
 			)
 
-			// Metadata: year, officialRating, ★ communityRating
-			val meta = buildMetadataString(item)
+			// Metadata: year, officialRating, runtime, ★ communityRating
+			val context = androidx.compose.ui.platform.LocalContext.current
+			val meta = buildMetadataString(item, context)
 			if (meta.isNotEmpty()) {
 				Text(
 					text = meta,
@@ -369,7 +385,8 @@ fun FocusedItemHud(
 				verticalAlignment = Alignment.CenterVertically,
 				horizontalArrangement = Arrangement.spacedBy(12.dp),
 			) {
-				val metaLine = buildMetadataString(item)
+				val context = androidx.compose.ui.platform.LocalContext.current
+				val metaLine = buildMetadataString(item, context)
 				if (metaLine.isNotEmpty()) {
 					Text(
 						text = metaLine,

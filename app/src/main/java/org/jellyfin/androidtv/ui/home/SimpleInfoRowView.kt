@@ -22,6 +22,7 @@ import org.jellyfin.androidtv.data.repository.RatingIconProvider
 import org.jellyfin.androidtv.data.repository.TmdbRepository
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.composable.getResolutionName
+import org.jellyfin.androidtv.util.TimeUtils
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -78,7 +79,7 @@ class SimpleInfoRowView @JvmOverloads constructor(
 		
 		currentItemId = item.id.toString()
 		
-		var index = 0
+		val metadataItems = mutableListOf<String>()
 		
 		val dateText = when (item.type) {
 			BaseItemKind.SERIES -> item.productionYear?.toString()
@@ -86,19 +87,26 @@ class SimpleInfoRowView @JvmOverloads constructor(
 			else -> item.productionYear?.toString() 
 				?: item.premiereDate?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
 		}
-		dateText?.let { setItemText(index++, it) }
+		dateText?.let { metadataItems.add(it) }
 		
 		if (item.type == BaseItemKind.EPISODE) {
 			val seasonNum = item.parentIndexNumber
 			val episodeNum = item.indexNumber
 			if (seasonNum != null && episodeNum != null) {
-				setItemText(index++, "S${seasonNum}E${episodeNum}")
+				metadataItems.add("S${seasonNum}E${episodeNum}")
 			}
 		}
 		
 		item.officialRating?.let { rating ->
 			if (rating.isNotBlank()) {
-				setItemText(index++, rating)
+				metadataItems.add(rating)
+			}
+		}
+		
+		if (item.type == BaseItemKind.MOVIE) {
+			item.runTimeTicks?.let { ticks ->
+				val runtimeMs = ticks / 10_000
+				metadataItems.add(TimeUtils.formatRuntimeHoursMinutes(context, runtimeMs))
 			}
 		}
 		
@@ -112,12 +120,8 @@ class SimpleInfoRowView @JvmOverloads constructor(
 			it.type == org.jellyfin.sdk.model.api.MediaStreamType.SUBTITLE && !it.isHearingImpaired 
 		} == true
 		
-		if (hasSdhSubtitles) {
-			setItemText(index++, "SDH")
-		}
-		if (hasCcSubtitles) {
-			setItemText(index++, "CC")
-		}
+		if (hasSdhSubtitles) metadataItems.add("SDH")
+		if (hasCcSubtitles) metadataItems.add("CC")
 		
 		if (videoStream?.width != null && videoStream.height != null) {
 			val resolution = getResolutionName(
@@ -126,7 +130,12 @@ class SimpleInfoRowView @JvmOverloads constructor(
 				height = videoStream.height!!,
 				interlaced = videoStream.isInterlaced
 			)
-			setItemText(index++, resolution)
+			metadataItems.add(resolution)
+		}
+		
+		var index = 0
+		if (metadataItems.isNotEmpty()) {
+			setItemText(index++, metadataItems.joinToString(" • "))
 		}
 		
 		val itemIdAtFetchTime = item.id.toString()
