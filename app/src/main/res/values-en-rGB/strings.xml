@@ -284,7 +284,7 @@
     <string name="lbl_use_series_thumbnails">Prefer programme thumbnails</string>
     <string name="lbl_hide_unwatched_count">When the item is watched</string>
     <string name="pref_watched_indicator">Show watched indicators</string>
-    <string name="login_help_description">Jellyfin requires a server to connect with. Visit our documentation at docs.jellyfin.org or scan the QR code to get started with Jellyfin.</string>
+    <string name="login_help_description">Jellyfin requires a server to connect with. Visit the documentation at docs.jellyfin.org or scan the QR code to get started with Jellyfin.</string>
     <string name="connect_manually_by_address">Enter server address</string>
     <string name="discovered_servers_empty">No servers found on local network.</string>
     <string name="discovered_servers_title">Discovered servers</string>
@@ -422,7 +422,7 @@
     <string name="pref_refresh_rate_scale_on_tv">Scale on TV</string>
     <string name="login_quickconnect_step_3">3. Enter the following code:</string>
     <string name="login_quickconnect_step_2">2. Open the user menu and go to the Quick Connect page</string>
-    <string name="login_quickconnect_step_1">1. Open the Jellyfin app on your phone or webbrowser, and sign in with your account</string>
+    <string name="login_quickconnect_step_1">1. Open the Jellyfin app on your phone or web browser, and sign in with your account</string>
     <string name="login_other_options">Other options:</string>
     <string name="login_connect_to">Connecting to %1$s</string>
     <string name="input_password">Password</string>

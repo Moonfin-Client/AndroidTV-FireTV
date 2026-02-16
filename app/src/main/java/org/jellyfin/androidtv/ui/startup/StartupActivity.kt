@@ -9,7 +9,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.add
 import androidx.fragment.app.commit
 import androidx.fragment.app.replace
 import androidx.lifecycle.Lifecycle
@@ -183,17 +182,17 @@ class StartupActivity : FragmentActivity() {
 	}
 
 	private fun showServer(id: UUID) = supportFragmentManager.commit {
-		replace<StartupToolbarFragment>(R.id.content_view)
-		add<ServerFragment>(
+		replace<ServerFragment>(
 			R.id.content_view, null, bundleOf(
 				ServerFragment.ARG_SERVER_ID to id.toString()
 			)
 		)
+		replace<StartupToolbarFragment>(R.id.toolbar_view)
 	}
 
 	private fun showServerSelection() = supportFragmentManager.commit {
-		replace<StartupToolbarFragment>(R.id.content_view)
-		add<SelectServerFragment>(R.id.content_view)
+		replace<SelectServerFragment>(R.id.content_view)
+		replace<StartupToolbarFragment>(R.id.toolbar_view)
 	}
 
 	override fun onNewIntent(intent: Intent) {

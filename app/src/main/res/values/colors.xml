@@ -41,22 +41,22 @@
     <color name="guide_kids_bg">#32039BE5</color>
 
     <!-- button_default -->
-    <color name="button_default_normal_background">#B3747474</color>
+    <color name="button_default_normal_background">#26FFFFFF</color>
     <color name="button_default_disabled_background">#33747474</color>
-    <color name="button_default_highlight_background">#E6CCCCCC</color>
+    <color name="button_default_highlight_background">#00a4dc</color>
     <color name="button_default_normal_text">#DDDDDD</color>
     <color name="button_default_disabled_text">#686868</color>
-    <color name="button_default_highlight_text">#444444</color>
+    <color name="button_default_highlight_text">#FFFFFF</color>
     <color name="button_default_activated_text">#CC3333</color>
     <color name="button_default_progress_background">#33000000</color>
 
     <!-- input_default -->
     <color name="input_default_stroke">#B3747474</color>
     <color name="input_default_disabled_background">#33747474</color>
-    <color name="input_default_highlight_background">#DDDDDD</color>
+    <color name="input_default_highlight_background">#26FFFFFF</color>
     <color name="input_default_normal_text">#DDDDDD</color>
     <color name="input_default_disabled_text">#686868</color>
-    <color name="input_default_highlight_text">#444444</color>
+    <color name="input_default_highlight_text">#FFFFFF</color>
 
     <!-- popup_menu -->
     <color name="popup_menu_background">#202124</color>
@@ -65,4 +65,20 @@
     <color name="lb_basic_card_info_bg_color">@color/grey</color>
 
     <color name="background_filter">#94101010</color>
+
+    <!-- Login / Startup Screen Colors (Moonfin-inspired) -->
+    <color name="login_bg_start">#0a0a0a</color>
+    <color name="login_bg_mid">#1a1a2e</color>
+    <color name="login_bg_end">#16213e</color>
+    <color name="login_card_bg">#CC111528</color>
+    <color name="login_card_border">#33FFFFFF</color>
+    <color name="login_input_bg">#1AFFFFFF</color>
+    <color name="login_input_focus_border">#00a4dc</color>
+    <color name="login_text_secondary">#B3FFFFFF</color>
+    <color name="login_text_muted">#80FFFFFF</color>
+    <color name="login_error_bg">#33ef4444</color>
+    <color name="login_error_border">#66ef4444</color>
+    <color name="login_error_text">#ef4444</color>
+    <color name="login_qc_border">#00a4dc</color>
+    <color name="login_qc_bg">#0D00a4dc</color>
 </resources>

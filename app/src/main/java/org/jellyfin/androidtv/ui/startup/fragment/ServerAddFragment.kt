@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.add
 import androidx.fragment.app.commit
 import androidx.fragment.app.replace
 import androidx.lifecycle.lifecycleScope
@@ -91,15 +90,14 @@ class ServerAddFragment : Fragment() {
 				}
 
 				is ConnectedState -> parentFragmentManager.commit {
-					// Open server view
-					replace<StartupToolbarFragment>(R.id.content_view)
-					add<ServerFragment>(
+					replace<ServerFragment>(
 						R.id.content_view,
 						null,
 						bundleOf(
 							ServerFragment.ARG_SERVER_ID to state.id.toString()
 						)
 					)
+					replace<StartupToolbarFragment>(R.id.toolbar_view)
 				}
 
 				null -> Unit

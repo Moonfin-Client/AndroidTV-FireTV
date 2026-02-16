@@ -22,6 +22,7 @@ fun StartupToolbar(
 ) {
 	val focusRequester = remember { FocusRequester() }
 	Toolbar(
+		start = {},
 		end = {
 			ToolbarButtons {
 				IconButton(

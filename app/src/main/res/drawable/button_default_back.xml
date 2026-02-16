@@ -3,13 +3,15 @@
     <item android:state_enabled="true" android:state_focused="false">
         <shape android:shape="rectangle">
             <corners android:radius="?attr/buttonRounding" />
-            <solid android:color="@android:color/transparent" />
+            <solid android:color="?attr/buttonDefaultNormalBackground" />
+            <stroke android:width="2dp" android:color="@color/login_card_border" />
         </shape>
     </item>
     <item android:state_enabled="false" android:state_focused="false">
         <shape android:shape="rectangle">
             <corners android:radius="?attr/buttonRounding" />
-            <solid android:color="@android:color/transparent" />
+            <solid android:color="@color/button_default_disabled_background" />
+            <stroke android:width="2dp" android:color="@color/login_card_border" />
         </shape>
     </item>
     <item android:state_enabled="true" android:state_focused="true">

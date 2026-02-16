@@ -407,7 +407,7 @@
     <string name="pref_refresh_rate_scale_on_tv">Skalierung durch TV</string>
     <string name="login_quickconnect_step_3">3. Gib den folgenden Code ein:</string>
     <string name="login_quickconnect_step_2">2. Öffne das Benutzermenü und gehe auf die Quick Connect-Seite</string>
-    <string name="login_quickconnect_step_1">1. Öffne die Jellyfin-App auf deinem Telefon oder Webbrowser und melde dich mit deinem Konto an</string>
+    <string name="login_quickconnect_step_1">1. Öffne die Jellyfin-App auf deinem Telefon oder Web browser und melde dich mit deinem Konto an</string>
     <string name="login_other_options">Andere Optionen:</string>
     <string name="login_connect_to">Mit %1$s verbinden</string>
     <string name="input_password">Passwort</string>
@@ -425,7 +425,7 @@
     <string name="image_size_smallest">Kleinste</string>
     <string name="image_type_poster">Poster</string>
     <string name="episode_name_special">Extra</string>
-    <string name="server_setup_incomplete">Das Setup von diesem Server wurde nicht abgeschlossen. Öffne Jellyfin in einem Webbrowser, um das Setup abzuschließen, bevor du dich anmeldest.</string>
+    <string name="server_setup_incomplete">Das Setup von diesem Server wurde nicht abgeschlossen. Öffne Jellyfin in einem Web browser, um das Setup abzuschließen, bevor du dich anmeldest.</string>
     <string name="crash_report_toast">Ups! Etwas ist schiefgegangen, ein Absturzbericht wurde an deinen Jellyfin-Server gesendet.</string>
     <string name="pref_crash_reports_enabled">Absturzberichte werden an den zuletzt von dir verwendeten Server gesendet</string>
     <string name="pref_crash_report_logs_disabled">Logs werden in Absturzberichten nicht eingeschlossen</string>

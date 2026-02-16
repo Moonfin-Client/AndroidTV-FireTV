@@ -1,10 +1,13 @@
 package org.jellyfin.androidtv.ui.startup.fragment
 
+import android.content.res.ColorStateList
 import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.widget.AppCompatButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.add
 import androidx.fragment.app.commit
 import androidx.fragment.app.replace
 import androidx.lifecycle.Lifecycle
@@ -39,7 +41,6 @@ import org.jellyfin.androidtv.auth.model.ServerAdditionState
 import org.jellyfin.androidtv.auth.model.UnableToConnectState
 import org.jellyfin.androidtv.data.repository.NotificationsRepository
 import org.jellyfin.androidtv.databinding.FragmentSelectServerBinding
-import org.jellyfin.androidtv.ui.ServerButtonView
 import org.jellyfin.androidtv.ui.SpacingItemDecoration
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.base.Text
@@ -47,6 +48,8 @@ import org.jellyfin.androidtv.ui.startup.StartupViewModel
 import org.jellyfin.androidtv.util.ListAdapter
 import org.jellyfin.androidtv.util.MenuBuilder
 import org.jellyfin.androidtv.util.getSummary
+import org.jellyfin.androidtv.util.popupMenu
+import org.jellyfin.androidtv.util.showIfNotEmpty
 import org.koin.androidx.viewmodel.ext.android.activityViewModel
 import org.koin.compose.koinInject
 
@@ -59,24 +62,22 @@ class SelectServerFragment : Fragment() {
 	override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
 		_binding = FragmentSelectServerBinding.inflate(inflater, container, false)
 
-		// Create spacing for recycler view of 8dp
 		@Suppress("MagicNumber")
 		val serverDivider = SpacingItemDecoration(0, 8)
 
-		// Stored servers
 		val storedServerAdapter = ServerAdapter(
 			serverClickListener = { (_, server) ->
 				requireActivity()
 					.supportFragmentManager
 					.commit {
-						replace<StartupToolbarFragment>(R.id.content_view)
-						add<ServerFragment>(
+						replace<ServerFragment>(
 							R.id.content_view,
 							null,
 							bundleOf(
 								ServerFragment.ARG_SERVER_ID to server.id.toString()
 							)
 						)
+						replace<StartupToolbarFragment>(R.id.toolbar_view)
 						addToBackStack(null)
 					}
 			},
@@ -90,7 +91,6 @@ class SelectServerFragment : Fragment() {
 		binding.storedServers.addItemDecoration(serverDivider)
 		binding.storedServers.adapter = storedServerAdapter
 
-		// Discovery
 		binding.discoveryServers.setHasFixedSize(true)
 		binding.discoveryServers.addItemDecoration(serverDivider)
 		val discoveryServerAdapter = ServerAdapter(
@@ -98,14 +98,14 @@ class SelectServerFragment : Fragment() {
 				startupViewModel.addServer(server.address).onEach { state ->
 					if (state is ConnectedState) {
 						parentFragmentManager.commit {
-							replace<StartupToolbarFragment>(R.id.content_view)
-							add<ServerFragment>(
+							replace<ServerFragment>(
 								R.id.content_view,
 								null,
 								bundleOf(
 									ServerFragment.ARG_SERVER_ID to state.id.toString()
 								)
 							)
+							replace<StartupToolbarFragment>(R.id.toolbar_view)
 						}
 					} else {
 						items = items.map {
@@ -113,8 +113,7 @@ class SelectServerFragment : Fragment() {
 							else it
 						}
 
-						// Show error as toast
-						if (state is UnableToConnectState) {
+					if (state is UnableToConnectState) {
 							Toast.makeText(requireContext(), getString(
 								R.string.server_connection_failed_candidates,
 								state.addressCandidates
@@ -143,7 +142,6 @@ class SelectServerFragment : Fragment() {
 					binding.welcomeTitle.isVisible = servers.isEmpty()
 					binding.welcomeContent.isVisible = servers.isEmpty()
 
-					// Make sure focus is properly set when no servers exist
 					if (servers.isEmpty()) binding.enterServerAddress.requestFocus()
 				}.launchIn(this)
 
@@ -159,7 +157,6 @@ class SelectServerFragment : Fragment() {
 			}
 		}
 
-		// Notifications
 		binding.notifications.setContent {
 			val notificationsRepository = koinInject<NotificationsRepository>()
 			val notifications by notificationsRepository.notifications.collectAsState()
@@ -186,7 +183,6 @@ class SelectServerFragment : Fragment() {
 			}
 		}
 
-		// Manual
 		binding.enterServerAddress.setOnClickListener {
 			parentFragmentManager.commit {
 				addToBackStack(null)
@@ -194,12 +190,10 @@ class SelectServerFragment : Fragment() {
 			}
 		}
 
-		// App info
 		@Suppress("SetTextI18n")
-		binding.appVersion.text = "jellyfin-androidtv ${BuildConfig.VERSION_NAME} ${BuildConfig.BUILD_TYPE}"
+		binding.appVersion.text = "Moonfin version ${BuildConfig.VERSION_NAME} ${BuildConfig.BUILD_TYPE}"
 
-		// Set focus to fragment
-		binding.root.requestFocus()
+		binding.enterServerAddress.requestFocus()
 
 		return binding.root
 	}
@@ -224,34 +218,53 @@ class SelectServerFragment : Fragment() {
 		override fun areItemsTheSame(old: StatefulServer, new: StatefulServer): Boolean = new.server == old.server
 
 		override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-			val view = ServerButtonView(parent.context).apply {
+			val button = AppCompatButton(parent.context, null, 0).apply {
 				layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+				setBackgroundResource(R.drawable.button_default_back)
+				setTextColor(ColorStateList.valueOf(
+					parent.context.getColor(R.color.button_default_normal_text)
+				))
+				gravity = Gravity.CENTER
+				val hPad = (24 * parent.context.resources.displayMetrics.density).toInt()
+				val vPad = (10 * parent.context.resources.displayMetrics.density).toInt()
+				setPadding(hPad, vPad, hPad, vPad)
+				textSize = 15f
+				isAllCaps = false
+				isFocusable = true
+				isFocusableInTouchMode = false
 			}
-			return ViewHolder(view)
+			return ViewHolder(button)
 		}
 
-		override fun onBindViewHolder(holder: ViewHolder, statefulServer: StatefulServer) = with(holder.serverButtonView) {
+		override fun onBindViewHolder(holder: ViewHolder, statefulServer: StatefulServer) {
 			val (serverState, server) = statefulServer
+			val button = holder.button
 
-			// Set data
-			name = server.name
-			address = server.address
-			version = server.version
+			val displayText = buildString {
+				append(server.name.ifBlank { server.address })
+				if (server.name.isNotBlank()) append("  •  ${server.address}")
+				if (server.version != null) append("  •  ${server.version}")
+			}
+			button.text = displayText
 
-			state = when (serverState) {
-				is ConnectingState -> ServerButtonView.State.CONNECTING
-				is UnableToConnectState -> ServerButtonView.State.ERROR
-				else -> ServerButtonView.State.DEFAULT
+			when (serverState) {
+				is ConnectingState -> button.isEnabled = false
+				is UnableToConnectState -> {
+					button.isEnabled = true
+					button.text = "${displayText} ⚠"
+				}
+				else -> button.isEnabled = true
 			}
 
-			// Set actions
-			setOnClickListener { serverClickListener(statefulServer) }
-			setPopupMenu { serverPopupBuilder(server) }
+			button.setOnClickListener { serverClickListener(statefulServer) }
+			button.setOnLongClickListener {
+				popupMenu(button.context, button) { serverPopupBuilder(server) }.showIfNotEmpty()
+			}
 		}
 
 		inner class ViewHolder(
-			val serverButtonView: ServerButtonView,
-		) : RecyclerView.ViewHolder(serverButtonView)
+			val button: AppCompatButton,
+		) : RecyclerView.ViewHolder(button)
 	}
 
 	data class StatefulServer(val state: ServerAdditionState? = null, val server: Server)

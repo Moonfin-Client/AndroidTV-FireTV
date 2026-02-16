@@ -13,11 +13,15 @@
         android:descendantFocusability="blocksDescendants"
         android:focusable="false" />
 
-    <LinearLayout
+    <FrameLayout
         android:id="@+id/content_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical" />
+        android:layout_height="match_parent" />
+
+    <FrameLayout
+        android:id="@+id/toolbar_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/screensaver"

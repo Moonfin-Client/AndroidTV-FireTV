@@ -10,7 +10,6 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.add
 import androidx.fragment.app.commit
 import androidx.fragment.app.replace
 import androidx.lifecycle.Lifecycle
@@ -36,7 +35,6 @@ import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.auth.repository.ServerUserRepository
 import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.databinding.FragmentServerBinding
-import org.jellyfin.androidtv.ui.ServerButtonView
 import org.jellyfin.androidtv.ui.card.UserCardView
 import org.jellyfin.androidtv.ui.startup.PinEntryDialog
 import org.jellyfin.androidtv.ui.startup.StartupViewModel
@@ -74,7 +72,6 @@ class ServerFragment : Fragment() {
 
 	val userAdapter = UserAdapter(requireContext(), server, startupViewModel, authenticationRepository, serverUserRepository)
 	userAdapter.onItemPressed = { user ->
-		// Check if user has PIN protection enabled
 		if (PinCodeUtil.isPinEnabled(requireContext(), user.id)) {
 			showPinEntry(server, user)
 		} else {
@@ -87,8 +84,7 @@ class ServerFragment : Fragment() {
 		.flowWithLifecycle(viewLifecycleOwner.lifecycle, Lifecycle.State.STARTED)
 		.onEach { users ->
 				userAdapter.items = users
-				
-				// Calculate centering padding once layout is complete
+
 				binding.users.post {
 					val parentWidth = (binding.users.parent as? View)?.width ?: 0
 					
@@ -104,16 +100,18 @@ class ServerFragment : Fragment() {
 
 				binding.users.isFocusable = users.any()
 				binding.noUsersWarning.isVisible = users.isEmpty()
-				
-				// Show edit button if there are users, hide the action buttons
+
 				val hasUsers = users.isNotEmpty()
 				binding.editButton.isVisible = hasUsers
 				binding.actionsContainer.isVisible = !hasUsers
 				
-				binding.root.requestFocus()
+				if (hasUsers) {
+					binding.users.requestFocus()
+				} else {
+					binding.addUserButton.requestFocus()
+				}
 			}.launchIn(viewLifecycleOwner.lifecycleScope)
 
-		// Setup edit button to toggle actions visibility
 		binding.editButton.setOnClickListener {
 			binding.actionsContainer.isVisible = true
 			binding.editButton.isVisible = false
@@ -150,23 +148,18 @@ class ServerFragment : Fragment() {
 					val storedHash = userPrefs[org.jellyfin.androidtv.preference.UserSettingPreferences.userPinHash]
 					
 					if (PinCodeUtil.hashPin(pin) == storedHash) {
-						// Correct PIN
 						authenticateUser(server, user)
 					} else {
-						// Incorrect PIN - show error and reopen dialog
 						Toast.makeText(context, R.string.lbl_pin_code_incorrect, Toast.LENGTH_SHORT).show()
-						// Reopen the dialog after a short delay
 						binding.root.postDelayed({
 							showPinEntry(server, user)
 						}, 500)
 					}
 				} else {
-					// User cancelled, restore focus to users grid
 					binding.users.requestFocus()
 				}
 			},
 			onForgotPin = {
-				// Navigate to password-based authentication screen
 				navigateFragment<UserLoginFragment>(bundleOf(
 					UserLoginFragment.ARG_SERVER_ID to server.id.toString(),
 					UserLoginFragment.ARG_USERNAME to user.name,
@@ -206,12 +199,8 @@ class ServerFragment : Fragment() {
 	private fun onServerChange(server: Server) {
 		binding.loginDisclaimer.text = server.loginDisclaimer?.let { markdownRenderer.toMarkdownSpanned(it) }
 
-		binding.serverButton.apply {
-			state = ServerButtonView.State.EDIT
-			name = server.name
-			address = server.address
-			version = server.version
-		}
+		binding.serverName.text = server.name
+		binding.serverName.isVisible = server.name.isNotBlank()
 
 		binding.addUserButton.setOnClickListener {
 			navigateFragment<UserLoginFragment>(
@@ -250,8 +239,8 @@ class ServerFragment : Fragment() {
 			.supportFragmentManager
 			.commit {
 				if (keepToolbar) {
-					replace<StartupToolbarFragment>(R.id.content_view)
-					add<F>(R.id.content_view, null, args)
+					replace<F>(R.id.content_view, null, args)
+					replace<StartupToolbarFragment>(R.id.toolbar_view)
 				} else {
 					replace<F>(R.id.content_view, null, args)
 				}
@@ -293,14 +282,12 @@ class ServerFragment : Fragment() {
 			holder.cardView.image = startupViewModel.getUserImage(server, user)
 
 			holder.cardView.setPopupMenu {
-				// Logout button
 				if (user is PrivateUser && user.accessToken != null) {
 					item(context.getString(R.string.lbl_sign_out)) {
 						authenticationRepository.logout(user)
 					}
 				}
 
-				// Remove button
 				if (user is PrivateUser) {
 					item(context.getString(R.string.lbl_remove)) {
 						serverUserRepository.deleteStoredUser(user)

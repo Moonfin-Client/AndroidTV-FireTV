@@ -55,7 +55,7 @@ class UserLoginFragment : Fragment() {
 	): View {
 		_binding = FragmentUserLoginBinding.inflate(inflater, container, false)
 
-		binding.cancel.setOnClickListener { parentFragmentManager.popBackStack() }
+		binding.backButton.setOnClickListener { parentFragmentManager.popBackStack() }
 		binding.useCredentials.setOnClickListener { setLoginMethod<UserLoginCredentialsFragment>() }
 		binding.useQuickconnect.setOnClickListener { setLoginMethod<UserLoginQuickConnectFragment>() }
 

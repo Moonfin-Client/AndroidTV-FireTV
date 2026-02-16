@@ -405,7 +405,7 @@
     <string name="action_connect">Verbinden</string>
     <string name="login_quickconnect_step_3">3. Voer de volgende code in:</string>
     <string name="login_quickconnect_step_2">2. Open het gebruikersmenu en ga naar de Quick Connect-pagina</string>
-    <string name="login_quickconnect_step_1">1. Open Jellyfin op je telefoon of in je webbrowser en meld je aan met je account</string>
+    <string name="login_quickconnect_step_1">1. Open Jellyfin op je telefoon of in je web browser en meld je aan met je account</string>
     <string name="login_other_options">Andere opties:</string>
     <string name="login_connect_to">Verbinden met %1$s</string>
     <string name="input_password">Wachtwoord</string>
@@ -448,7 +448,7 @@
 \nBedankt voor je deelname aan het bètaprogramma van Jellyfin.</string>
     <string name="crash_report_toast">Oeps! Er is iets misgegaan; er is een crashrapport naar je Jellyfin-server verzonden.</string>
     <string name="pref_crash_report_logs_enabled">Logboeken worden bijgevoegd bij crashrapporten</string>
-    <string name="server_setup_incomplete">Het instellen van deze server is nog niet voltooid. Open Jellyfin eerst in een webbrowser om het instellen te voltooien.</string>
+    <string name="server_setup_incomplete">Het instellen van deze server is nog niet voltooid. Open Jellyfin eerst in een web browser om het instellen te voltooien.</string>
     <string name="pref_enable_media_management">Mediabeheer inschakelen</string>
     <string name="item_delete_confirm_title">Item verwijderen</string>
     <string name="item_deleted">%1$s verwijderd</string>

@@ -1,49 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical">
 
     <TextView
         style="@style/TextAppearance.AppCompat.Body2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/login_quickconnect_step_1" />
+        android:text="@string/login_quickconnect_step_1"
+        android:textColor="@color/login_text_secondary"
+        android:textSize="15sp" />
 
     <TextView
         style="@style/TextAppearance.AppCompat.Body2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/login_quickconnect_step_2" />
+        android:layout_marginTop="12dp"
+        android:text="@string/login_quickconnect_step_2"
+        android:textColor="@color/login_text_secondary"
+        android:textSize="15sp" />
 
     <TextView
         style="@style/TextAppearance.AppCompat.Body2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/login_quickconnect_step_3" />
+        android:layout_marginTop="12dp"
+        android:text="@string/login_quickconnect_step_3"
+        android:textColor="@color/login_text_secondary"
+        android:textSize="15sp" />
 
-    <TextView
-        android:id="@+id/quick_connect_code"
-        style="@style/TextAppearance.AppCompat.Display3"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:textDirection="ltr" />
-
-    <ProgressBar
-        android:id="@+id/loading"
-        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:indeterminate="true" />
+        android:layout_marginTop="20dp"
+        android:background="@drawable/bg_qc_code"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingVertical="24dp">
+
+        <TextView
+            android:id="@+id/quick_connect_code"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.3"
+            android:textColor="@color/jellyfin_blue"
+            android:textDirection="ltr"
+            android:textSize="48sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/loading"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:indeterminate="true" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/error"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp" />
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:textColor="@color/login_error_text"
+        android:textSize="14sp" />
 </LinearLayout>

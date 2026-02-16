@@ -3,21 +3,22 @@
     <item android:state_enabled="true" android:state_focused="false">
         <shape android:shape="rectangle">
             <corners android:radius="?attr/inputRounding" />
-            <stroke android:width="?attr/inputDefaultStrokeWidth" android:color="?attr/inputDefaultStrokeColor" />
+            <solid android:color="@color/login_input_bg" />
+            <stroke android:width="2dp" android:color="@android:color/transparent" />
         </shape>
     </item>
     <item android:state_enabled="false" android:state_focused="false">
         <shape android:shape="rectangle">
             <corners android:radius="?attr/inputRounding" />
-            <stroke android:width="?attr/inputDefaultStrokeWidth" android:color="?attr/inputDefaultStrokeColor" />
             <solid android:color="@color/input_default_disabled_background" />
+            <stroke android:width="2dp" android:color="@color/login_card_border" />
         </shape>
     </item>
     <item android:state_enabled="true" android:state_focused="true">
         <shape android:shape="rectangle">
             <corners android:radius="?attr/inputRounding" />
-            <stroke android:width="?attr/inputDefaultStrokeWidth" android:color="?attr/inputDefaultStrokeColor" />
-            <solid android:color="?attr/inputDefaultHighlightBackground" />
+            <solid android:color="@color/login_input_bg" />
+            <stroke android:width="2dp" android:color="@color/login_input_focus_border" />
         </shape>
     </item>
 </selector>
