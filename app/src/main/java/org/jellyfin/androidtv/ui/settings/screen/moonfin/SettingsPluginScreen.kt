@@ -227,18 +227,6 @@ fun SettingsPluginScreen() {
 			)
 		}
 
-		item {
-			val mediaBarEnabled by rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarEnabled)
-			var mediaBarSwapLayout by rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarSwapLayout)
-			ListButton(
-				headingContent = { Text("Swap Layout") },
-				captionContent = { Text("Switch positions of logo and info overlay") },
-				trailingContent = { Checkbox(checked = mediaBarSwapLayout) },
-				enabled = mediaBarEnabled,
-				onClick = { mediaBarSwapLayout = !mediaBarSwapLayout }
-			)
-		}
-
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_theme_music_title)) }) }
 
 		item {

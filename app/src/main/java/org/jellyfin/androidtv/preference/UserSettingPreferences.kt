@@ -52,7 +52,6 @@ class UserSettingPreferences(
 		val mediaBarItemCount = stringPreference("mediaBarItemCount", "10")
 		val mediaBarOverlayOpacity = intPreference("mediaBarOverlayOpacity", 50)
 		val mediaBarOverlayColor = stringPreference("mediaBarOverlayColor", "gray")
-		val mediaBarSwapLayout = booleanPreference("mediaBarSwapLayout", false)
 		
 		// Home rows image type settings
 		val homeRowsUniversalOverride = booleanPreference("homeRowsUniversalOverride", false)

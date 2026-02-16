@@ -71,6 +71,7 @@ import org.jellyfin.androidtv.util.TimeUtils
 import org.jellyfin.androidtv.util.isImagePrimarilyDark
 import org.jellyfin.androidtv.util.toHtmlSpanned
 import org.jellyfin.sdk.api.client.ApiClient
+import org.jellyfin.sdk.model.api.BaseItemKind
 import org.koin.compose.koinInject
 import timber.log.Timber
 
@@ -186,82 +187,38 @@ fun MediaBarSlideshowView(
 			is MediaBarState.Ready -> {
 				val item = currentState.items.getOrNull(playbackState.currentIndex)
 
-				// Check if layout should be swapped
-				val swapLayout = userSettingPreferences[UserSettingPreferences.mediaBarSwapLayout]
+				Crossfade(
+					targetState = item?.logoUrl,
+					animationSpec = tween(300),
+					label = "mediabar_logo_transition",
+					modifier = Modifier
+						.align(Alignment.TopStart)
+						.offset(x = 70.dp, y = (-220).dp)
+						.width(250.dp)
+						.height(100.dp)
+				) { logoUrl ->
+					if (logoUrl != null) {
+						LogoView(
+							url = logoUrl,
+							modifier = Modifier.fillMaxSize()
+						)
+					}
+				}
 
-				// Content row: Info overlay and logo
-				Row(
+				// Info overlay at bottom
+				Box(
 					modifier = Modifier
 						.align(Alignment.BottomStart)
 						.fillMaxWidth()
 						.padding(start = 43.dp, end = 43.dp, bottom = 30.dp),
-					horizontalArrangement = Arrangement.SpaceBetween,
-					verticalAlignment = Alignment.Bottom
 				) {
-					if (swapLayout) {
-						// Logo on the left when swapped
-						Box(
-							modifier = Modifier
-								.weight(1f)
-								.height(140.dp)
-								.padding(end = 24.dp),
-							contentAlignment = Alignment.Center
-						) {
-							Crossfade(
-								targetState = item?.logoUrl,
-								animationSpec = tween(300),
-								label = "mediabar_logo_transition"
-							) { logoUrl ->
-								if (logoUrl != null) {
-									LogoView(
-										url = logoUrl,
-										modifier = Modifier.fillMaxSize()
-									)
-								}
-							}
-						}
-
-						// Media info overlay on the right when swapped
-						if (item != null) {
-							MediaInfoOverlay(
-								item = item,
-								overlayColor = overlayColor,
-								overlayOpacity = overlayOpacity,
-								modifier = Modifier.width(600.dp)
-							)
-						}
-					} else {
-						// Media info overlay on the left (default)
-						if (item != null) {
-							MediaInfoOverlay(
-								item = item,
-								overlayColor = overlayColor,
-								overlayOpacity = overlayOpacity,
-								modifier = Modifier.width(600.dp)
-							)
-						}
-
-						// Logo on the right (default)
-						Box(
-							modifier = Modifier
-								.weight(1f)
-								.height(140.dp)
-								.padding(start = 24.dp),
-							contentAlignment = Alignment.Center
-						) {
-							Crossfade(
-								targetState = item?.logoUrl,
-								animationSpec = tween(300),
-								label = "mediabar_logo_transition"
-							) { logoUrl ->
-								if (logoUrl != null) {
-									LogoView(
-										url = logoUrl,
-										modifier = Modifier.fillMaxSize()
-									)
-								}
-							}
-						}
+					if (item != null) {
+						MediaInfoOverlay(
+							item = item,
+							overlayColor = overlayColor,
+							overlayOpacity = overlayOpacity,
+							modifier = Modifier.fillMaxWidth()
+						)
 					}
 				}
 
@@ -339,7 +296,6 @@ private fun MediaInfoOverlay(
 ) {
 	Box(
 		modifier = modifier
-			.width(600.dp)
 			.background(
 				brush = Brush.verticalGradient(
 					colors = listOf(
@@ -352,61 +308,43 @@ private fun MediaInfoOverlay(
 			.padding(16.dp)
 	) {
 		Column(
+			modifier = Modifier.fillMaxWidth(),
 			verticalArrangement = Arrangement.spacedBy(8.dp)
 		) {
-			// Metadata row
-		Row(
-			horizontalArrangement = Arrangement.spacedBy(16.dp),
-			verticalAlignment = Alignment.CenterVertically
-		) {
-			item.year?.let { year ->
+			// Metadata + genres row
+			val context = LocalContext.current
+			val infoParts = buildList {
+				item.year?.let { add(it.toString()) }
+				item.rating?.let { add(it) }
+				if (item.itemType != BaseItemKind.SERIES) {
+					item.runtime?.let { add(TimeUtils.formatRuntimeHoursMinutes(context, it)) }
+				}
+				if (item.genres.isNotEmpty()) {
+					add(item.genres.joinToString(" • "))
+				}
+			}
+			if (infoParts.isNotEmpty()) {
 				Text(
-					text = year.toString(),
+					text = infoParts.joinToString(" • "),
 					fontSize = 16.sp,
 					color = Color.White
 				)
 			}
 
-			item.rating?.let { rating ->
+			// Ratings row
+			MediaBarRating(item = item)
+
+			// Overview
+			item.overview?.let { overview ->
 				Text(
-					text = rating,
-					fontSize = 16.sp,
-					color = Color.White
+					text = overview.toHtmlSpanned().toString(),
+					fontSize = 14.sp,
+					color = Color.White,
+					maxLines = 3,
+					overflow = TextOverflow.Ellipsis,
+					lineHeight = 20.sp
 				)
 			}
-
-			item.runtime?.let { runtime ->
-				Text(
-					text = TimeUtils.formatRuntimeHoursMinutes(LocalContext.current, runtime),
-					fontSize = 16.sp,
-					color = Color.White
-				)
-			}
-		}
-
-		// Ratings row (separate line)
-		MediaBarRating(item = item)
-
-		// Genres
-		if (item.genres.isNotEmpty()) {
-			Text(
-				text = item.genres.joinToString(" • "),
-				fontSize = 14.sp,
-				color = Color.White
-			)
-		}
-
-		// Overview
-		item.overview?.let { overview ->
-			Text(
-				text = overview.toHtmlSpanned().toString(),
-				fontSize = 14.sp,
-				color = Color.White,
-				maxLines = 2,
-				overflow = TextOverflow.Ellipsis,
-				lineHeight = 20.sp
-			)
-		}
 		}
 	}
 }

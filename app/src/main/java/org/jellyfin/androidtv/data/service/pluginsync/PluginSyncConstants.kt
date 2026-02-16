@@ -58,7 +58,6 @@ object PluginSyncConstants {
 		SyncablePreference(UserSettingPreferences.mediaBarItemCount, SyncType.STRING, "mediaBarItemCount"),
 		SyncablePreference(UserSettingPreferences.mediaBarOverlayOpacity, SyncType.INT, "mediaBarOpacity"),
 		SyncablePreference(UserSettingPreferences.mediaBarOverlayColor, SyncType.STRING, "mediaBarOverlayColor"),
-		SyncablePreference(UserSettingPreferences.mediaBarSwapLayout, SyncType.BOOLEAN, "mediaBarSwapLayout"),
 		// Theme Music
 		SyncablePreference(UserSettingPreferences.themeMusicEnabled, SyncType.BOOLEAN, "themeMusicEnabled"),
 		SyncablePreference(UserSettingPreferences.themeMusicVolume, SyncType.INT, "themeMusicVolume"),
