@@ -16,6 +16,7 @@ import org.jellyfin.sdk.api.client.exception.ApiClientException
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.playStateApi
+import org.jellyfin.sdk.api.client.extensions.playlistsApi
 import org.jellyfin.sdk.api.client.extensions.tvShowsApi
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -143,8 +144,12 @@ class ItemDetailsViewModel(
 					loadFilmography(item.id)
 				}
 
-				BaseItemKind.MUSIC_ALBUM, BaseItemKind.PLAYLIST -> {
+				BaseItemKind.MUSIC_ALBUM -> {
 					loadTracks(item.id)
+				}
+
+				BaseItemKind.PLAYLIST -> {
+					loadPlaylistItems(item.id)
 				}
 
 				else -> {
@@ -258,6 +263,82 @@ class ItemDetailsViewModel(
 			_uiState.value = _uiState.value.copy(tracks = tracks.items)
 		} catch (err: ApiClientException) {
 			Timber.w(err, "Failed to load tracks")
+		}
+	}
+
+	private suspend fun loadPlaylistItems(playlistId: UUID) {
+		try {
+			val items = withContext(Dispatchers.IO) {
+				effectiveApi.playlistsApi.getPlaylistItems(
+					playlistId = playlistId,
+					limit = 150,
+					fields = ItemRepository.itemFields,
+				).content
+			}
+			_uiState.value = _uiState.value.copy(tracks = items.items)
+		} catch (err: ApiClientException) {
+			Timber.w(err, "Failed to load playlist items")
+		}
+	}
+
+	fun movePlaylistItem(fromIndex: Int, toIndex: Int) {
+		val item = _uiState.value.item ?: return
+		val tracks = _uiState.value.tracks.toMutableList()
+		if (fromIndex !in tracks.indices || toIndex !in tracks.indices) return
+
+		val track = tracks[fromIndex]
+		val playlistItemId = track.playlistItemId ?: return
+
+		tracks.removeAt(fromIndex)
+		tracks.add(toIndex, track)
+		_uiState.value = _uiState.value.copy(tracks = tracks)
+
+		Timber.d("Moving playlist item from index %d to %d", fromIndex, toIndex)
+
+		viewModelScope.launch {
+			try {
+				withContext(Dispatchers.IO) {
+					effectiveApi.playlistsApi.moveItem(
+						playlistId = item.id.toString(),
+						itemId = playlistItemId,
+						newIndex = toIndex,
+					)
+				}
+			} catch (err: Exception) {
+				Timber.w(err, "Failed to move playlist item")
+				val reverted = _uiState.value.tracks.toMutableList()
+				val movedItem = reverted.removeAt(toIndex)
+				reverted.add(fromIndex, movedItem)
+				_uiState.value = _uiState.value.copy(tracks = reverted)
+			}
+		}
+	}
+
+	fun removeFromPlaylist(index: Int) {
+		val item = _uiState.value.item ?: return
+		val tracks = _uiState.value.tracks.toMutableList()
+		if (index !in tracks.indices) return
+
+		val track = tracks[index]
+		val playlistItemId = track.playlistItemId ?: return
+
+		tracks.removeAt(index)
+		_uiState.value = _uiState.value.copy(tracks = tracks)
+
+		viewModelScope.launch {
+			try {
+				withContext(Dispatchers.IO) {
+					effectiveApi.playlistsApi.removeItemFromPlaylist(
+						playlistId = item.id.toString(),
+						entryIds = listOf(playlistItemId),
+					)
+				}
+			} catch (err: Exception) {
+				Timber.w(err, "Failed to remove item from playlist")
+				val reverted = _uiState.value.tracks.toMutableList()
+				reverted.add(index, track)
+				_uiState.value = _uiState.value.copy(tracks = reverted)
+			}
 		}
 	}
 

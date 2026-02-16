@@ -14,10 +14,12 @@ import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +51,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -641,7 +644,29 @@ class ItemDetailsFragment : Fragment() {
 				// ---- Metadata ----
 				item {
 					Spacer(modifier = Modifier.height(24.dp))
-					MetadataSection(item, uiState)
+					if (isPlaylist) {
+						Row(
+							modifier = Modifier
+								.fillMaxWidth()
+								.clip(RoundedCornerShape(8.dp))
+								.background(Color.White.copy(alpha = 0.03f))
+								.border(
+									1.dp,
+									Color.White.copy(alpha = 0.06f),
+									RoundedCornerShape(8.dp),
+								)
+								.padding(vertical = 12.dp, horizontal = 18.dp),
+							verticalAlignment = Alignment.CenterVertically,
+						) {
+							Text(
+								text = "To reorder items, press left and right on the D-pad",
+								fontSize = 14.sp,
+								color = Color.White.copy(alpha = 0.6f),
+							)
+						}
+					} else {
+						MetadataSection(item, uiState)
+					}
 				}
 
 				// ---- Next Up ----
@@ -685,6 +710,8 @@ class ItemDetailsFragment : Fragment() {
 
 				// ---- Tracks (Music Album / Playlist) ----
 				if (uiState.tracks.isNotEmpty()) {
+					val canReorder = isPlaylist && item.canDelete == true
+
 					item {
 						Text(
 							text = "Tracks",
@@ -695,7 +722,7 @@ class ItemDetailsFragment : Fragment() {
 						)
 					}
 
-					items(uiState.tracks.size) { index ->
+					items(uiState.tracks.size, key = { uiState.tracks[it].id }) { index ->
 						val track = uiState.tracks[index]
 						TrackItemCard(
 							trackNumber = track.indexNumber ?: (index + 1),
@@ -710,6 +737,14 @@ class ItemDetailsFragment : Fragment() {
 							} else {
 								null
 							},
+							onMoveUp = if (canReorder && index > 0) {
+								{ viewModel.movePlaylistItem(index, index - 1) }
+							} else null,
+							onMoveDown = if (canReorder && index < uiState.tracks.size - 1) {
+								{ viewModel.movePlaylistItem(index, index + 1) }
+							} else null,
+							isFirst = index == 0,
+							isLast = index == uiState.tracks.size - 1,
 							modifier = Modifier.padding(bottom = 12.dp),
 						)
 					}

@@ -29,6 +29,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.Alignment
@@ -876,7 +879,8 @@ fun LandscapeItemCard(
 }
 
 /**
- * Track item card for music album/playlist track lists
+ * Track item card for music album/playlist track lists.
+ * When [onMoveUp]/[onMoveDown] are provided, shows reorder chevrons and handles DPAD left/right.
  */
 @Composable
 fun TrackItemCard(
@@ -887,9 +891,15 @@ fun TrackItemCard(
 	onClick: () -> Unit,
 	modifier: Modifier = Modifier,
 	onFocused: (() -> Unit)? = null,
+	onMoveUp: (() -> Unit)? = null,
+	onMoveDown: (() -> Unit)? = null,
+	isFirst: Boolean = false,
+	isLast: Boolean = false,
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
+	val canReorder = onMoveUp != null || onMoveDown != null
+	val focusColor = if (canReorder) focusBorderColor() else Color.White
 
 	LaunchedEffect(isFocused) {
 		if (isFocused) onFocused?.invoke()
@@ -898,6 +908,22 @@ fun TrackItemCard(
 	Row(
 		modifier = modifier
 			.fillMaxWidth()
+			.then(
+				if (canReorder) {
+					Modifier.onKeyEvent { event ->
+						if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
+						when (event.key) {
+							Key.DirectionLeft -> {
+								if (!isFirst) { onMoveUp?.invoke(); true } else false
+							}
+							Key.DirectionRight -> {
+								if (!isLast) { onMoveDown?.invoke(); true } else false
+							}
+							else -> false
+						}
+					}
+				} else Modifier
+			)
 			.clickable(
 				interactionSource = interactionSource,
 				indication = null,
@@ -910,7 +936,7 @@ fun TrackItemCard(
 			)
 			.border(
 				width = if (isFocused) 2.dp else 0.dp,
-				color = if (isFocused) Color.White else Color.Transparent,
+				color = if (isFocused) focusColor else Color.Transparent,
 				shape = RoundedCornerShape(8.dp),
 			)
 			.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -951,6 +977,27 @@ fun TrackItemCard(
 				fontSize = 16.sp,
 				color = Color.White.copy(alpha = 0.6f),
 			)
+		}
+
+		if (canReorder && isFocused) {
+			Spacer(modifier = Modifier.width(12.dp))
+
+			Column(
+				verticalArrangement = Arrangement.spacedBy(2.dp),
+			) {
+				Icon(
+					imageVector = ImageVector.vectorResource(R.drawable.ic_up),
+					contentDescription = "Move up",
+					modifier = Modifier.size(18.dp),
+					tint = if (!isFirst) focusColor else Color.White.copy(alpha = 0.2f),
+				)
+				Icon(
+					imageVector = ImageVector.vectorResource(R.drawable.ic_down),
+					contentDescription = "Move down",
+					modifier = Modifier.size(18.dp),
+					tint = if (!isLast) focusColor else Color.White.copy(alpha = 0.2f),
+				)
+			}
 		}
 	}
 }
