@@ -387,6 +387,8 @@
     <string name="lbl_hide_watched_checkmark">When there are episodes remaining</string>
     <string name="lbl_use_series_thumbnails">Prefer thumbnails</string>
     <string name="lbl_use_series_thumbnails_description">Use series thumbnails when displaying episodes</string>
+    <string name="lbl_card_focus_expansion">Card focus expansion</string>
+    <string name="lbl_card_focus_expansion_description">Enlarge card items when they receive focus</string>
     <string name="lbl_merge_continue_watching_next_up">Merge Continue Watching and Next Up</string>
     <string name="lbl_merge_continue_watching_next_up_description">Show all in-progress and next episodes in a single row</string>
     <string name="auto_sign_in">Automatic sign in</string>

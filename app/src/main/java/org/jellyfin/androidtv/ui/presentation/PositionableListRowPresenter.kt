@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.ui.presentation
 
 import android.content.Context
 import android.view.View
+import androidx.leanback.widget.FocusHighlight
 import androidx.leanback.widget.RowHeaderPresenter
 import androidx.leanback.widget.RowPresenter
 import org.jellyfin.androidtv.R
@@ -12,16 +13,24 @@ class PositionableListRowPresenter : CustomListRowPresenter {
 
 	// Backward compatible constructor
 	@JvmOverloads
-	constructor(padding: Int = 0) : super(padding) {
+	constructor(
+		padding: Int = 0,
+		focusZoomFactor: Int = FocusHighlight.ZOOM_FACTOR_MEDIUM,
+	) : super(padding, focusZoomFactor) {
 		init()
 	}
 
 	// New constructor with context and spacing preference
-	constructor(context: Context, useLargeSpacing: Boolean = false) : this(
+	constructor(
+		context: Context,
+		useLargeSpacing: Boolean = false,
+		focusZoomFactor: Int = FocusHighlight.ZOOM_FACTOR_MEDIUM,
+	) : this(
 		context.resources.getDimensionPixelSize(
 			if (useLargeSpacing) R.dimen.home_row_spacing_large
 			else R.dimen.home_row_spacing
-		)
+		),
+		focusZoomFactor,
 	)
 
 	private fun init() {

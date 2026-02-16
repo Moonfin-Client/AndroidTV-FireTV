@@ -123,7 +123,11 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 		super.onCreate(savedInstanceState)
 
 		// Create a custom row presenter that keeps headers always visible
-		val rowPresenter = PositionableListRowPresenter(requireContext()).apply {
+		val zoomFactor = if (userPreferences[UserPreferences.cardFocusExpansion])
+			androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM
+		else
+			androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_NONE
+		val rowPresenter = PositionableListRowPresenter(requireContext(), focusZoomFactor = zoomFactor).apply {
 			// Enable select effect for rows
 			setSelectEffectEnabled(true)
 		}

@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.leanback.app.RowsSupportFragment
 import androidx.leanback.widget.ArrayObjectAdapter
+import androidx.leanback.widget.FocusHighlight
 import androidx.leanback.widget.HeaderItem
 import androidx.leanback.widget.ListRow
 import androidx.leanback.widget.OnItemViewClickedListener
@@ -24,6 +25,7 @@ import org.jellyfin.androidtv.constant.JellyseerrRowType
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrMediaInfoDto
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.itemhandling.JellyseerrMediaBaseRowItem
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
@@ -38,6 +40,7 @@ import kotlinx.serialization.json.Json
 class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 	private val viewModel: JellyseerrViewModel by viewModel()
 	private val navigationRepository: NavigationRepository by inject()
+	private val userPreferences: UserPreferences by inject()
 	private val jellyseerrPreferences: JellyseerrPreferences by inject(named("global"))
 	private var hasSetupRows = false
 	
@@ -301,7 +304,11 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 		}
 
 		// Create rows adapter
-		val rowPresenter = PositionableListRowPresenter(requireContext()).apply {
+		val zoomFactor = if (userPreferences[UserPreferences.cardFocusExpansion])
+			FocusHighlight.ZOOM_FACTOR_MEDIUM
+		else
+			FocusHighlight.ZOOM_FACTOR_NONE
+		val rowPresenter = PositionableListRowPresenter(requireContext(), focusZoomFactor = zoomFactor).apply {
 			setSelectEffectEnabled(true)
 		}
 		val rowsAdapter = ArrayObjectAdapter(rowPresenter)

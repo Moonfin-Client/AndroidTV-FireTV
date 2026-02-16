@@ -214,7 +214,8 @@ class GenreBrowseFragment : Fragment() {
 	}
 
 	private fun setupGrid() {
-		gridPresenter = VerticalGridPresenter(FocusHighlight.ZOOM_FACTOR_MEDIUM, false).apply {
+		val zoomFactor = if (userPreferences[UserPreferences.cardFocusExpansion]) FocusHighlight.ZOOM_FACTOR_MEDIUM else FocusHighlight.ZOOM_FACTOR_NONE
+		gridPresenter = VerticalGridPresenter(zoomFactor, false).apply {
 			numberOfColumns = NUM_COLUMNS
 			shadowEnabled = false
 		}

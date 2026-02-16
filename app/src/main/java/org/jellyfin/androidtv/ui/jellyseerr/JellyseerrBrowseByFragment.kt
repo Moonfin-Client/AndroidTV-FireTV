@@ -23,6 +23,7 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.databinding.HorizontalGridBrowseBinding
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.itemhandling.JellyseerrMediaBaseRowItem
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.navigation.Destinations
@@ -58,6 +59,7 @@ class JellyseerrBrowseByFragment : Fragment() {
 	private val viewModel: JellyseerrViewModel by viewModel()
 	private val navigationRepository: NavigationRepository by inject()
 	private val backgroundService: BackgroundService by inject()
+	private val userPreferences: UserPreferences by inject()
 	
 	private var filterId: Int = 0
 	private var filterName: String = ""
@@ -264,7 +266,8 @@ class JellyseerrBrowseByFragment : Fragment() {
 	}
 	
 	private fun setupGrid() {
-		gridPresenter = VerticalGridPresenter(FocusHighlight.ZOOM_FACTOR_MEDIUM, false).apply {
+		val zoomFactor = if (userPreferences[UserPreferences.cardFocusExpansion]) FocusHighlight.ZOOM_FACTOR_MEDIUM else FocusHighlight.ZOOM_FACTOR_NONE
+		gridPresenter = VerticalGridPresenter(zoomFactor, false).apply {
 			numberOfColumns = NUM_COLUMNS
 			shadowEnabled = false
 		}

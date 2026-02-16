@@ -225,6 +225,6 @@ val appModule = module {
 	single { org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer(androidContext()) }
 
 	factory { (context: Context) -> 
-		SearchFragmentDelegate(context, get(), get()) 
+		SearchFragmentDelegate(context, get(), get(), get()) 
 	}
 }

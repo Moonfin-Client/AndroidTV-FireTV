@@ -1,6 +1,7 @@
 package org.jellyfin.androidtv.ui.search
 
 import android.content.Context
+import androidx.leanback.widget.FocusHighlight
 import androidx.leanback.widget.HeaderItem
 import androidx.leanback.widget.ListRow
 import androidx.leanback.widget.OnItemViewClickedListener
@@ -12,6 +13,7 @@ import org.jellyfin.androidtv.data.service.BlurContext
 import org.jellyfin.androidtv.ui.itemhandling.BaseRowItem
 import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
 import org.jellyfin.androidtv.ui.itemhandling.ItemRowAdapter
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.CustomListRowPresenter
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter
@@ -20,8 +22,11 @@ class SearchFragmentDelegate(
 	private val context: Context,
 	private val backgroundService: BackgroundService,
 	private val itemLauncher: ItemLauncher,
+	private val userPreferences: UserPreferences,
 ) {
-	val rowsAdapter = MutableObjectAdapter<Row>(CustomListRowPresenter())
+	val rowsAdapter = MutableObjectAdapter<Row>(CustomListRowPresenter(
+		focusZoomFactor = if (userPreferences[UserPreferences.cardFocusExpansion]) FocusHighlight.ZOOM_FACTOR_MEDIUM else FocusHighlight.ZOOM_FACTOR_NONE
+	))
 
 	fun showResults(searchResultGroups: Collection<SearchResultGroup>) {
 		rowsAdapter.clear()

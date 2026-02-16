@@ -38,6 +38,12 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var posterSize = enumPreference("poster_size", PosterSize.DEFAULT)
 
 		/**
+		 * Enable focus expansion (zoom) effect on card items.
+		 * When enabled, focused cards scale up slightly. Default is off.
+		 */
+		var cardFocusExpansion = booleanPreference("pref_card_focus_expansion", false)
+
+		/**
 		 * Enable background images while browsing
 		 */
 		var backdropEnabled = booleanPreference("pref_show_backdrop", true)

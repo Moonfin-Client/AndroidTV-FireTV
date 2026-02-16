@@ -110,6 +110,17 @@ fun SettingsCustomizationScreen() {
 			)
 		}
 
+		item {
+			var cardFocusExpansion by rememberPreference(userPreferences, UserPreferences.cardFocusExpansion)
+
+			ListButton(
+				headingContent = { Text(stringResource(R.string.lbl_card_focus_expansion)) },
+				trailingContent = { Checkbox(checked = cardFocusExpansion) },
+				captionContent = { Text(stringResource(R.string.lbl_card_focus_expansion_description)) },
+				onClick = { cardFocusExpansion = !cardFocusExpansion }
+			)
+		}
+
 	}
 }
 
