@@ -375,6 +375,8 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                 } else {
                     return cardHeight * ImageHelper.ASPECT_RATIO_2_3;
                 }
+            case SQUARE:
+                return cardHeight;
             case THUMB:
                 return cardHeight * ImageHelper.ASPECT_RATIO_16_9;
             case BANNER:
@@ -396,6 +398,8 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                 } else {
                     return cardWidth / ImageHelper.ASPECT_RATIO_2_3;
                 }
+            case SQUARE:
+                return cardWidth;
             case THUMB:
                 return cardWidth / ImageHelper.ASPECT_RATIO_16_9;
             case BANNER:
