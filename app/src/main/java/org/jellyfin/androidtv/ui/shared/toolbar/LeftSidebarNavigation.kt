@@ -64,6 +64,7 @@ import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.model.AggregatedLibrary
 import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
+import org.jellyfin.androidtv.data.service.pluginsync.PluginSyncService
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.ClockBehavior
@@ -108,6 +109,8 @@ fun LeftSidebarNavigation(
 	val apiClientFactory = koinInject<ApiClientFactory>()
 	val settingsViewModel = koinActivityViewModel<SettingsViewModel>()
 	val settingsClosedCounter by settingsViewModel.settingsClosedCounter.collectAsState()
+	val pluginSyncService = koinInject<PluginSyncService>()
+	val syncCompletedCounter by pluginSyncService.syncCompletedCounter.collectAsState()
 	val jellyseerrPreferences = koinInject<JellyseerrPreferences>(named("global"))
 	
 	// User image - same pattern as MainToolbar
@@ -128,7 +131,7 @@ fun LeftSidebarNavigation(
 	var enableFolderView by remember { mutableStateOf(false) }
 	var clockBehavior by remember { mutableStateOf(ClockBehavior.ALWAYS) }
 	
-	LaunchedEffect(settingsClosedCounter) {
+	LaunchedEffect(settingsClosedCounter, syncCompletedCounter) {
 		showShuffleButton = userPreferences[UserPreferences.showShuffleButton]
 		showGenresButton = userPreferences[UserPreferences.showGenresButton]
 		showFavoritesButton = userPreferences[UserPreferences.showFavoritesButton]

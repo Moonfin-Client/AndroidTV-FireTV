@@ -515,12 +515,15 @@ private fun MediaBarRating(item: MediaBarSlideItem) {
 	}
 
 	val allRatings = remember(apiRatings, item.criticRating, item.communityRating) {
-		buildMap {
+		linkedMapOf<String, Float>().apply {
 			item.communityRating?.let { put("stars", it) }
-			item.criticRating?.let { put("tomatoes", it.toFloat()) }
 			apiRatings?.forEach { (source, value) ->
 				if (source == "tomatoes" && item.criticRating != null) return@forEach
 				put(source, value)
+			}
+			// Fallback: if API didn't provide tomatoes but item has criticRating
+			if ("tomatoes" !in this) {
+				item.criticRating?.let { put("tomatoes", it.toFloat()) }
 			}
 		}
 	}
@@ -536,14 +539,9 @@ private fun MediaBarRating(item: MediaBarSlideItem) {
 		verticalArrangement = Arrangement.spacedBy(4.dp),
 		horizontalArrangement = Arrangement.spacedBy(16.dp)
 	) {
-		allRatings["stars"]?.let { SingleRating(source = "stars", rating = it, baseUrl = baseUrl) }
-		allRatings["tomatoes"]?.let { SingleRating(source = "tomatoes", rating = it, baseUrl = baseUrl) }
-
-		if (enableAdditionalRatings) {
-			apiRatings?.keys?.forEach { source ->
-				if (source == "tomatoes") return@forEach
-				allRatings[source]?.let { SingleRating(source = source, rating = it, baseUrl = baseUrl) }
-			}
+		allRatings.forEach { (source, value) ->
+			if (!enableAdditionalRatings && source != "stars" && source != "tomatoes") return@forEach
+			SingleRating(source = source, rating = value, baseUrl = baseUrl)
 		}
 	}
 }

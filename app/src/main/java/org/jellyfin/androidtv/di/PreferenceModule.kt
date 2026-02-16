@@ -11,7 +11,7 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val preferenceModule = module {
-	single { PluginSyncService(androidContext(), get(), get(), get(), get(), get()) }
+	single { PluginSyncService(androidContext(), get(), get(), get(), get(), get(), get()) }
 	single { PreferencesRepository(get(), get(), get(), get()) }
 
 	single { LiveTvPreferences(get()) }

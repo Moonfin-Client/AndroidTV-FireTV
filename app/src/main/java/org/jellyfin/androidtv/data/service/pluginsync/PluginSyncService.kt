@@ -6,6 +6,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -23,6 +26,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.repository.JellyseerrRepository
+import org.jellyfin.androidtv.data.service.UpdateCheckerService
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
@@ -81,6 +85,7 @@ class PluginSyncService(
 	private val userSettingPreferences: UserSettingPreferences,
 	private val userRepository: UserRepository,
 	private val jellyseerrRepository: JellyseerrRepository,
+	private val updateCheckerService: UpdateCheckerService,
 ) {
 	companion object {
 		private const val TAG = "PluginSync"
@@ -115,6 +120,14 @@ class PluginSyncService(
 
 	/** Coroutine scope for push-on-change debouncing. Uses IO dispatcher. */
 	private var pushScope: CoroutineScope? = null
+
+	/**
+	 * Counter incremented after settings are applied from server sync.
+	 * UI components (MainToolbar, LeftSidebarNavigation) observe this to
+	 * re-read preferences when plugin sync updates them on startup.
+	 */
+	private val _syncCompletedCounter = MutableStateFlow(0)
+	val syncCompletedCounter: StateFlow<Int> = _syncCompletedCounter.asStateFlow()
 
 	/** SharedPreferences storing the last-synced snapshot for three-way merge. */
 	private val snapshotPrefs: SharedPreferences by lazy {
@@ -154,6 +167,7 @@ class PluginSyncService(
 				applySettings(merged)
 				pushSettings(baseUrl, token, merged)
 				saveSnapshot(merged)
+				_syncCompletedCounter.value++
 				Timber.i("$TAG: Startup sync complete (three-way merge)")
 			}
 			else -> {
@@ -164,6 +178,7 @@ class PluginSyncService(
 		}
 
 		registerChangeListeners()
+		checkForPluginUpdate(baseUrl, token)
 	}
 
 	/**
@@ -182,6 +197,23 @@ class PluginSyncService(
 
 		fetchJellyseerrConfig(baseUrl, token)
 		autoConfigureMoonfinProxy(baseUrl, token)
+	}
+
+	/**
+	 * Silently checks for app updates via `/Moonfin/ClientUpdate` and caches the result
+	 * in [UpdateCheckerService.latestPluginUpdateInfo].
+	 */
+	private suspend fun checkForPluginUpdate(baseUrl: String, token: String) {
+		val result = updateCheckerService.checkForUpdateViaPlugin(baseUrl, token)
+		result.onSuccess { updateInfo ->
+			if (updateInfo != null && updateInfo.isNewer) {
+				Timber.i("$TAG: Update available via plugin: ${updateInfo.version}")
+			} else {
+				Timber.d("$TAG: No update available via plugin")
+			}
+		}.onFailure { error ->
+			Timber.d(error, "$TAG: Plugin update check failed")
+		}
 	}
 
 	/**

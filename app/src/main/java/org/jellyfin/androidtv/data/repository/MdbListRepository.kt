@@ -124,8 +124,8 @@ class MdbListRepository(
 								}
 								ratingValue?.let { source to it }
 							}
-							?.toMap()
-							?: emptyMap()
+							?.toMap(LinkedHashMap())
+							?: linkedMapOf()
 
 						ratingsCache[cacheKey] = ratingsMap
 						deferred.complete(ratingsMap)

@@ -35,7 +35,13 @@ class UpdateCheckerService(private val context: Context) {
 		private const val GITHUB_OWNER = "Moonfin-Client"
 		private const val GITHUB_REPO = "AndroidTV-FireTV"
 		private const val GITHUB_API_URL = "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest"
+		private const val PLUGIN_UPDATE_PATH = "/Moonfin/ClientUpdate"
 	}
+
+	/** Cached result from the last plugin update check (populated on startup sync). */
+	@Volatile
+	var latestPluginUpdateInfo: UpdateInfo? = null
+		private set
 
 	@Serializable
 	data class GitHubRelease(
@@ -54,6 +60,18 @@ class UpdateCheckerService(private val context: Context) {
 		@SerialName("size") val size: Long,
 	)
 
+	/**
+	 * Response from the Moonfin plugin's `/Moonfin/ClientUpdate` endpoint.
+	 */
+	@Serializable
+	data class PluginUpdateResponse(
+		val version: String? = null,
+		val downloadUrl: String? = null,
+		val releaseNotes: String? = null,
+		val releaseUrl: String? = null,
+		val apkSize: Long? = null,
+	)
+
 	data class UpdateInfo(
 		val version: String,
 		val releaseNotes: String,
@@ -64,7 +82,51 @@ class UpdateCheckerService(private val context: Context) {
 	)
 
 	/**
-	 * Check if an update is available
+	 * Check if an update is available via the Moonfin server plugin.
+	 * Returns `null` if the plugin endpoint is unavailable.
+	 */
+	suspend fun checkForUpdateViaPlugin(
+		baseUrl: String,
+		accessToken: String,
+	): Result<UpdateInfo?> = withContext(Dispatchers.IO) {
+		runCatching {
+			val url = "$baseUrl$PLUGIN_UPDATE_PATH"
+			Timber.d("Checking for update via plugin: $url")
+
+			val request = Request.Builder()
+				.url(url)
+				.addHeader("Authorization", "MediaBrowser Token=\"$accessToken\"")
+				.build()
+
+			httpClient.newCall(request).execute().use { response ->
+				if (!response.isSuccessful) {
+					Timber.d("Plugin update endpoint not available: ${response.code}")
+					return@runCatching null
+				}
+
+				val body = response.body?.string() ?: return@runCatching null
+				val pluginResponse = json.decodeFromString<PluginUpdateResponse>(body)
+
+				val latestVersion = pluginResponse.version ?: return@runCatching null
+				val currentVersion = BuildConfig.VERSION_NAME
+				val isNewer = compareVersions(latestVersion, currentVersion) > 0
+
+				Timber.d("Plugin update check — Current: $currentVersion, Latest: $latestVersion, Newer: $isNewer")
+
+				UpdateInfo(
+					version = latestVersion,
+					releaseNotes = pluginResponse.releaseNotes ?: "No release notes available",
+					downloadUrl = pluginResponse.downloadUrl ?: "",
+					releaseUrl = pluginResponse.releaseUrl ?: "",
+					isNewer = isNewer,
+					apkSize = pluginResponse.apkSize ?: 0L,
+				).also { latestPluginUpdateInfo = it }
+			}
+		}
+	}
+
+	/**
+	 * Check if an update is available via GitHub releases
 	 */
 	suspend fun checkForUpdate(): Result<UpdateInfo?> = withContext(Dispatchers.IO) {
 		runCatching {

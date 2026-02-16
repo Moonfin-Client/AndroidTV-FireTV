@@ -145,13 +145,9 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 	}
 
 	val allRatings = remember(apiRatings, item.criticRating, item.communityRating, episodeRating, seriesCommunityRating) {
-		buildMap {
+		linkedMapOf<String, Float>().apply {
 			episodeRating?.let { put("tmdb_episode", it / 10f) }
 
-			// Jellyfin-provided critic rating (typically RT from OMDb)
-			item.criticRating?.let { put("tomatoes", it / 100f) }
-
-			// Normalize MDBList ratings to 0–1
 			apiRatings?.forEach { (source, value) ->
 				val normalized = when (source) {
 					"tomatoes" -> item.criticRating?.let { it / 100f } ?: (value / 100f)
@@ -169,6 +165,11 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 				}
 				put(source, normalized)
 			}
+
+			// Fallback: if API didn't provide tomatoes but item has criticRating
+			if ("tomatoes" !in this) {
+				item.criticRating?.let { put("tomatoes", it / 100f) }
+			}
 		}
 	}
 
@@ -182,21 +183,11 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 		horizontalArrangement = Arrangement.spacedBy(8.dp),
 		verticalArrangement = Arrangement.spacedBy(8.dp),
 	) {
-		// Show TMDB episode rating
-		if (enableEpisodeRatings && isEpisode && episodeRating != null) {
-			RatingDisplay("tmdb_episode", allRatings["tmdb_episode"]!!, baseUrl, showRatingLabels)
-		}
-
-		allRatings["tomatoes"]?.let { RatingDisplay("tomatoes", it, baseUrl, showRatingLabels) }
-
-		if (enableAdditionalRatings) {
-			apiRatings?.keys?.forEach { source ->
-				if (source == "tomatoes") return@forEach
-				if (isEpisode && enableEpisodeRatings && source == "tmdb" && episodeRating != null) {
-					return@forEach
-				}
-				allRatings[source]?.let { RatingDisplay(source, it, baseUrl, showRatingLabels) }
-			}
+		allRatings.forEach { (source, value) ->
+			if (source == "tmdb_episode" && !(enableEpisodeRatings && isEpisode)) return@forEach
+			if (source == "tmdb" && isEpisode && enableEpisodeRatings && episodeRating != null) return@forEach
+			if (!enableAdditionalRatings && source != "tmdb_episode" && source != "tomatoes") return@forEach
+			RatingDisplay(source, value, baseUrl, showRatingLabels)
 		}
 	}
 }
@@ -277,8 +268,7 @@ fun InfoRowCompactRatings(item: BaseItemDto) {
 	}
 
 	val allRatings = remember(apiRatings, item.criticRating, item.communityRating) {
-		buildMap {
-			item.criticRating?.let { put("tomatoes", it / 100f) }
+		linkedMapOf<String, Float>().apply {
 			apiRatings?.forEach { (source, value) ->
 				val normalized = when (source) {
 					"tomatoes" -> item.criticRating?.let { it / 100f } ?: (value / 100f)
@@ -296,6 +286,11 @@ fun InfoRowCompactRatings(item: BaseItemDto) {
 				}
 				put(source, normalized)
 			}
+
+			// Fallback: if API didn't provide tomatoes but item has criticRating
+			if ("tomatoes" !in this) {
+				item.criticRating?.let { put("tomatoes", it / 100f) }
+			}
 		}
 	}
 
@@ -306,12 +301,9 @@ fun InfoRowCompactRatings(item: BaseItemDto) {
 		horizontalArrangement = Arrangement.spacedBy(6.dp),
 		verticalArrangement = Arrangement.spacedBy(2.dp),
 	) {
-		allRatings["tomatoes"]?.let { CompactRatingChip("tomatoes", it, baseUrl) }
-		if (enableAdditionalRatings) {
-			apiRatings?.keys?.forEach { source ->
-				if (source == "tomatoes") return@forEach
-				allRatings[source]?.let { CompactRatingChip(source, it, baseUrl) }
-			}
+		allRatings.forEach { (source, value) ->
+			if (!enableAdditionalRatings && source != "tomatoes") return@forEach
+			CompactRatingChip(source, value, baseUrl)
 		}
 	}
 }
