@@ -93,7 +93,7 @@ class ItemDetailsViewModel(
 
 				val cast = item.people
 					?.filter { it.type == PersonKind.ACTOR || it.type == PersonKind.GUEST_STAR }
-					?.take(20) ?: emptyList()
+					?: emptyList()
 				val directors = item.people?.filter { it.type == PersonKind.DIRECTOR } ?: emptyList()
 				val writers = item.people?.filter { it.type == PersonKind.WRITER } ?: emptyList()
 				val badges = getMediaBadges(item)
