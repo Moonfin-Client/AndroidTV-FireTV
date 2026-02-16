@@ -87,6 +87,7 @@ import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.PrePlaybackTrackSelector
 import org.jellyfin.androidtv.ui.playlist.showAddToPlaylistDialog
 import org.jellyfin.androidtv.ui.playback.PlaybackLauncher
+import org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer
 import org.jellyfin.androidtv.util.PlaybackHelper
 import org.jellyfin.androidtv.util.TimeUtils
 import org.jellyfin.androidtv.util.apiclient.Response
@@ -134,6 +135,7 @@ class ItemDetailsFragment : Fragment() {
 	private val trackSelector: PrePlaybackTrackSelector by inject()
 	private val playbackLauncher: PlaybackLauncher by inject()
 	private val dataRefreshService: DataRefreshService by inject()
+	private val themeMusicPlayer: ThemeMusicPlayer by inject()
 
 	private var backdropImage: ImageView? = null
 	private var gradientView: View? = null
@@ -347,6 +349,9 @@ class ItemDetailsFragment : Fragment() {
 			.onEach { uiState ->
 				val item = uiState.item
 				if (item != null) {
+					// Play theme music for the item
+					themeMusicPlayer.playThemeMusicForItem(item)
+
 					if (item.type == BaseItemKind.PERSON || item.type == BaseItemKind.PLAYLIST) {
 						backdropImage?.isVisible = false
 						gradientView?.isVisible = false
@@ -389,6 +394,11 @@ class ItemDetailsFragment : Fragment() {
 				}
 			}
 			.launchIn(lifecycleScope)
+	}
+
+	override fun onDestroyView() {
+		themeMusicPlayer.stop()
+		super.onDestroyView()
 	}
 
 	@Composable
