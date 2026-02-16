@@ -391,10 +391,10 @@ class JellyseerrViewModel(
 					// Filter by status BEFORE enrichment to avoid wasted API calls
 					val filteredRequests = userRequests.filter { request ->
 						when (request.status) {
-							1 -> true // Pending - always show
-							2 -> true // Approved/Processing - always show  
+							1 -> true // Pending
+							2 -> true // Approved/Processing
 							3 -> isWithinDays(request.updatedAt, 3) // Declined - recent only
-							4 -> isWithinDays(request.updatedAt, 3) // Available - recent only
+							4 -> true // Available
 							else -> true
 						}
 					}
@@ -475,8 +475,8 @@ class JellyseerrViewModel(
 					}
 					
 			
-			Timber.d("JellyseerrViewModel: Filtered ${enrichedRequests.size} requests to ${filteredRequests.size} after date filtering")
-			_userRequests.emit(filteredRequests)
+			Timber.d("JellyseerrViewModel: Emitting ${enrichedRequests.size} enriched requests")
+			_userRequests.emit(enrichedRequests)
 			_loadingState.emit(JellyseerrLoadingState.Success())
 		} else {
 			val error = result.exceptionOrNull()?.message ?: "Failed to load requests"

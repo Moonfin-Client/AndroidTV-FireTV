@@ -83,6 +83,8 @@ class PersonDetailsFragment : Fragment() {
 			override fun dispatchKeyEvent(event: KeyEvent): Boolean {
 				if (event.action == KeyEvent.ACTION_DOWN &&
 					event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+					if (super.dispatchKeyEvent(event)) return true
+
 					val focused = findFocus()
 					if (focused != null && isAtLeftEdge(focused)) {
 						val sidebar = findViewById<View>(sidebarId)
@@ -91,6 +93,7 @@ class PersonDetailsFragment : Fragment() {
 							return true
 						}
 					}
+					return false
 				}
 				return super.dispatchKeyEvent(event)
 			}

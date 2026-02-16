@@ -114,19 +114,18 @@ class MediaDetailsFragment : Fragment() {
 		
 		val mainContainer = object : FrameLayout(requireContext()) {
 			override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-				if (event.action == KeyEvent.ACTION_DOWN) {
-					when (event.keyCode) {
-						KeyEvent.KEYCODE_DPAD_LEFT -> {
-							val focused = findFocus()
-							if (focused != null && isAtLeftEdge(focused)) {
-								val sidebar = findViewById<View>(sidebarId)
-								if (sidebar != null && sidebar.isVisible) {
-									sidebar.requestFocus()
-									return true
-								}
-							}
+				if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+					if (super.dispatchKeyEvent(event)) return true
+
+					val focused = findFocus()
+					if (focused != null && isAtLeftEdge(focused)) {
+						val sidebar = findViewById<View>(sidebarId)
+						if (sidebar != null && sidebar.isVisible) {
+							sidebar.requestFocus()
+							return true
 						}
 					}
+					return false
 				}
 				return super.dispatchKeyEvent(event)
 			}
