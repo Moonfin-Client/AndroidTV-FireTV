@@ -20,4 +20,9 @@ enum class ImageType(
 	 * Banner.
 	 */
 	BANNER(R.string.image_type_banner),
+
+	/**
+	 * Square.
+	 */
+	SQUARE(R.string.image_type_square),
 }

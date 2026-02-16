@@ -21,7 +21,6 @@ class LibraryPreferences(
 		val posterSize = enumPreference("PosterSize", PosterSize.MED)
 		val imageType = enumPreference("ImageType", ImageType.POSTER)
 		val gridDirection = enumPreference("GridDirection", GridDirection.HORIZONTAL)
-		val enableSmartScreen = booleanPreference("SmartScreen", false)
 
 		// Filters
 		val filterFavoritesOnly = booleanPreference("FilterFavoritesOnly", false)

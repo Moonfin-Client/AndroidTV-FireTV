@@ -10,11 +10,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
-import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.di.defaultDeviceInfo
 import org.jellyfin.androidtv.preference.LibraryPreferences
 import org.jellyfin.androidtv.ui.base.Text
@@ -42,11 +42,8 @@ fun SettingsLibrariesDisplayScreen(
 	userId: UUID
 ) {
 	val router = LocalRouter.current
-	val userViewsRepository = koinInject<UserViewsRepository>()
 	val userView = rememberUserView(itemId)
 	val prefs = rememberLibraryPreferences(displayPreferencesId, serverId, userId) ?: return
-
-	val allowViewSelection = userViewsRepository.allowViewSelection(userView?.collectionType)
 
 	SettingsColumn {
 		item {
@@ -116,17 +113,6 @@ fun SettingsLibrariesDisplayScreen(
 			)
 		}
 
-		if (allowViewSelection) item {
-			var enableSmartScreen by rememberPreference(prefs, LibraryPreferences.enableSmartScreen)
-
-			ListButton(
-				headingContent = { Text(stringResource(R.string.enable_smart_view)) },
-				trailingContent = { Checkbox(checked = enableSmartScreen) },
-				captionContent = { Text(stringResource(R.string.enable_smart_view_description)) },
-				onClick = { enableSmartScreen = !enableSmartScreen }
-			)
-		}
-
 		item {
 			val userRepository = koinInject<UserRepository>()
 			val serverRepository = koinInject<ServerRepository>()
@@ -158,7 +144,7 @@ fun SettingsLibrariesDisplayScreen(
 				}
 
 				serverApi = api
-				val user by api.userApi.getCurrentUser()
+				val user = withContext(Dispatchers.IO) { api.userApi.getCurrentUser() }.content
 				userConfig = user.configuration
 				hidden = itemId in (user.configuration?.myMediaExcludes.orEmpty())
 			}

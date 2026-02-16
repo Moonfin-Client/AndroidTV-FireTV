@@ -248,7 +248,6 @@
     <string name="lbl_playback_control_ends">Приключва в %1$s</string>
     <string name="lbl_unknown_key">Непознат(a) (%1s)</string>
     <string name="pref_clock_display">Покажи часовника</string>
-    <string name="enable_smart_view">Активирайте умен екран</string>
     <string name="lbl_new_only">Само ново</string>
     <string name="lbl_exit">Изход</string>
     <string name="lbl_my_media">Моята медия</string>

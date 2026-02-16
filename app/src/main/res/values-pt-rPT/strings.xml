@@ -298,8 +298,6 @@
     <string name="image_size_small">Pequeno</string>
     <string name="image_type_banner">Faixa</string>
     <string name="image_type_thumbnail">Miniatura</string>
-    <string name="enable_smart_view_description">O ecrã inteligente mostra itens relevantes em vez de uma grelha</string>
-    <string name="enable_smart_view">Ativar ecrã inteligente</string>
     <string name="lbl_sign_out">Terminar sessão</string>
     <string name="lbl_remove">Remover</string>
     <string name="lbl_server">Servidor</string>

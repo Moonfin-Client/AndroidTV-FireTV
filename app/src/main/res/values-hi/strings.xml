@@ -306,7 +306,6 @@
     <string name="lbl_use_series_thumbnails">धारावाहिक के थंबनेल को प्राथमिकता दें</string>
     <string name="runtime_minutes">%1$dमिनट</string>
     <string name="lbl_remove">इसे हटाएँ</string>
-    <string name="enable_smart_view">स्मार्ट स्क्रीन चालू करें</string>
     <string name="image_size_medium">मध्यम</string>
     <string name="select_version">संस्करण</string>
     <string name="login_help_description">जेलीफ़िन को कनेक्ट करने के लिए एक सर्वर की आवश्यकता होती है। जेलीफ़िन के साथ शुरुआत करने के लिए docs.jellyfin.org पर हमारे दस्तावेज़ देखें या QR कोड स्कैन करें।</string>
@@ -408,7 +407,6 @@
     <string name="color_green">हरा</string>
     <string name="pref_subtitles_size">टेक्स्ट का साइज़</string>
     <string name="server_issue_unsupported_version">सर्वर %1$s संस्करण का उपयोग करता है जो समर्थित नहीं है</string>
-    <string name="enable_smart_view_description">स्मार्ट स्क्रीन ग्रिड के बजाय प्रासंगिक आइटम दिखाती है</string>
     <string name="image_size_xlarge">बहुत बड़ा</string>
     <string name="discovered_servers_title">खोजे गए सर्वर</string>
     <string name="pref_developer_link_description">उन्नत और प्रयोगात्मक सुविधाएँ</string>

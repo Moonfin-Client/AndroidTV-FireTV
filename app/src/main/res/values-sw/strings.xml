@@ -312,8 +312,6 @@
     <string name="lbl_server">Seva</string>
     <string name="lbl_remove">Ondoa</string>
     <string name="lbl_sign_out">Ondoka</string>
-    <string name="enable_smart_view">Wezesha skrini erevu</string>
-    <string name="enable_smart_view_description">Skrini erevu huonyesha vitu muhimu badala ya gridi</string>
     <string name="image_type_poster">Posta</string>
     <string name="image_type_thumbnail">Picha ndogo</string>
     <string name="image_type_banner">Bango</string>

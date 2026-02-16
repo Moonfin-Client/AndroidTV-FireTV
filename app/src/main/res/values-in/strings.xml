@@ -290,7 +290,6 @@
     <string name="image_size_medium">Sedang</string>
     <string name="image_type_thumbnail">Keluku</string>
     <string name="lbl_remove_user_content">Hapus akun</string>
-    <string name="enable_smart_view_description">Smart screen memunculkan entri relevan daripada kisi</string>
     <string name="image_size_smallest">Terkecil</string>
     <string name="image_size_small">Kecil</string>
     <string name="pref_developer_link">Pilihan pengembang</string>
@@ -313,7 +312,6 @@
     <string name="lbl_use_series_thumbnails_description">Gunakan keluku seri ketika menampilkan episode</string>
     <string name="login_invalid_credentials">Salah nama identitas dan/atau kata sandi</string>
     <string name="image_type_banner">Spanduk</string>
-    <string name="enable_smart_view">Hidupkan fitur \"smart screen\"</string>
     <string name="image_size_xlarge">Extra besar</string>
     <string name="lbl_hidden">Tersembunyi</string>
     <string name="discovered_servers_empty">Tidak ditemukan server dalam koneksi lokal.</string>

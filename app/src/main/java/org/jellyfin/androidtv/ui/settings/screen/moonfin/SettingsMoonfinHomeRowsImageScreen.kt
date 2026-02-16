@@ -85,6 +85,7 @@ fun SettingsMoonfinHomeRowsImageScreen() {
 					ImageType.POSTER -> stringResource(R.string.image_type_poster)
 					ImageType.THUMB -> stringResource(R.string.image_type_thumbnail)
 					ImageType.BANNER -> stringResource(R.string.image_type_banner)
+					ImageType.SQUARE -> stringResource(R.string.image_type_square)
 				}
 
 				ListButton(
@@ -95,7 +96,8 @@ fun SettingsMoonfinHomeRowsImageScreen() {
 						val newType = when (currentImageType) {
 							ImageType.POSTER -> ImageType.THUMB
 							ImageType.THUMB -> ImageType.BANNER
-							ImageType.BANNER -> ImageType.POSTER
+							ImageType.BANNER -> ImageType.SQUARE
+							ImageType.SQUARE -> ImageType.POSTER
 						}
 						perRowImageTypes[sectionType] = newType
 						userSettingPreferences.setHomeRowImageType(sectionType, newType)

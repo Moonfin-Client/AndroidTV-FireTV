@@ -355,7 +355,6 @@
     <string name="welcome_title">Jellyfin tervitab!</string>
     <string name="watch_count_overflow">99+</string>
     <string name="pref_clock_display">Kuva kell</string>
-    <string name="enable_smart_view">Luba nutikas ekraan</string>
     <string name="lbl_user_last_used">Viimati kasutatud %1$s kell %2$s</string>
     <string name="discovered_servers_title">Avastatud serverid</string>
     <string name="server_field_empty">Aadress ei tohi olla tühi</string>
@@ -378,7 +377,6 @@
     <string name="lbl_sign_out">Logi välja</string>
     <string name="lbl_server">Server</string>
     <string name="image_size_small">Väike</string>
-    <string name="enable_smart_view_description">Nutikas ekraan näitab ruudustiku asemel asjakohaseid üksusi</string>
     <string name="pref_developer_link">Arendaja valikud</string>
     <string name="pref_watched_indicator">Kuva vaatamise oleku tähised</string>
     <string name="lbl_hide_unwatched_count">Kui üksust vaadatakse</string>

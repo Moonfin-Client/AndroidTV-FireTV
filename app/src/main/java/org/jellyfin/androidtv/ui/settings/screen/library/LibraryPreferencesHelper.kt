@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
 import org.jellyfin.androidtv.di.defaultDeviceInfo
@@ -42,17 +44,19 @@ fun rememberLibraryPreferences(
 		val serverStore = authenticationStore.getServer(serverId)
 		val userInfo = serverStore?.users?.get(userId)
 		
-		libraryPreferences = if (server != null && userInfo != null && !userInfo.accessToken.isNullOrBlank()) {
-			val userDeviceInfo = deviceInfo.forUser(userId)
-			val apiClient = jellyfin.createApi(
-				baseUrl = server.address,
-				accessToken = userInfo.accessToken,
-				deviceInfo = userDeviceInfo
-			)
-			preferencesRepository.getLibraryPreferences(displayPreferencesId, apiClient)
-		} else {
-			// Fallback to current session's API client
-			preferencesRepository.getLibraryPreferences(displayPreferencesId, currentApi)
+		libraryPreferences = withContext(Dispatchers.IO) {
+			if (server != null && userInfo != null && !userInfo.accessToken.isNullOrBlank()) {
+				val userDeviceInfo = deviceInfo.forUser(userId)
+				val apiClient = jellyfin.createApi(
+					baseUrl = server.address,
+					accessToken = userInfo.accessToken,
+					deviceInfo = userDeviceInfo
+				)
+				preferencesRepository.getLibraryPreferences(displayPreferencesId, apiClient)
+			} else {
+				// Fallback to current session's API client
+				preferencesRepository.getLibraryPreferences(displayPreferencesId, currentApi)
+			}
 		}
 	}
 	

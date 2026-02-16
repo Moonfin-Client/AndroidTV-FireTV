@@ -8,8 +8,6 @@ import org.jellyfin.androidtv.auth.repository.SessionRepository;
 import org.jellyfin.androidtv.constant.LiveTvOption;
 import org.jellyfin.androidtv.constant.QueryType;
 import org.jellyfin.androidtv.data.model.ChapterItemInfo;
-import org.jellyfin.androidtv.preference.LibraryPreferences;
-import org.jellyfin.androidtv.preference.PreferencesRepository;
 import org.jellyfin.androidtv.ui.navigation.Destination;
 import org.jellyfin.androidtv.ui.navigation.Destinations;
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository;
@@ -41,7 +39,6 @@ public class ItemLauncher {
     private final Lazy<NavigationRepository> navigationRepository = KoinJavaComponent.<NavigationRepository>inject(NavigationRepository.class);
     private final Lazy<SessionRepository> sessionRepository = KoinJavaComponent.<SessionRepository>inject(SessionRepository.class);
     private final Lazy<ApiClient> api = KoinJavaComponent.<ApiClient>inject(ApiClient.class);
-    private final Lazy<PreferencesRepository> preferencesRepository = KoinJavaComponent.<PreferencesRepository>inject(org.jellyfin.androidtv.preference.PreferencesRepository .class);
     private final Lazy<MediaManager> mediaManager = KoinJavaComponent.<MediaManager>inject(MediaManager.class);
     private final Lazy<PlaybackLauncher> playbackLauncher = KoinJavaComponent.<PlaybackLauncher>inject(PlaybackLauncher.class);
     private final Lazy<PlaybackHelper> playbackHelper = KoinJavaComponent.<PlaybackHelper>inject(PlaybackHelper.class);
@@ -61,14 +58,11 @@ public class ItemLauncher {
         switch (collectionType) {
             case MOVIES:
             case TVSHOWS:
-                LibraryPreferences displayPreferences = preferencesRepository.getValue().getLibraryPreferences(baseItem.getDisplayPreferencesId(), api.getValue());
-                boolean enableSmartScreen = displayPreferences.get(LibraryPreferences.Companion.getEnableSmartScreen());
-
-                if (!enableSmartScreen) return Destinations.INSTANCE.libraryBrowser(baseItem);
-                else return Destinations.INSTANCE.librarySmartScreen(baseItem);
+                return Destinations.INSTANCE.libraryBrowser(baseItem);
             case MUSIC:
+                return Destinations.INSTANCE.musicBrowser(baseItem, null, null);
             case LIVETV:
-                return Destinations.INSTANCE.librarySmartScreen(baseItem);
+                return Destinations.INSTANCE.liveTvBrowser(baseItem);
             default:
                 return Destinations.INSTANCE.libraryBrowser(baseItem);
         }

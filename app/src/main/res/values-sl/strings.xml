@@ -364,8 +364,6 @@
     <string name="image_type_banner">Pasica</string>
     <string name="image_type_thumbnail">Sličica</string>
     <string name="image_type_poster">Poster</string>
-    <string name="enable_smart_view_description">Pametni zaslon prikaže ustrezne elemente, namesto mreže</string>
-    <string name="enable_smart_view">Omogoči pametni zaslon</string>
     <string name="lbl_sign_out">Izpis</string>
     <string name="lbl_remove">Odstrani</string>
     <string name="lbl_server">Strežnik</string>

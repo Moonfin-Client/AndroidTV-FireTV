@@ -287,7 +287,6 @@
     <string name="random">무작위</string>
     <string name="lbl_user_server">%2$s의 %1$s</string>
     <string name="lbl_sign_out">로그아웃</string>
-    <string name="enable_smart_view">스마트 스크린 활성화</string>
     <string name="photo_albums">사진 앨범</string>
     <string name="lbl_record_only_new">새 에피소드만 녹화</string>
     <string name="lbl_album_artists">앨범 아티스트</string>
@@ -357,7 +356,6 @@
     <string name="pref_accounts">계정</string>
     <string name="lbl_remove_user_content">계정 삭제</string>
     <string name="lbl_remove">삭제</string>
-    <string name="enable_smart_view_description">스마트 스크린은 그리드 대신 관련된 항목을 보여줍니다</string>
     <string name="discovered_servers_title">발견된 서버</string>
     <string name="searchable_settings_description">미디어</string>
     <string name="connect_manually_by_address">서버 주소 입력</string>

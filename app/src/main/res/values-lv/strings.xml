@@ -329,7 +329,6 @@
     <string name="watch_count_overflow">99+</string>
     <string name="login_username_field_empty">Lietotājvārds nevar būt tukšs</string>
     <string name="server_field_empty">Adrese nevar būt tukša</string>
-    <string name="enable_smart_view_description">Viedajā ekrānā tiek rādīti atbilstošie vienumi, nevis režģis</string>
     <string name="image_size_small">Mazs</string>
     <string name="image_size_xlarge">Ļoti liels</string>
     <string name="user_picker_last_user_summary">Izmantot pēdējo aktīvo kontu</string>
@@ -363,7 +362,6 @@
     <string name="lbl_playback_speed">Atskaņošanas ātrums</string>
     <string name="lbl_subtitle_delay">Subtitru aizkave</string>
     <string name="login_server_unavailable">Nevar izveidot savienojumu ar serveri</string>
-    <string name="enable_smart_view">Ieslēgt viedo ekrānu</string>
     <string name="lbl_hidden">Noslēpts</string>
     <string name="auto_sign_in">Automātiska pierakstīšanās</string>
     <string name="lbl_next_up_minimal">Bez miniatūras</string>

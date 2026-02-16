@@ -289,8 +289,6 @@
     <string name="image_size_large">Suuri</string>
     <string name="image_size_medium">Keskikokoinen</string>
     <string name="image_size_small">Pieni</string>
-    <string name="enable_smart_view">Käytä älynäyttöä</string>
-    <string name="enable_smart_view_description">Älynäyttö näyttää ruudukon sijaan olennaisia kohteita</string>
     <string name="lbl_sign_out">Kirjaudu ulos</string>
     <string name="lbl_remove">Poista</string>
     <string name="lbl_server">Palvelin</string>

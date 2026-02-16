@@ -472,7 +472,9 @@ class GenresGridFragment : Fragment() {
 				genreName = genre.name,
 				parentId = genre.parentId,
 				includeType = includeType,
-				serverId = genre.serverId
+				serverId = genre.serverId,
+				displayPreferencesId = folder?.displayPreferencesId,
+				parentItemId = folder?.id,
 			)
 		)
 	}

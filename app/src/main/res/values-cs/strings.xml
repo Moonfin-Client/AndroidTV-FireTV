@@ -286,8 +286,6 @@
     <string name="image_size_small">Malý</string>
     <string name="image_type_banner">Výřez plakátu</string>
     <string name="image_type_thumbnail">Náhled</string>
-    <string name="enable_smart_view_description">Chytrá obrazovka zobrazuje relevantní položky místo mřížky</string>
-    <string name="enable_smart_view">Povolit chytrou obrazovku</string>
     <string name="lbl_sign_out">Odhlásit</string>
     <string name="lbl_remove">Odebrat</string>
     <string name="lbl_server">Server</string>

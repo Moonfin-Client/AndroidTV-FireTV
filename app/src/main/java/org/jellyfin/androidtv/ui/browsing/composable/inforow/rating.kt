@@ -246,3 +246,93 @@ fun InfoRowParentalRating(parentalRating: String) {
 		Text(parentalRating, color = Color.White)
 	}
 }
+
+/**
+ * Compact inline ratings for the library browse HUD.
+ * Shows small icon + value only, no labels or background chips.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun InfoRowCompactRatings(item: BaseItemDto) {
+	val userSettingPreferences = koinInject<UserSettingPreferences>()
+	val mdbListRepository = koinInject<MdbListRepository>()
+	val apiClient = koinInject<ApiClient>()
+	val baseUrl = apiClient.baseUrl
+	val enableAdditionalRatings = userSettingPreferences[UserSettingPreferences.enableAdditionalRatings]
+
+	var apiRatings by remember { mutableStateOf<Map<String, Float>?>(null) }
+	var isLoading by remember { mutableStateOf(false) }
+
+	if (enableAdditionalRatings) {
+		LaunchedEffect(item.id) {
+			isLoading = true
+			try {
+				apiRatings = mdbListRepository.getRatings(item)
+			} catch (e: Exception) {
+				Timber.e(e, "Failed to fetch MDBList ratings for item ${item.id}")
+			} finally {
+				isLoading = false
+			}
+		}
+	}
+
+	val allRatings = remember(apiRatings, item.criticRating, item.communityRating) {
+		buildMap {
+			item.criticRating?.let { put("tomatoes", it / 100f) }
+			apiRatings?.forEach { (source, value) ->
+				val normalized = when (source) {
+					"tomatoes" -> item.criticRating?.let { it / 100f } ?: (value / 100f)
+					"popcorn" -> value / 100f
+					"imdb" -> value / 10f
+					"tmdb" -> value / 100f
+					"metacritic" -> value / 100f
+					"metacriticuser" -> value / 100f
+					"trakt" -> value / 100f
+					"letterboxd" -> value / 5f
+					"rogerebert" -> value / 4f
+					"myanimelist" -> value / 10f
+					"anilist" -> value / 100f
+					else -> value / 10f
+				}
+				put(source, normalized)
+			}
+		}
+	}
+
+	if (enableAdditionalRatings && isLoading) return
+	if (allRatings.isEmpty()) return
+
+	FlowRow(
+		horizontalArrangement = Arrangement.spacedBy(6.dp),
+		verticalArrangement = Arrangement.spacedBy(2.dp),
+	) {
+		allRatings["tomatoes"]?.let { CompactRatingChip("tomatoes", it, baseUrl) }
+		if (enableAdditionalRatings) {
+			apiRatings?.keys?.forEach { source ->
+				if (source == "tomatoes") return@forEach
+				allRatings[source]?.let { CompactRatingChip(source, it, baseUrl) }
+			}
+		}
+	}
+}
+
+@Composable
+private fun CompactRatingChip(sourceKey: String, rating: Float, baseUrl: String?) {
+	val scorePercent = (rating * 100f).toInt()
+	val icon = RatingIconProvider.getIcon(baseUrl, sourceKey, scorePercent) ?: return
+	val formattedRating = when (sourceKey) {
+		"tomatoes", "popcorn" -> NumberFormat.getPercentInstance().format(rating)
+		"tmdb", "metacritic", "metacriticuser", "trakt", "anilist" -> "${(rating * 100f).toInt()}%"
+		"letterboxd" -> String.format("%.1f", rating * 5f)
+		"rogerebert" -> String.format("%.1f", rating * 4f)
+		else -> String.format("%.1f", rating * 10f)
+	}
+
+	Row(
+		horizontalArrangement = Arrangement.spacedBy(3.dp),
+		verticalAlignment = Alignment.CenterVertically,
+	) {
+		RatingIconImage(icon = icon, contentDescription = sourceKey, modifier = Modifier.size(14.dp))
+		Text(formattedRating, color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.W600)
+	}
+}
