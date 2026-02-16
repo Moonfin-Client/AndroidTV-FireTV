@@ -55,7 +55,9 @@ android {
 			if (signingConfigs.names.contains("release")) {
 				signingConfig = signingConfigs.getByName("release")
 			}
-			
+
+			isMinifyEnabled = true
+			isShrinkResources = true
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
 			// Set package names used in various XML files
@@ -72,7 +74,10 @@ android {
 		debug {
 			// Use different application id to run release and debug at the same time
 			applicationIdSuffix = ".debug"
-
+			isMinifyEnabled = true
+			isShrinkResources = true
+			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+			
 			// Set package names used in various XML files
 			resValue("string", "app_id", namespace + applicationIdSuffix)
 			resValue("string", "app_search_suggest_authority", "${namespace + applicationIdSuffix}.content")
