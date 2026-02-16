@@ -42,6 +42,7 @@ import org.jellyfin.androidtv.ui.base.LocalTextStyle
 import org.jellyfin.androidtv.ui.base.ProfilePicture
 import org.jellyfin.androidtv.ui.base.ProvideTextStyle
 import org.jellyfin.androidtv.ui.base.Text
+import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.util.MenuBuilder
 import org.jellyfin.androidtv.util.popupMenu
 import org.jellyfin.androidtv.util.showIfNotEmpty
@@ -59,8 +60,9 @@ fun UserCard(
 
 	// Mix button background with input foreground because we display text beneath the profile picture on a transparent background similar
 	// to the input text
+	val focusColor = focusBorderColor()
 	val color = when {
-		focused -> JellyfinTheme.colorScheme.buttonFocused to JellyfinTheme.colorScheme.onInputFocused
+		focused -> focusColor to JellyfinTheme.colorScheme.onInputFocused
 		else -> JellyfinTheme.colorScheme.button to JellyfinTheme.colorScheme.onInput
 	}
 	val scale by animateFloatAsState(if (focused) 1.1f else 1f, label = "UserCardFocusScale")

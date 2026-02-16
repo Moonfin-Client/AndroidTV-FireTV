@@ -27,6 +27,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -57,6 +58,7 @@ import org.jellyfin.androidtv.ui.base.button.Button
 import org.jellyfin.androidtv.ui.base.button.ButtonDefaults
 import org.jellyfin.androidtv.ui.base.button.IconButton
 import org.jellyfin.androidtv.ui.base.button.IconButtonDefaults
+import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
 import org.jellyfin.androidtv.ui.navigation.ActivityDestinations
 import org.jellyfin.androidtv.ui.navigation.Destinations
@@ -252,6 +254,9 @@ private fun MainToolbar(
 	var showShuffleDialog by remember { mutableStateOf(false) }
 	val isShuffling by shuffleManager.isShuffling.collectAsState()
 
+	val focusColor = focusBorderColor()
+	val focusContentColor = if (focusColor.luminance() > 0.4f) Color(0xFF444444) else Color(0xFFDDDDDD)
+
 	val activeButtonColors = ButtonDefaults.colors(
 		containerColor = JellyfinTheme.colorScheme.buttonActive,
 		contentColor = JellyfinTheme.colorScheme.onButtonActive,
@@ -260,8 +265,8 @@ private fun MainToolbar(
 	val toolbarButtonColors = ButtonDefaults.colors(
 		containerColor = Color.Transparent,
 		contentColor = JellyfinTheme.colorScheme.onButton,
-		focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
-		focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
+		focusedContainerColor = focusColor,
+		focusedContentColor = focusContentColor,
 	)
 
 	// Get overlay preferences for toolbar styling
@@ -314,8 +319,8 @@ private fun MainToolbar(
 						ButtonDefaults.colors(
 							containerColor = Color.Transparent,
 							contentColor = JellyfinTheme.colorScheme.onButton,
-							focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
-							focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
+							focusedContainerColor = focusColor,
+							focusedContentColor = focusContentColor,
 						)
 					} else {
 						toolbarButtonColors
@@ -338,7 +343,7 @@ private fun MainToolbar(
 								.aspectRatio(1f)
 								.border(
 									width = if (isFocused) 2.dp else 0.dp,
-									color = if (isFocused) JellyfinTheme.colorScheme.buttonFocused else Color.Transparent,
+									color = if (isFocused) focusColor else Color.Transparent,
 									shape = IconButtonDefaults.Shape
 								)
 								.clip(IconButtonDefaults.Shape)

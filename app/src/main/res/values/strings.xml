@@ -284,8 +284,8 @@
     <string name="lbl_image_type">Image type</string>
     <string name="lbl_image_size">Image size</string>
     <string name="lbl_my_media">My media</string>
-    <string name="pref_theme_dark">Dark (Default)</string>
-    <string name="pref_theme_emerald">Classic emerald</string>
+    <string name="pref_focus_color_white">White (Default)</string>
+    <string name="pref_focus_color">Focus color</string>
     <string name="pref_about_title">About</string>
     <string name="pref_donate_title">Support Moonfin</string>
     <string name="pref_donate_description">Help keep this project alive</string>
@@ -299,7 +299,6 @@
     <string name="watch_now">Watch now</string>
     <string name="pref_next_up_behavior_title">Show next video info</string>
     <string name="pref_still_watching_behavior_title">Show inactivity timeout popup</string>
-    <string name="pref_app_theme">App theme</string>
     <string name="pref_device_model">Device model</string>
     <string name="grid_direction">Grid direction</string>
     <string name="grid_direction_horizontal">Horizontal</string>
@@ -391,7 +390,6 @@
     <string name="user_picker_last_user_title">Most recently used</string>
     <string name="user_picker_last_user_summary">Use the last active account</string>
     <string name="lbl_switch_user">Switch account</string>
-    <string name="pref_theme_muted_purple">Muted purple</string>
     <string name="no_network_permissions">Jellyfin requires network permissions to function</string>
     <string name="press_to_close">Press to close</string>
     <string name="saved_servers">Saved servers</string>

@@ -77,6 +77,7 @@ import org.jellyfin.androidtv.data.model.DataRefreshService
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Text
+import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.ui.base.CircularProgressIndicator
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
@@ -926,7 +927,6 @@ class ItemDetailsFragment : Fragment() {
 						icon = ImageVector.vectorResource(R.drawable.ic_check),
 						onClick = { viewModel.toggleWatched() },
 						isActive = item.userData?.played == true,
-						activeColor = Color(0xFF00A4DC),
 					)
 				}
 
@@ -1345,7 +1345,6 @@ class ItemDetailsFragment : Fragment() {
 									icon = ImageVector.vectorResource(R.drawable.ic_check),
 									onClick = { viewModel.toggleWatched() },
 									isActive = item.userData?.played == true,
-									activeColor = Color(0xFF00A4DC),
 								)
 
 								DetailActionButton(

@@ -13,6 +13,7 @@ import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import org.jellyfin.androidtv.preference.UserPreferences
 
 class SeasonSelectionDialog(
 	context: Context,
@@ -28,9 +29,17 @@ class SeasonSelectionDialog(
 	private lateinit var confirmButton: TextView
 	private lateinit var cancelButton: TextView
 	
+	private fun getFocusColor(): Int {
+		val userPreferences: UserPreferences by org.koin.java.KoinJavaComponent.inject(UserPreferences::class.java)
+		val appTheme = userPreferences[UserPreferences.appTheme]
+		return appTheme.colorValue.toInt()
+	}
+
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		
+		val focusBorderColor = getFocusColor()
+
 		val rootContainer = LinearLayout(context).apply {
 			orientation = LinearLayout.VERTICAL
 			setBackgroundColor(Color.parseColor("#1F2937"))
@@ -187,7 +196,7 @@ class SeasonSelectionDialog(
 			val focusedBg = android.graphics.drawable.GradientDrawable().apply {
 				setColor(Color.parseColor("#9CA3AF"))
 				cornerRadius = 6.dp(context).toFloat()
-				setStroke(2.dp(context), Color.WHITE)
+				setStroke(2.dp(context), focusBorderColor)
 			}
 			
 			background = android.graphics.drawable.StateListDrawable().apply {
@@ -224,7 +233,7 @@ class SeasonSelectionDialog(
 			val focusedBg = android.graphics.drawable.GradientDrawable().apply {
 				setColor(Color.parseColor("#60A5FA"))
 				cornerRadius = 6.dp(context).toFloat()
-				setStroke(2.dp(context), Color.WHITE)
+				setStroke(2.dp(context), focusBorderColor)
 			}
 			
 			background = android.graphics.drawable.StateListDrawable().apply {

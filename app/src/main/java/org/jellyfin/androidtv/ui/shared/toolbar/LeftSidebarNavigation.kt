@@ -69,6 +69,7 @@ import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.ClockBehavior
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Text
+import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
 import org.jellyfin.androidtv.ui.navigation.ActivityDestinations
 import org.jellyfin.androidtv.ui.navigation.Destinations
@@ -694,7 +695,7 @@ private fun SidebarIconItem(
 		onFocusChanged?.invoke(isFocused)
 	}
 	
-	val focusedColor = Color(0xFF00A4DC)
+	val focusedColor = focusBorderColor()
 	val iconAlpha by animateFloatAsState(
 		targetValue = if (isExpanded || imageUrl != null) 1f else 0.5f,
 		label = "iconAlpha"
@@ -815,7 +816,7 @@ private fun SidebarTextItem(
 		onFocusChanged?.invoke(isFocused)
 	}
 	
-	val focusedColor = Color(0xFF00A4DC)
+	val focusedColor = focusBorderColor()
 	val textColor = Color.White
 
 	Row(

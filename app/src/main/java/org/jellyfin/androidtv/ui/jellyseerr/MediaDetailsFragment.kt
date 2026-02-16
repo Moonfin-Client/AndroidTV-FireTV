@@ -15,7 +15,14 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -33,12 +40,13 @@ import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrMovieDetailsDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrRequestDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrTvDetailsDto
+import org.jellyfin.androidtv.ui.base.JellyfinTheme
+import org.jellyfin.androidtv.ui.itemdetail.v2.DetailActionButton
 import org.jellyfin.androidtv.ui.itemhandling.JellyseerrMediaBaseRowItem
 import org.jellyfin.androidtv.ui.itemhandling.JellyseerrPersonBaseRowItem
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.presentation.CardPresenter
-import org.jellyfin.androidtv.ui.TextUnderButton
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.NavbarPosition
 import org.jellyfin.androidtv.ui.shared.toolbar.LeftSidebarNavigation
@@ -69,9 +77,6 @@ class MediaDetailsFragment : Fragment() {
 	private var movieDetails: JellyseerrMovieDetailsDto? = null
 	private var tvDetails: JellyseerrTvDetailsDto? = null
 	private var requestButton: View? = null
-	private var cancelRequestButton: View? = null
-	private var trailerButton: View? = null
-	private var playInMoonfinButton: View? = null
 	private var castSection: View? = null
 	private var toolbarContainer: View? = null
 	private var sidebarId: Int = View.NO_ID
@@ -695,42 +700,24 @@ class MediaDetailsFragment : Fragment() {
 	}
 
 	private fun createActionButtonsSection(): View {
-		val container = LinearLayout(requireContext()).apply {
-			orientation = LinearLayout.HORIZONTAL
-			gravity = android.view.Gravity.START
-			layoutParams = LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.MATCH_PARENT,
-				LinearLayout.LayoutParams.WRAP_CONTENT
-			).apply {
-				topMargin = 24.dp(context)
-			}
-		}
-
-		val buttonTopMargin = 0
-
 		// Check request status
-		// Get mediaInfo from full details if available, otherwise from selectedItem
 		val mediaInfo = movieDetails?.mediaInfo ?: tvDetails?.mediaInfo ?: selectedItem?.mediaInfo
 		val hdStatus = mediaInfo?.status
 		val status4k = mediaInfo?.status4k
-		
+
 		// Check for declined requests
 		val requests = mediaInfo?.requests
 		val hdDeclined = requests?.any { !it.is4k && it.status == 3 } == true
 		val fourKDeclined = requests?.any { it.is4k && it.status == 3 } == true
-		
+
 		// Determine if HD/4K are requestable
-		// Blocked if: pending (2), processing (3), available (5), blacklisted (6), or declined
-		// Requestable if: not requested (null/1), or partially available (4)
 		val isHdBlocked = (hdStatus != null && hdStatus >= 2 && hdStatus != 4) || hdDeclined
 		val is4kBlocked = (status4k != null && status4k >= 2 && status4k != 4) || fourKDeclined
-		
-		// Determine button state and label
+
 		val canRequestHd = !isHdBlocked
 		val canRequest4k = !is4kBlocked
 		val canRequestAny = canRequestHd || canRequest4k
-		
-		// Determine the button label based on status
+
 		val requestLabel = when {
 			!canRequestAny -> getStatusLabel(hdStatus, status4k, hdDeclined, fourKDeclined)
 			hdStatus == 4 && status4k == 4 -> "Request More"
@@ -739,89 +726,61 @@ class MediaDetailsFragment : Fragment() {
 			else -> "Request"
 		}
 
-		// Single Request button
-		requestButton = TextUnderButton(requireContext()).apply {
-			setLabel(requestLabel)
-			setIcon(R.drawable.ic_select_quality)
-			isEnabled = canRequestAny
-			isFocusable = canRequestAny
-			isFocusableInTouchMode = canRequestAny
-			alpha = if (canRequestAny) 1.0f else 0.5f
-			setOnClickListener {
-				if (canRequestAny) {
-					handleRequestClick(canRequestHd, canRequest4k, hdStatus, status4k)
-				}
-			}
-			id = View.generateViewId()
-			layoutParams = LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.WRAP_CONTENT,
-				LinearLayout.LayoutParams.WRAP_CONTENT
-			).apply {
-				marginEnd = 8.dp(context)
-				topMargin = buttonTopMargin
-			}
-		}
-		container.addView(requestButton)
-
-		// Cancel Request button - show if there are pending (status=1) requests
 		val pendingRequests = requests?.filter { it.status == JellyseerrRequestDto.STATUS_PENDING } ?: emptyList()
-		if (pendingRequests.isNotEmpty()) {
-			cancelRequestButton = TextUnderButton(requireContext()).apply {
-				setLabel("Cancel Request")
-				setIcon(R.drawable.ic_delete)
-				setOnClickListener {
-					showCancelRequestDialog(pendingRequests)
-				}
-				id = View.generateViewId()
-				layoutParams = LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.WRAP_CONTENT,
-					LinearLayout.LayoutParams.WRAP_CONTENT
-				).apply {
-					marginEnd = 8.dp(context)
-					topMargin = buttonTopMargin
-				}
-			}
-			container.addView(cancelRequestButton)
-		}
+		val showPlayButton = hdStatus == 5 || hdStatus == 4
 
-		// Watch Trailer button
-		trailerButton = TextUnderButton(requireContext()).apply {
-			setLabel("Watch Trailer")
-			setIcon(R.drawable.ic_trailer)
-			setOnClickListener {
-				playTrailer()
-			}
+		val composeView = ComposeView(requireContext()).apply {
 			id = View.generateViewId()
 			layoutParams = LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.WRAP_CONTENT,
+				LinearLayout.LayoutParams.MATCH_PARENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
 			).apply {
-				marginEnd = 8.dp(context)
-				topMargin = buttonTopMargin
+				topMargin = 24.dp(context)
+			}
+			setContent {
+				JellyfinTheme {
+					Row(
+						horizontalArrangement = Arrangement.spacedBy(12.dp),
+					) {
+						DetailActionButton(
+							label = requestLabel,
+							icon = ImageVector.vectorResource(R.drawable.ic_select_quality),
+							onClick = {
+								if (canRequestAny) {
+									handleRequestClick(canRequestHd, canRequest4k, hdStatus, status4k)
+								}
+							},
+							modifier = if (!canRequestAny) Modifier.alpha(0.5f) else Modifier,
+						)
+
+						if (pendingRequests.isNotEmpty()) {
+							DetailActionButton(
+								label = "Cancel",
+								icon = ImageVector.vectorResource(R.drawable.ic_delete),
+								onClick = { showCancelRequestDialog(pendingRequests) },
+							)
+						}
+
+						DetailActionButton(
+							label = "Trailer",
+							icon = ImageVector.vectorResource(R.drawable.ic_trailer),
+							onClick = { playTrailer() },
+						)
+
+						if (showPlayButton) {
+							DetailActionButton(
+								label = "Play",
+								icon = ImageVector.vectorResource(R.drawable.ic_play),
+								onClick = { playInMoonfin() },
+							)
+						}
+					}
+				}
 			}
 		}
-		container.addView(trailerButton)
-		
-		// Play in Moonfin button (only show if available in library)
-		if (hdStatus == 5 || hdStatus == 4) {
-			playInMoonfinButton = TextUnderButton(requireContext()).apply {
-				setLabel("Play in Moonfin")
-				setIcon(R.drawable.ic_play)
-				setOnClickListener {
-					playInMoonfin()
-				}
-				id = View.generateViewId()
-				layoutParams = LinearLayout.LayoutParams(
-					LinearLayout.LayoutParams.WRAP_CONTENT,
-					LinearLayout.LayoutParams.WRAP_CONTENT
-				).apply {
-					topMargin = buttonTopMargin
-				}
-			}
-			container.addView(playInMoonfinButton)
-		}
-		
-		return container
+
+		requestButton = composeView
+		return composeView
 	}
 	
 	/**

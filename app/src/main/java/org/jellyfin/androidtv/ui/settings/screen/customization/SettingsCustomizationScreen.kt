@@ -53,7 +53,7 @@ fun SettingsCustomizationScreen() {
 			var appTheme by rememberPreference(userPreferences, UserPreferences.appTheme)
 
 			ListButton(
-				headingContent = { Text(stringResource(R.string.pref_app_theme)) },
+				headingContent = { Text(stringResource(R.string.pref_focus_color)) },
 				captionContent = { Text(stringResource(appTheme.nameRes)) },
 				onClick = { router.push(Routes.CUSTOMIZATION_THEME) }
 			)

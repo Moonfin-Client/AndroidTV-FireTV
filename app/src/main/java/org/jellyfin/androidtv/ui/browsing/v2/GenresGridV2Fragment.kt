@@ -72,6 +72,7 @@ import org.jellyfin.androidtv.ui.base.CircularProgressIndicator
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.base.Text
+import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.ui.browsing.genre.JellyfinGenreItem
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
@@ -412,6 +413,7 @@ class GenresGridV2Fragment : Fragment() {
 
 		val scale = if (isFocused) 1.08f else 1.0f
 		val cardAlpha = if (isFocused) 1.0f else 0.6f
+		val borderColor = focusBorderColor()
 
 		Box(
 			modifier = modifier
@@ -423,7 +425,7 @@ class GenresGridV2Fragment : Fragment() {
 				}
 				.clip(RoundedCornerShape(6.dp))
 				.then(
-					if (isFocused) Modifier.border(2.dp, Color.White, RoundedCornerShape(6.dp))
+					if (isFocused) Modifier.border(2.dp, borderColor, RoundedCornerShape(6.dp))
 					else Modifier
 				)
 				.background(Color.White.copy(alpha = 0.06f))

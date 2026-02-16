@@ -51,6 +51,7 @@ import coil3.compose.AsyncImage
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Text
+import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowCompactRatings
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -121,6 +122,7 @@ fun LibraryPosterCard(
 	}
 
 	val scale = if (isFocused) 1.08f else 1.0f
+	val borderColor = focusBorderColor()
 
 	Column(
 		modifier = modifier
@@ -142,7 +144,7 @@ fun LibraryPosterCard(
 				.size(width = cardWidth.dp, height = cardHeight.dp)
 				.clip(RoundedCornerShape(4.dp))
 				.then(
-					if (isFocused) Modifier.border(2.dp, Color.White, RoundedCornerShape(4.dp))
+					if (isFocused) Modifier.border(2.dp, borderColor, RoundedCornerShape(4.dp))
 					else Modifier
 				)
 				.background(Color.White.copy(alpha = 0.06f)),

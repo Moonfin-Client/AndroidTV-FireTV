@@ -29,7 +29,7 @@ fun SettingsCustomizationThemeScreen() {
 		item {
 			ListSection(
 				overlineContent = { Text(stringResource(R.string.pref_customization).uppercase()) },
-				headingContent = { Text(stringResource(R.string.pref_app_theme)) },
+				headingContent = { Text(stringResource(R.string.pref_focus_color)) },
 			)
 		}
 
@@ -41,7 +41,7 @@ fun SettingsCustomizationThemeScreen() {
 					if (appTheme != entry) {
 						userPreferences[UserPreferences.appTheme] = entry
 						appTheme = entry
-						// Recreate activity to apply new theme
+						// Recreate activity to apply new focus color
 						activity?.recreate()
 					} else {
 						router.back()

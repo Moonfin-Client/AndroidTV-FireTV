@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -52,6 +53,7 @@ import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.base.button.IconButton
 import org.jellyfin.androidtv.ui.base.button.IconButtonDefaults
+import org.jellyfin.androidtv.ui.base.focusBorderColor
 
 @Composable
 fun DetailActionButton(
@@ -61,10 +63,13 @@ fun DetailActionButton(
 	modifier: Modifier = Modifier,
 	detail: String? = null,
 	isActive: Boolean = false,
-	activeColor: Color = Color(0xFF00A4DC),
+	activeColor: Color = Color.Unspecified,
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
+	val focusColor = focusBorderColor()
+	val resolvedActiveColor = if (activeColor == Color.Unspecified) focusColor else activeColor
+	val focusContentColor = if (focusColor.luminance() > 0.4f) Color(0xFF0A0A0A) else Color.White
 
 	Column(
 		horizontalAlignment = Alignment.CenterHorizontally,
@@ -75,9 +80,9 @@ fun DetailActionButton(
 			shape = RoundedCornerShape(14.dp),
 			colors = IconButtonDefaults.colors(
 				containerColor = Color.White.copy(alpha = 0.08f),
-				contentColor = if (isActive) activeColor else Color.White,
-				focusedContainerColor = Color.White.copy(alpha = 0.95f),
-				focusedContentColor = if (isActive) activeColor else Color(0xFF0A0A0A),
+				contentColor = if (isActive) resolvedActiveColor else Color.White,
+				focusedContainerColor = focusColor.copy(alpha = 0.95f),
+				focusedContentColor = if (isActive) resolvedActiveColor else focusContentColor,
 			),
 			contentPadding = PaddingValues(16.dp),
 			interactionSource = interactionSource,
@@ -240,7 +245,7 @@ fun CastCard(
 				.size(90.dp)
 				.clip(CircleShape)
 				.then(
-					if (isFocused) Modifier.border(2.dp, Color.White, CircleShape)
+					if (isFocused) Modifier.border(2.dp, focusBorderColor(), CircleShape)
 					else Modifier.border(2.dp, Color.Transparent, CircleShape)
 				)
 				.background(Color.White.copy(alpha = 0.05f)),
@@ -314,7 +319,7 @@ fun SeasonCard(
 				.height(255.dp)
 				.clip(RoundedCornerShape(6.dp))
 				.then(
-					if (isFocused) Modifier.border(2.dp, Color.White, RoundedCornerShape(6.dp))
+					if (isFocused) Modifier.border(2.dp, focusBorderColor(), RoundedCornerShape(6.dp))
 					else Modifier.border(2.dp, Color.Transparent, RoundedCornerShape(6.dp))
 				)
 				.background(Color.White.copy(alpha = 0.05f)),
@@ -405,6 +410,7 @@ fun EpisodeCard(
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
+	val borderColor = focusBorderColor()
 
 	Column(
 		modifier = modifier
@@ -413,18 +419,18 @@ fun EpisodeCard(
 			.then(
 				if (isCurrent) Modifier.border(
 					2.dp,
-					Color(0xFF00A4DC).copy(alpha = 0.4f),
+					borderColor.copy(alpha = 0.4f),
 					RoundedCornerShape(8.dp),
 				)
 				else if (isFocused) Modifier.border(
 					2.dp,
-					Color.White,
+					borderColor,
 					RoundedCornerShape(8.dp),
 				)
 				else Modifier.border(2.dp, Color.Transparent, RoundedCornerShape(8.dp))
 			)
 			.then(
-				if (isCurrent) Modifier.background(Color(0xFF00A4DC).copy(alpha = 0.08f))
+				if (isCurrent) Modifier.background(borderColor.copy(alpha = 0.08f))
 				else Modifier
 			)
 			.clickable(
@@ -511,6 +517,7 @@ fun SeasonEpisodeItem(
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
+	val seasonBorderColor = focusBorderColor()
 
 	Row(
 		modifier = modifier
@@ -523,7 +530,7 @@ fun SeasonEpisodeItem(
 			.then(
 				if (isFocused) Modifier.border(
 					2.dp,
-					Color(0xFF00A4DC).copy(alpha = 0.4f),
+					seasonBorderColor.copy(alpha = 0.4f),
 					RoundedCornerShape(8.dp),
 				)
 				else Modifier.border(2.dp, Color.Transparent, RoundedCornerShape(8.dp))
@@ -765,7 +772,7 @@ fun SimilarItemCard(
 				.height(200.dp)
 				.clip(RoundedCornerShape(6.dp))
 				.then(
-					if (isFocused) Modifier.border(2.dp, Color.White, RoundedCornerShape(6.dp))
+					if (isFocused) Modifier.border(2.dp, focusBorderColor(), RoundedCornerShape(6.dp))
 					else Modifier.border(2.dp, Color.Transparent, RoundedCornerShape(6.dp))
 				)
 				.background(Color.White.copy(alpha = 0.05f)),
@@ -832,7 +839,7 @@ fun LandscapeItemCard(
 				.height(124.dp)
 				.clip(RoundedCornerShape(6.dp))
 				.then(
-					if (isFocused) Modifier.border(2.dp, Color.White, RoundedCornerShape(6.dp))
+					if (isFocused) Modifier.border(2.dp, focusBorderColor(), RoundedCornerShape(6.dp))
 					else Modifier.border(2.dp, Color.Transparent, RoundedCornerShape(6.dp))
 				)
 				.background(Color.White.copy(alpha = 0.05f)),
@@ -962,6 +969,8 @@ fun TrackSelectorDialog(
 ) {
 	val initialFocusRequester = remember { FocusRequester() }
 
+	val selectorFocusColor = focusBorderColor()
+
 	Dialog(
 		onDismissRequest = onDismiss,
 		properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -1032,7 +1041,7 @@ fun TrackSelectorDialog(
 									.size(18.dp)
 									.border(
 										width = 2.dp,
-										color = if (isSelected) Color(0xFF00A4DC) else Color.White.copy(alpha = 0.3f),
+										color = if (isSelected) focusBorderColor() else Color.White.copy(alpha = 0.3f),
 										shape = CircleShape,
 									),
 								contentAlignment = Alignment.Center,
@@ -1041,7 +1050,7 @@ fun TrackSelectorDialog(
 									Box(
 										modifier = Modifier
 											.size(10.dp)
-											.background(Color(0xFF00A4DC), CircleShape),
+											.background(focusBorderColor(), CircleShape),
 									)
 								}
 							}
@@ -1053,7 +1062,7 @@ fun TrackSelectorDialog(
 								fontSize = 16.sp,
 								fontWeight = if (isSelected) FontWeight.W600 else FontWeight.W400,
 								color = when {
-									isSelected -> Color(0xFF00A4DC)
+									isSelected -> focusBorderColor()
 									isFocused -> Color.White
 									else -> Color.White.copy(alpha = 0.8f)
 								},

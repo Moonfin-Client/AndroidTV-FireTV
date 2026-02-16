@@ -36,9 +36,9 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 	companion object {
 		/* Display */
 		/**
-		 * Select the app theme
+		 * Focus border color preference
 		 */
-		var appTheme = enumPreference("app_theme", AppTheme.DARK)
+		var appTheme = enumPreference("app_theme", AppTheme.WHITE)
 
 		/**
 		 * Enable background images while browsing
