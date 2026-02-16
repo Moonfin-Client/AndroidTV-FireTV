@@ -1242,8 +1242,8 @@ class MediaDetailsFragment : Fragment() {
 	private fun createPaginatedCardRow(
 		headingText: String,
 		emptyText: String,
-		fetchPage: suspend (page: Int) -> List<JellyseerrDiscoverItemDto>,
 		maxPages: Int = 3,
+		fetchPage: suspend (page: Int) -> List<JellyseerrDiscoverItemDto>,
 	): View {
 		val container = LinearLayout(requireContext()).apply {
 			orientation = LinearLayout.VERTICAL

@@ -119,6 +119,16 @@ fun SettingsHomeScreen() {
 			)
 		}
 
+		// Poster Size
+		item {
+			val posterSize by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userPreferences, org.jellyfin.androidtv.preference.UserPreferences.posterSize)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_poster_size)) },
+				captionContent = { Text(stringResource(posterSize.nameRes)) },
+				onClick = { router.push(org.jellyfin.androidtv.ui.settings.Routes.HOME_POSTER_SIZE) }
+			)
+		}
+
 		// Media Bar Settings (Moonfin)
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_media_bar_title)) }) }
 

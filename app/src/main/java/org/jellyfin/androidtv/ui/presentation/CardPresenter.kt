@@ -56,6 +56,7 @@ import org.jellyfin.androidtv.ui.itemhandling.BaseRowType
 import org.jellyfin.androidtv.ui.itemhandling.ChapterItemInfoBaseRowItem
 import org.jellyfin.androidtv.ui.itemhandling.GridButtonBaseRowItem
 import org.jellyfin.androidtv.ui.itemhandling.JellyseerrMediaBaseRowItem
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.util.ImageHelper
 import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.androidtv.util.apiclient.JellyfinImage
@@ -355,8 +356,15 @@ private fun CardViewHolderContent(
 	val aspectRatio = displayConfig.aspectRatio.takeIf { it >= 0.1f }
 		?: image?.aspectRatio?.takeIf { it >= 0.1f } ?: 1f
 
+	val userPreferences = koinInject<UserPreferences>()
+	val effectiveStaticHeight = if (staticHeight == 150) {
+		userPreferences[UserPreferences.posterSize].height
+	} else {
+		staticHeight
+	}
+
 	val size = when (item.staticHeight) {
-		true -> DpSize(staticHeight.dp * aspectRatio, staticHeight.dp)
+		true -> DpSize(effectiveStaticHeight.dp * aspectRatio, effectiveStaticHeight.dp)
 		false if (aspectRatio > 1f) -> DpSize(130.dp * aspectRatio, 130.dp)
 		else -> DpSize(150.dp * aspectRatio, 150.dp)
 	}

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.preference.PreferenceManager
 import org.jellyfin.androidtv.preference.UserPreferences.Companion.screensaverInAppEnabled
 import org.jellyfin.androidtv.preference.constant.AppTheme
+import org.jellyfin.androidtv.preference.constant.PosterSize
 import org.jellyfin.androidtv.preference.constant.AudioBehavior
 import org.jellyfin.androidtv.preference.constant.ClockBehavior
 import org.jellyfin.androidtv.preference.constant.MaxVideoResolution
@@ -39,6 +40,8 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 * Focus border color preference
 		 */
 		var appTheme = enumPreference("app_theme", AppTheme.WHITE)
+
+		var posterSize = enumPreference("poster_size", PosterSize.DEFAULT)
 
 		/**
 		 * Enable background images while browsing

@@ -286,6 +286,11 @@
     <string name="lbl_my_media">My media</string>
     <string name="pref_focus_color_white">White (Default)</string>
     <string name="pref_focus_color">Focus color</string>
+    <string name="pref_poster_size">Poster size</string>
+    <string name="pref_poster_size_small">Small</string>
+    <string name="pref_poster_size_default">Default</string>
+    <string name="pref_poster_size_large">Large</string>
+    <string name="pref_poster_size_extra_large">Extra large</string>
     <string name="pref_about_title">About</string>
     <string name="pref_donate_title">Support Moonfin</string>
     <string name="pref_donate_description">Help keep this project alive</string>
