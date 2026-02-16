@@ -13,7 +13,8 @@ import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.auth.repository.UserRepository
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 
 class SeasonSelectionDialog(
 	context: Context,
@@ -30,9 +31,10 @@ class SeasonSelectionDialog(
 	private lateinit var cancelButton: TextView
 	
 	private fun getFocusColor(): Int {
-		val userPreferences: UserPreferences by org.koin.java.KoinJavaComponent.inject(UserPreferences::class.java)
-		val appTheme = userPreferences[UserPreferences.appTheme]
-		return appTheme.colorValue.toInt()
+		val userRepository: UserRepository by org.koin.java.KoinJavaComponent.inject(UserRepository::class.java)
+		val userId = userRepository.currentUser.value?.id
+		val prefs = UserSettingPreferences(context, userId)
+		return prefs[UserSettingPreferences.focusColor].colorValue.toInt()
 	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {

@@ -4,7 +4,8 @@ import androidx.activity.viewModels
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import org.jellyfin.androidtv.R
-import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.auth.repository.UserRepository
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.constant.AppTheme
 import org.koin.android.ext.android.inject
 import timber.log.Timber
@@ -21,13 +22,15 @@ class ThemeViewModel : ViewModel() {
  * [FragmentActivity.onResume]. It recreates the activity when the theme changed after it was set.
  * Do not call during resume if the activity may not be recreated (like in the video player).
  *
- * The XML theme is always [R.style.Theme_Jellyfin] (dark). The [AppTheme] preference now controls
- * focus border color only, applied via Compose.
+ * The XML theme is always [R.style.Theme_Jellyfin] (dark). The focus color preference is per-user
+ * and applied via Compose.
  */
 fun FragmentActivity.applyTheme() {
 	val viewModel by viewModels<ThemeViewModel>()
-	val userPreferences by inject<UserPreferences>()
-	val theme = userPreferences[UserPreferences.appTheme]
+	val userRepository by inject<UserRepository>()
+	val userId = userRepository.currentUser.value?.id
+	val userSettingPreferences = UserSettingPreferences(this, userId)
+	val theme = userSettingPreferences[UserSettingPreferences.focusColor]
 
 	if (viewModel.theme != theme) {
 		if (viewModel.theme != null) {

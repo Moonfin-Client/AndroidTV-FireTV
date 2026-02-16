@@ -5,6 +5,7 @@ import androidx.preference.PreferenceManager
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.jellyfin.androidtv.constant.HomeSectionType
+import org.jellyfin.androidtv.preference.constant.AppTheme
 import org.jellyfin.preference.booleanPreference
 import org.jellyfin.preference.enumPreference
 import org.jellyfin.preference.intPreference
@@ -105,6 +106,9 @@ class UserSettingPreferences(
 		val themeMusicEnabled = booleanPreference("themeMusicEnabled", false)
 		val themeMusicVolume = intPreference("themeMusicVolume", 30) // 0-100
 		val themeMusicOnHomeRows = booleanPreference("themeMusicOnHomeRows", false)
+
+		/* Display */
+		val focusColor = enumPreference("focus_color", AppTheme.WHITE)
 
 		/* Security */
 		/**

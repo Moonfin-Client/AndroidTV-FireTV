@@ -1,12 +1,17 @@
 package org.jellyfin.androidtv.ui.settings.screen.customization
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.base.form.Checkbox
@@ -21,7 +26,11 @@ import org.koin.compose.koinInject
 @Composable
 fun SettingsCustomizationScreen() {
 	val router = LocalRouter.current
+	val context = LocalContext.current
 	val userPreferences = koinInject<UserPreferences>()
+	val userRepository = koinInject<UserRepository>()
+	val userId = userRepository.currentUser.collectAsState().value?.id
+	val userSettingPreferences = remember(userId) { UserSettingPreferences(context, userId) }
 
 	SettingsColumn {
 		item {
@@ -50,11 +59,11 @@ fun SettingsCustomizationScreen() {
 		}
 
 		item {
-			var appTheme by rememberPreference(userPreferences, UserPreferences.appTheme)
+			var focusColor by rememberPreference(userSettingPreferences, UserSettingPreferences.focusColor)
 
 			ListButton(
 				headingContent = { Text(stringResource(R.string.pref_focus_color)) },
-				captionContent = { Text(stringResource(appTheme.nameRes)) },
+				captionContent = { Text(stringResource(focusColor.nameRes)) },
 				onClick = { router.push(Routes.CUSTOMIZATION_THEME) }
 			)
 		}
