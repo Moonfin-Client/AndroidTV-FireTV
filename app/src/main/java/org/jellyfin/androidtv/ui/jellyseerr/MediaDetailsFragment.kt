@@ -82,7 +82,7 @@ class MediaDetailsFragment : Fragment() {
 	private var sidebarId: Int = View.NO_ID
 
 	// Items per section (cast/recommendations/similar)
-	private val ITEMS_PER_SECTION = 45  // 3 pages * ~15 items per page
+	private val ITEMS_PER_SECTION = 15
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -1235,7 +1235,16 @@ class MediaDetailsFragment : Fragment() {
 		return container
 	}
 	
-	private fun createRecommendationsSection(): View {
+	/**
+	 * Creates a paginated horizontal card row. Loads page 1 immediately,
+	 * then fetches subsequent pages when focus reaches the last 2 cards.
+	 */
+	private fun createPaginatedCardRow(
+		headingText: String,
+		emptyText: String,
+		fetchPage: suspend (page: Int) -> List<JellyseerrDiscoverItemDto>,
+		maxPages: Int = 3,
+	): View {
 		val container = LinearLayout(requireContext()).apply {
 			orientation = LinearLayout.VERTICAL
 			layoutParams = LinearLayout.LayoutParams(
@@ -1248,8 +1257,8 @@ class MediaDetailsFragment : Fragment() {
 			clipToPadding = false
 		}
 
-		val recommendationsHeading = TextView(requireContext()).apply {
-			text = "Recommendations"
+		val heading = TextView(requireContext()).apply {
+			text = headingText
 			textSize = 22f
 			setTextColor(Color.WHITE)
 			setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -1260,204 +1269,146 @@ class MediaDetailsFragment : Fragment() {
 				bottomMargin = 16.dp(context)
 			}
 		}
-		container.addView(recommendationsHeading)
+		container.addView(heading)
 
-		lifecycleScope.launch {
-			try {
-				val allRecommendations = mutableListOf<JellyseerrDiscoverItemDto>()
-				for (page in 1..3) {
-					val recommendationsResult = when {
-						movieDetails != null -> viewModel.getRecommendationsMovies(selectedItem!!.id, page)
-						tvDetails != null -> viewModel.getRecommendationsTv(selectedItem!!.id, page)
-						else -> null
+		val scrollView = android.widget.HorizontalScrollView(requireContext()).apply {
+			layoutParams = LinearLayout.LayoutParams(
+				LinearLayout.LayoutParams.MATCH_PARENT,
+				LinearLayout.LayoutParams.WRAP_CONTENT
+			)
+			isHorizontalScrollBarEnabled = false
+			setPadding(12.dp(context), 0, 0, 0)
+			clipChildren = false
+			clipToPadding = false
+		}
+
+		val row = LinearLayout(requireContext()).apply {
+			orientation = LinearLayout.HORIZONTAL
+			layoutParams = LinearLayout.LayoutParams(
+				LinearLayout.LayoutParams.WRAP_CONTENT,
+				LinearLayout.LayoutParams.WRAP_CONTENT
+			)
+			clipChildren = false
+			clipToPadding = false
+		}
+		scrollView.addView(row)
+		container.addView(scrollView)
+
+		var currentPage = 0
+		var isLoadingMore = false
+		var allPagesLoaded = false
+		val posterPresenter = CardPresenter()
+
+		fun addCards(items: List<JellyseerrDiscoverItemDto>) {
+			items.forEach { item ->
+				val rowItem = JellyseerrMediaBaseRowItem(item)
+				val vh = posterPresenter.onCreateViewHolder(row)
+				posterPresenter.onBindViewHolder(vh, rowItem)
+				vh.view.apply {
+					setOnClickListener {
+						val itemJson = Json.encodeToString(JellyseerrDiscoverItemDto.serializer(), item)
+						navigationRepository.navigate(Destinations.jellyseerrMediaDetails(itemJson))
 					}
-					recommendationsResult?.getOrNull()?.let { pageResult ->
-						allRecommendations.addAll(pageResult.results ?: emptyList())
-					}
-				}
-
-				val recommendationsList = allRecommendations.take(ITEMS_PER_SECTION)
-
-				if (recommendationsList.isNotEmpty()) {
-					val scrollView = android.widget.HorizontalScrollView(requireContext()).apply {
-						layoutParams = LinearLayout.LayoutParams(
-							LinearLayout.LayoutParams.MATCH_PARENT,
-							LinearLayout.LayoutParams.WRAP_CONTENT
-						)
-						isHorizontalScrollBarEnabled = false
-						setPadding(12.dp(context), 0, 0, 0)
-						clipChildren = false
-						clipToPadding = false
-					}
-
-					val recommendationsRow = LinearLayout(requireContext()).apply {
-						orientation = LinearLayout.HORIZONTAL
+					val lp = layoutParams as? ViewGroup.MarginLayoutParams
+					if (lp != null) {
+						lp.marginEnd = 12.dp(context)
+					} else {
 						layoutParams = LinearLayout.LayoutParams(
 							LinearLayout.LayoutParams.WRAP_CONTENT,
 							LinearLayout.LayoutParams.WRAP_CONTENT
-						)
-						clipChildren = false
-						clipToPadding = false
+						).apply { marginEnd = 12.dp(context) }
 					}
-
-					val posterPresenter = CardPresenter()
-					recommendationsList.forEach { item ->
-						val rowItem = JellyseerrMediaBaseRowItem(item)
-						val vh = posterPresenter.onCreateViewHolder(recommendationsRow)
-						posterPresenter.onBindViewHolder(vh, rowItem)
-						vh.view.apply {
-							setOnClickListener {
-								val itemJson = Json.encodeToString(JellyseerrDiscoverItemDto.serializer(), item)
-								navigationRepository.navigate(Destinations.jellyseerrMediaDetails(itemJson))
-							}
-							val lp = layoutParams as? ViewGroup.MarginLayoutParams
-							if (lp != null) {
-								lp.marginEnd = 12.dp(context)
-							} else {
-								layoutParams = LinearLayout.LayoutParams(
-									LinearLayout.LayoutParams.WRAP_CONTENT,
-									LinearLayout.LayoutParams.WRAP_CONTENT
-								).apply { marginEnd = 12.dp(context) }
+				}
+				row.addView(vh.view)
+			}
+			// Attach focus listener on last 2 cards to trigger next page load
+			if (!allPagesLoaded) {
+				val childCount = row.childCount
+				for (i in maxOf(0, childCount - 2) until childCount) {
+					row.getChildAt(i)?.setOnFocusChangeListener { _, hasFocus ->
+						if (hasFocus && !isLoadingMore && !allPagesLoaded) {
+							isLoadingMore = true
+							lifecycleScope.launch {
+								try {
+									val nextPage = currentPage + 1
+									if (nextPage > maxPages) {
+										allPagesLoaded = true
+										isLoadingMore = false
+										return@launch
+									}
+									val newItems = fetchPage(nextPage)
+									if (newItems.isEmpty()) {
+										allPagesLoaded = true
+									} else {
+										currentPage = nextPage
+										addCards(newItems)
+									}
+								} catch (e: Exception) {
+									Timber.e(e, "Failed to load page for $headingText")
+								} finally {
+									isLoadingMore = false
+								}
 							}
 						}
-						recommendationsRow.addView(vh.view)
 					}
+				}
+			}
+		}
 
-					scrollView.addView(recommendationsRow)
-					container.addView(scrollView)
+		// Load page 1
+		lifecycleScope.launch {
+			try {
+				val firstPage = fetchPage(1)
+				if (firstPage.isNotEmpty()) {
+					currentPage = 1
+					addCards(firstPage)
 				} else {
-					val noRecommendations = TextView(requireContext()).apply {
-						text = "No recommendations found"
+					scrollView.isVisible = false
+					container.addView(TextView(requireContext()).apply {
+						text = emptyText
 						textSize = 14f
 						setTextColor(Color.parseColor("#9CA3AF"))
 						layoutParams = LinearLayout.LayoutParams(
 							LinearLayout.LayoutParams.MATCH_PARENT,
 							LinearLayout.LayoutParams.WRAP_CONTENT
 						)
-					}
-					container.addView(noRecommendations)
+					})
 				}
 			} catch (e: Exception) {
-				Timber.e(e, "Failed to load recommendations")
+				Timber.e(e, "Failed to load first page for $headingText")
 			}
 		}
 
 		return container
 	}
 
+	private fun createRecommendationsSection(): View {
+		return createPaginatedCardRow(
+			headingText = "Recommendations",
+			emptyText = "No recommendations found",
+		) { page ->
+			val result = when {
+				movieDetails != null -> viewModel.getRecommendationsMovies(selectedItem!!.id, page)
+				tvDetails != null -> viewModel.getRecommendationsTv(selectedItem!!.id, page)
+				else -> null
+			}
+			result?.getOrNull()?.results ?: emptyList()
+		}
+	}
+
 	private fun createSimilarSection(): View {
-		val container = LinearLayout(requireContext()).apply {
-			orientation = LinearLayout.VERTICAL
-			layoutParams = LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.MATCH_PARENT,
-				LinearLayout.LayoutParams.WRAP_CONTENT
-			).apply {
-				topMargin = 32.dp(context)
+		val similarTitle = if (tvDetails != null) "Similar Series" else "Similar Titles"
+		return createPaginatedCardRow(
+			headingText = similarTitle,
+			emptyText = "No similar titles found",
+		) { page ->
+			val result = when {
+				movieDetails != null -> viewModel.getSimilarMovies(selectedItem!!.id, page)
+				tvDetails != null -> viewModel.getSimilarTv(selectedItem!!.id, page)
+				else -> null
 			}
-			clipChildren = false
-			clipToPadding = false
+			result?.getOrNull()?.results ?: emptyList()
 		}
-
-		val similarTitle = when {
-			tvDetails != null -> "Similar Series"
-			else -> "Similar Titles"
-		}
-
-		val similarHeading = TextView(requireContext()).apply {
-			text = similarTitle
-			textSize = 22f
-			setTextColor(Color.WHITE)
-			setTypeface(typeface, android.graphics.Typeface.BOLD)
-			layoutParams = LinearLayout.LayoutParams(
-				LinearLayout.LayoutParams.MATCH_PARENT,
-				LinearLayout.LayoutParams.WRAP_CONTENT
-			).apply {
-				bottomMargin = 16.dp(context)
-			}
-		}
-		container.addView(similarHeading)
-
-		lifecycleScope.launch {
-			try {
-				val allSimilar = mutableListOf<JellyseerrDiscoverItemDto>()
-				for (page in 1..3) {
-					val similarResult = when {
-						movieDetails != null -> viewModel.getSimilarMovies(selectedItem!!.id, page)
-						tvDetails != null -> viewModel.getSimilarTv(selectedItem!!.id, page)
-						else -> null
-					}
-					similarResult?.getOrNull()?.let { pageResult ->
-						allSimilar.addAll(pageResult.results ?: emptyList())
-					}
-				}
-
-				val similarList = allSimilar.take(ITEMS_PER_SECTION)
-
-				if (similarList.isNotEmpty()) {
-					val scrollView = android.widget.HorizontalScrollView(requireContext()).apply {
-						layoutParams = LinearLayout.LayoutParams(
-							LinearLayout.LayoutParams.MATCH_PARENT,
-							LinearLayout.LayoutParams.WRAP_CONTENT
-						)
-						isHorizontalScrollBarEnabled = false
-						setPadding(12.dp(context), 0, 0, 0)
-						clipChildren = false
-						clipToPadding = false
-					}
-
-					val similarRow = LinearLayout(requireContext()).apply {
-						orientation = LinearLayout.HORIZONTAL
-						layoutParams = LinearLayout.LayoutParams(
-							LinearLayout.LayoutParams.WRAP_CONTENT,
-							LinearLayout.LayoutParams.WRAP_CONTENT
-						)
-						clipChildren = false
-						clipToPadding = false
-					}
-
-					val posterPresenter = CardPresenter()
-					similarList.forEach { item ->
-						val rowItem = JellyseerrMediaBaseRowItem(item)
-						val vh = posterPresenter.onCreateViewHolder(similarRow)
-						posterPresenter.onBindViewHolder(vh, rowItem)
-						vh.view.apply {
-							setOnClickListener {
-								val itemJson = Json.encodeToString(JellyseerrDiscoverItemDto.serializer(), item)
-								navigationRepository.navigate(Destinations.jellyseerrMediaDetails(itemJson))
-							}
-							val lp = layoutParams as? ViewGroup.MarginLayoutParams
-							if (lp != null) {
-								lp.marginEnd = 12.dp(context)
-							} else {
-								layoutParams = LinearLayout.LayoutParams(
-									LinearLayout.LayoutParams.WRAP_CONTENT,
-									LinearLayout.LayoutParams.WRAP_CONTENT
-								).apply { marginEnd = 12.dp(context) }
-							}
-						}
-						similarRow.addView(vh.view)
-					}
-
-					scrollView.addView(similarRow)
-					container.addView(scrollView)
-				} else {
-					val noSimilar = TextView(requireContext()).apply {
-						text = "No similar titles found"
-						textSize = 14f
-						setTextColor(Color.parseColor("#9CA3AF"))
-						layoutParams = LinearLayout.LayoutParams(
-							LinearLayout.LayoutParams.MATCH_PARENT,
-							LinearLayout.LayoutParams.WRAP_CONTENT
-						)
-					}
-					container.addView(noSimilar)
-				}
-			} catch (e: Exception) {
-				Timber.e(e, "Failed to load similar content")
-			}
-		}
-
-		return container
 	}
 
 	private fun createKeywordsSection(): View {

@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.data.repository.JellyseerrRepository
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrGenreDto
+import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrMediaDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrNetworkDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrRequestDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrStudioDto
@@ -380,15 +381,32 @@ class JellyseerrViewModel(
 			val result = jellyseerrRepository.getRequests(
 				filter = "all",
 				requestedBy = currentUser.id,
-				limit = 100
+				limit = 20
 			)
 				
 				if (result.isSuccess) {
 					val userRequests = result.getOrNull()?.results ?: emptyList()
 					Timber.d("JellyseerrViewModel: Fetched ${userRequests.size} requests for user ${currentUser.id}")
 					
+					// Filter by status BEFORE enrichment to avoid wasted API calls
+					val filteredRequests = userRequests.filter { request ->
+						when (request.status) {
+							1 -> true // Pending - always show
+							2 -> true // Approved/Processing - always show  
+							3 -> isWithinDays(request.updatedAt, 3) // Declined - recent only
+							4 -> isWithinDays(request.updatedAt, 3) // Available - recent only
+							else -> true
+						}
+					}
+					Timber.d("JellyseerrViewModel: Filtered ${userRequests.size} to ${filteredRequests.size} before enrichment")
+					
+					// Cache to avoid duplicate fetches for the same TMDB ID
+					val movieCache = mutableMapOf<Int, JellyseerrMediaDto?>()
+					val tvCache = mutableMapOf<Int, JellyseerrMediaDto?>()
+					val semaphore = kotlinx.coroutines.sync.Semaphore(5)
+					
 					val enrichedRequests = coroutineScope {
-						userRequests.map { request ->
+						filteredRequests.map { request ->
 							async {
 								val tmdbId = request.media?.tmdbId
 								if (tmdbId == null) {
@@ -398,33 +416,47 @@ class JellyseerrViewModel(
 								
 								val enrichedMedia = when (request.type) {
 									"movie" -> {
-										val result = jellyseerrRepository.getMovieDetails(tmdbId)
-										if (result.isSuccess) {
-											val movieDetails = result.getOrNull()
-											request.media?.copy(
-												title = movieDetails?.title,
-												posterPath = movieDetails?.posterPath,
-												backdropPath = movieDetails?.backdropPath,
-												overview = movieDetails?.overview
-											)
-										} else {
-											Timber.w("JellyseerrViewModel: Failed to fetch movie details for request ${request.id}, tmdbId: $tmdbId")
-											request.media
+										movieCache.getOrPut(tmdbId) {
+											semaphore.acquire()
+											try {
+												val result = jellyseerrRepository.getMovieDetails(tmdbId)
+												if (result.isSuccess) {
+													val movieDetails = result.getOrNull()
+													request.media?.copy(
+														title = movieDetails?.title,
+														posterPath = movieDetails?.posterPath,
+														backdropPath = movieDetails?.backdropPath,
+														overview = movieDetails?.overview
+													)
+												} else {
+													Timber.w("JellyseerrViewModel: Failed to fetch movie details for tmdbId: $tmdbId")
+													request.media
+												}
+											} finally {
+												semaphore.release()
+											}
 										}
 									}
 									"tv" -> {
-										val result = jellyseerrRepository.getTvDetails(tmdbId)
-										if (result.isSuccess) {
-											val tvDetails = result.getOrNull()
-											request.media?.copy(
-												name = tvDetails?.name ?: tvDetails?.title,
-												posterPath = tvDetails?.posterPath,
-												backdropPath = tvDetails?.backdropPath,
-												overview = tvDetails?.overview
-											)
-										} else {
-											Timber.w("JellyseerrViewModel: Failed to fetch TV details for request ${request.id}, tmdbId: $tmdbId")
-											request.media
+										tvCache.getOrPut(tmdbId) {
+											semaphore.acquire()
+											try {
+												val result = jellyseerrRepository.getTvDetails(tmdbId)
+												if (result.isSuccess) {
+													val tvDetails = result.getOrNull()
+													request.media?.copy(
+														name = tvDetails?.name ?: tvDetails?.title,
+														posterPath = tvDetails?.posterPath,
+														backdropPath = tvDetails?.backdropPath,
+														overview = tvDetails?.overview
+													)
+												} else {
+													Timber.w("JellyseerrViewModel: Failed to fetch TV details for tmdbId: $tmdbId")
+													request.media
+												}
+											} finally {
+												semaphore.release()
+											}
 										}
 									}
 									else -> {
@@ -440,21 +472,6 @@ class JellyseerrViewModel(
 					
 					enrichedRequests.forEach { request ->
 						Timber.d("JellyseerrViewModel: Request ${request.id} - Type: ${request.type}, Status: ${request.status}, Media: ${request.media?.title ?: request.media?.name}, RequestedBy: ${request.requestedBy?.username}")
-					}
-					
-					// Filter requests based on status and last modified date
-					val filteredRequests = enrichedRequests.filter { request ->
-						when (request.status) {
-							1 -> true // Pending - always show
-							2 -> true // Approved/Processing - always show  
-							3 -> { // Declined - show only if modified within 3 days
-								isWithinDays(request.updatedAt, 3)
-							}
-							4 -> { // Available - show only if modified within 3 days
-								isWithinDays(request.updatedAt, 3)
-							}
-							else -> true // Unknown status - show it
-						}
 					}
 					
 			
