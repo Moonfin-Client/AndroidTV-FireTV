@@ -1,6 +1,5 @@
 package org.jellyfin.androidtv.ui.browsing
 
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
@@ -10,6 +9,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.compose.runtime.mutableStateOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
@@ -60,7 +60,7 @@ class MainActivity : FragmentActivity() {
 	private val playbackLauncher by inject<PlaybackLauncher>()
 
 	private lateinit var binding: ActivityMainBinding
-	private var exitConfirmationDialog: AlertDialog? = null
+	private val showExitDialog = mutableStateOf(false)
 
 	private val backPressedCallback = object : OnBackPressedCallback(false) {
 		override fun handleOnBackPressed() {
@@ -115,6 +115,14 @@ class MainActivity : FragmentActivity() {
 		binding.background.setContent { AppBackground() }
 		binding.settings.setContent { MainActivitySettings() }
 		binding.screensaver.setContent { InAppScreensaver() }
+		binding.exitDialog.setContent {
+			if (showExitDialog.value) {
+				ExitConfirmationDialog(
+					onConfirm = { finish() },
+					onDismiss = { showExitDialog.value = false },
+				)
+			}
+		}
 		setContentView(binding.root)
 
 		// Check for updates on app launch
@@ -300,32 +308,16 @@ class MainActivity : FragmentActivity() {
 	}
 
 	private fun showExitConfirmation() {
-		// Check if confirmation is enabled in preferences
 		if (!userPreferences[UserPreferences.confirmExit]) {
-			// Exit immediately without confirmation
 			finish()
 			return
 		}
 
-		// Don't show dialog if one is already showing
-		if (exitConfirmationDialog?.isShowing == true) return
-
-		exitConfirmationDialog = AlertDialog.Builder(this)
-			.setTitle(R.string.exit_confirmation_title)
-			.setMessage(R.string.exit_confirmation_message)
-			.setPositiveButton(R.string.lbl_exit) { _, _ ->
-				finish()
-			}
-			.setNegativeButton(android.R.string.cancel, null)
-			.setOnCancelListener { exitConfirmationDialog = null }
-			.create()
-
-		exitConfirmationDialog?.show()
+		showExitDialog.value = true
 	}
 
 	override fun onDestroy() {
-		exitConfirmationDialog?.dismiss()
-		exitConfirmationDialog = null
+		showExitDialog.value = false
 		super.onDestroy()
 	}
 
