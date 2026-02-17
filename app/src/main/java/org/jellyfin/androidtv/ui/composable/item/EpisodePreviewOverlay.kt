@@ -49,6 +49,12 @@ import timber.log.Timber
 /** Delay before starting preview playback to debounce quick scrolling. */
 private const val PREVIEW_START_DELAY_MS = 1500L
 
+/** Seek to 20% of runtime as a fallback when no intro segment or resume position is available. */
+private fun runtimeFallbackMs(item: BaseItemDto): Long {
+	val runtimeTicks = item.runTimeTicks ?: 0L
+	return if (runtimeTicks > 0) (runtimeTicks / 10_000L) / 5 else 0L
+}
+
 /**
  * A composable overlay that plays a muted video preview of an episode/movie
  * directly on top of its card when focused.
@@ -79,6 +85,7 @@ fun EpisodePreviewOverlay(
 	val httpDataSourceFactory = koinInject<HttpDataSource.Factory>()
 
 	var streamUrl by remember { mutableStateOf<String?>(null) }
+	var fallbackUrl by remember { mutableStateOf<String?>(null) }
 	var seekPositionMs by remember { mutableStateOf(0L) }
 	var isPlaying by remember { mutableStateOf(false) }
 	var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
@@ -97,6 +104,7 @@ fun EpisodePreviewOverlay(
 	LaunchedEffect(focused, item.id) {
 		if (!focused) {
 			streamUrl = null
+			fallbackUrl = null
 			isPlaying = false
 			exoPlayer?.stop()
 			exoPlayer?.release()
@@ -111,35 +119,45 @@ fun EpisodePreviewOverlay(
 		Timber.d("EpisodePreview: Resolving stream URL for ${item.name}")
 
 		try {
-			val url = withContext(Dispatchers.IO) {
-				effectiveApi.videosApi.getVideoStreamUrl(
+			val (directUrl, transcodedUrl, introEndMs) = withContext(Dispatchers.IO) {
+				val direct = effectiveApi.videosApi.getVideoStreamUrl(
 					itemId = item.id,
 					static = true,
 				)
-			}
 
-			Timber.d("EpisodePreview: Stream URL resolved for ${item.name}: ${url.take(80)}...")
+				val transcoded = effectiveApi.videosApi.getVideoStreamUrl(
+					itemId = item.id,
+					static = false,
+					videoCodec = "h264",
+					audioCodec = "aac",
+					maxVideoBitDepth = 8,
+					audioBitRate = 128000,
+					audioChannels = 2,
+				)
 
-			val introEndMs = withContext(Dispatchers.IO) {
-				try {
-					val segments = mediaSegmentRepository.getSegmentsForItem(item)
-					val introSegment = segments.firstOrNull { it.type == MediaSegmentType.INTRO }
-					if (introSegment != null) {
-						introSegment.endTicks / 10_000L
+				val seekMs = try {
+					val positionTicks = item.userData?.playbackPositionTicks ?: 0L
+					if (positionTicks > 0) {
+						positionTicks / 10_000L
 					} else {
-						val positionTicks = item.userData?.playbackPositionTicks ?: 0L
-						if (positionTicks > 0) positionTicks / 10_000L else 0L
+						val segments = mediaSegmentRepository.getSegmentsForItem(item)
+						val introSegment = segments.firstOrNull { it.type == MediaSegmentType.INTRO }
+						introSegment?.endTicks?.let { it / 10_000L }
+							?: runtimeFallbackMs(item)
 					}
 				} catch (e: Exception) {
 					Timber.w(e, "EpisodePreview: Failed to get intro segments for ${item.name}")
 					val positionTicks = item.userData?.playbackPositionTicks ?: 0L
-					if (positionTicks > 0) positionTicks / 10_000L else 0L
+					if (positionTicks > 0) positionTicks / 10_000L else runtimeFallbackMs(item)
 				}
+
+				Triple(direct, transcoded, seekMs)
 			}
 
-			streamUrl = url
+			streamUrl = directUrl
+			fallbackUrl = transcodedUrl
 			seekPositionMs = introEndMs
-			Timber.d("EpisodePreview: Ready to play ${item.name}, seekTo=${introEndMs}ms, url=${url.take(80)}...")
+			Timber.d("EpisodePreview: Ready to play ${item.name}, seekTo=${introEndMs}ms, url=${directUrl.take(80)}...")
 		} catch (e: Exception) {
 			Timber.w(e, "EpisodePreview: Failed to resolve stream URL for ${item.name}")
 		}
@@ -151,7 +169,7 @@ fun EpisodePreviewOverlay(
 		DisposableEffect(currentUrl) {
 			val renderersFactory = DefaultRenderersFactory(context).apply {
 				setEnableDecoderFallback(true)
-				setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+				setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
 			}
 
 			val player = ExoPlayer.Builder(context)
@@ -167,11 +185,14 @@ fun EpisodePreviewOverlay(
 			val mediaSource = ProgressiveMediaSource.Factory(httpDataSourceFactory)
 				.createMediaSource(MediaItem.fromUri(Uri.parse(currentUrl)))
 
+			var hasSeeked = false
+
 			player.addListener(object : Player.Listener {
 				override fun onPlaybackStateChanged(playbackState: Int) {
 					when (playbackState) {
 						Player.STATE_READY -> {
-							if (seekPositionMs > 0 && player.currentPosition < 1000) {
+							if (!hasSeeked && seekPositionMs > 0) {
+								hasSeeked = true
 								player.seekTo(seekPositionMs)
 							}
 							isPlaying = true
@@ -188,6 +209,12 @@ fun EpisodePreviewOverlay(
 				override fun onPlayerError(error: PlaybackException) {
 					Timber.w("EpisodePreview: Error for ${item.name}: ${error.message}")
 					isPlaying = false
+					val fb = fallbackUrl
+					if (fb != null) {
+						Timber.d("EpisodePreview: Retrying ${item.name} with transcoded H.264 stream")
+						fallbackUrl = null
+						streamUrl = fb
+					}
 				}
 			})
 

@@ -48,7 +48,9 @@ import org.jellyfin.androidtv.ui.composable.item.ItemCard
 import org.jellyfin.androidtv.ui.composable.item.ItemCardBaseItemOverlay
 import org.jellyfin.androidtv.ui.composable.item.ItemCardJellyseerrOverlay
 import org.jellyfin.androidtv.ui.composable.item.ItemPreview
+import org.jellyfin.androidtv.ui.composable.item.SeriesTrailerOverlay
 import org.jellyfin.androidtv.ui.composable.item.isEligibleForPreview
+import org.jellyfin.androidtv.ui.composable.item.isEligibleForTrailerPreview
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.getJellyseerrJson
@@ -424,6 +426,12 @@ private fun CardViewHolderContent(
 				val baseItem = item.baseItem
 				if (episodePreviewEnabled && baseItem != null && isEligibleForPreview(baseItem)) {
 					EpisodePreviewOverlay(
+						item = baseItem,
+						focused = focused,
+					)
+				}
+				if (episodePreviewEnabled && baseItem != null && isEligibleForTrailerPreview(baseItem)) {
+					SeriesTrailerOverlay(
 						item = baseItem,
 						focused = focused,
 					)
