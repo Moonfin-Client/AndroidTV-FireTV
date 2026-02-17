@@ -69,7 +69,7 @@ class TrailerPlayerFragment : Fragment() {
 		val injectionScript = buildInjectionScript(segments, videoId, startSeconds)
 
 		val startParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
-		val embedUrl = "https://${invidiousInstances[0]}/embed/$videoId?autoplay=1&controls=0$startParam"
+		val embedUrl = "https://${invidiousInstances[0]}/embed/$videoId?autoplay=1&controls=0&quality=dash$startParam"
 
 		val root = object : FrameLayout(requireContext()) {
 			override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -151,7 +151,7 @@ class TrailerPlayerFragment : Fragment() {
 					instanceIndex++
 					if (instanceIndex < invidiousInstances.size) {
 						val nextStartParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
-						val nextUrl = "https://${invidiousInstances[instanceIndex]}/embed/$videoId?autoplay=1&controls=0$nextStartParam"
+						val nextUrl = "https://${invidiousInstances[instanceIndex]}/embed/$videoId?autoplay=1&controls=0&quality=dash$nextStartParam"
 						Timber.d("TrailerPlayer: Trying next instance: $nextUrl")
 						view?.loadUrl(nextUrl)
 					} else {
@@ -261,6 +261,21 @@ class TrailerPlayerFragment : Fragment() {
       video.addEventListener('ended', function() { clearInterval(skipInterval); });
       setTimeout(function() { clearInterval(skipInterval); }, 300000);
     }
+
+    // Force highest quality in DASH player
+    try {
+      var vjsEl = document.querySelector('.video-js');
+      if (vjsEl && vjsEl.player && vjsEl.player.qualityLevels) {
+        var ql = vjsEl.player.qualityLevels();
+        var best = -1, bestIdx = -1;
+        for (var i = 0; i < ql.length; i++) {
+          if (ql[i].height > best) { best = ql[i].height; bestIdx = i; }
+        }
+        if (bestIdx >= 0) {
+          for (var i = 0; i < ql.length; i++) { ql[i].enabled = (i === bestIdx); }
+        }
+      }
+    } catch(qe) {}
 
     var playPromise = video.play();
     if (playPromise) {

@@ -72,7 +72,7 @@ fun YouTubeTrailerWebView(
 	// Build the embed URL for the first instance (fallback handled via JS)
 	val embedUrl = remember(videoId, startSeconds, invidiousInstances) {
 		val startParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
-		"https://${invidiousInstances[0]}/embed/$videoId?autoplay=1&muted=true&controls=0$startParam"
+		"https://${invidiousInstances[0]}/embed/$videoId?autoplay=1&muted=true&controls=0&quality=dash$startParam"
 	}
 
 	// Build the post-load injection script (SponsorBlock + callbacks + CSS overrides)
@@ -179,7 +179,7 @@ fun YouTubeTrailerWebView(
 							instanceIndex++
 							if (instanceIndex < invidiousInstances.size) {
 								val startParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
-								val nextUrl = "https://${invidiousInstances[instanceIndex]}/embed/$videoId?autoplay=1&muted=true&controls=0$startParam"
+								val nextUrl = "https://${invidiousInstances[instanceIndex]}/embed/$videoId?autoplay=1&muted=true&controls=0&quality=dash$startParam"
 								Timber.d("YouTubeTrailer: Trying next instance: $nextUrl")
 								view?.loadUrl(nextUrl)
 							} else {
@@ -290,6 +290,21 @@ private fun buildInjectionScript(
       video.addEventListener('ended', function() { clearInterval(skipInterval); });
       setTimeout(function() { clearInterval(skipInterval); }, 300000);
     }
+
+    // Force highest quality in DASH player
+    try {
+      var vjsEl = document.querySelector('.video-js');
+      if (vjsEl && vjsEl.player && vjsEl.player.qualityLevels) {
+        var ql = vjsEl.player.qualityLevels();
+        var best = -1, bestIdx = -1;
+        for (var i = 0; i < ql.length; i++) {
+          if (ql[i].height > best) { best = ql[i].height; bestIdx = i; }
+        }
+        if (bestIdx >= 0) {
+          for (var i = 0; i < ql.length; i++) { ql[i].enabled = (i === bestIdx); }
+        }
+      }
+    } catch(qe) {}
 
     // Force play if not already playing
     var playPromise = video.play();
