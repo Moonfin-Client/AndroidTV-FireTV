@@ -396,13 +396,13 @@ class LibraryBrowseFragment : Fragment() {
 		val columns = GridCells.Adaptive(minSize = (cardWidth + 16).dp)
 
 		// Infinite scroll
-		val shouldLoadMore by remember {
+		val shouldLoadMore by remember(uiState.items.size) {
 			derivedStateOf {
 				val lastIdx = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 				lastIdx >= uiState.items.size - 10
 			}
 		}
-		LaunchedEffect(shouldLoadMore) {
+		LaunchedEffect(shouldLoadMore, uiState.hasMoreItems) {
 			if (shouldLoadMore && uiState.hasMoreItems) viewModel.loadMore()
 		}
 
