@@ -91,11 +91,18 @@ object SponsorBlockApi {
 	 * Calculate the best start time for a trailer preview.
 	 * Finds the first non-sponsored moment after skipping any intro/sponsor segments.
 	 *
+	 * When SponsorBlock has no data for a video, returns a default skip of 5 seconds
+	 * to jump past the MPAA green rating screen and studio logos that appear at the
+	 * start of most official movie trailers.
+	 *
 	 * @param segments The SponsorBlock segments for the video
-	 * @return The recommended start time in seconds
+	 * @return The recommended start time in seconds (minimum 5s)
 	 */
 	fun calculateStartTime(segments: List<Segment>): Double {
-		if (segments.isEmpty()) return 0.0
+		// Default skip past MPAA green screen / studio logos
+		val defaultSkip = 5.0
+
+		if (segments.isEmpty()) return defaultSkip
 
 		// Sort segments by start time
 		val sorted = segments.sortedBy { it.startTime }
@@ -113,6 +120,7 @@ object SponsorBlockApi {
 			}
 		}
 
-		return currentTime
+		// Ensure we always skip at least past the typical MPAA green screen
+		return maxOf(currentTime, defaultSkip)
 	}
 }
