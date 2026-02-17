@@ -16,6 +16,7 @@ import android.widget.FrameLayout
 import androidx.fragment.app.Fragment
 import kotlinx.serialization.json.Json
 import org.jellyfin.androidtv.ui.home.mediabar.SponsorBlockApi
+import org.jellyfin.androidtv.ui.home.mediabar.TrailerJsBuilder
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.koin.android.ext.android.inject
 import timber.log.Timber
@@ -66,7 +67,7 @@ class TrailerPlayerFragment : Fragment() {
 			emptyList()
 		}
 
-		val injectionScript = buildInjectionScript(segments, videoId, startSeconds)
+		val injectionScript = TrailerJsBuilder.build(segments = segments, muted = false)
 
 		val startParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
 		val embedUrl = "https://${invidiousInstances[0]}/embed/$videoId?autoplay=1&controls=0&quality=dash$startParam"
@@ -83,6 +84,20 @@ class TrailerPlayerFragment : Fragment() {
 			setBackgroundColor(android.graphics.Color.BLACK)
 			isFocusable = true
 			isFocusableInTouchMode = true
+		}
+
+		var instanceIndex = 0
+
+		fun tryNextInstance(wv: WebView) {
+			instanceIndex++
+			if (instanceIndex < invidiousInstances.size) {
+				val nextStartParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
+				val nextUrl = "https://${invidiousInstances[instanceIndex]}/embed/$videoId?autoplay=1&controls=0&quality=dash$nextStartParam"
+				Timber.d("TrailerPlayer: Trying next instance: $nextUrl")
+				wv.loadUrl(nextUrl)
+			} else {
+				Handler(Looper.getMainLooper()).post { goBack() }
+			}
 		}
 
 		val wv = WebView(requireContext()).apply {
@@ -106,6 +121,8 @@ class TrailerPlayerFragment : Fragment() {
 			setBackgroundColor(android.graphics.Color.BLACK)
 			webChromeClient = WebChromeClient()
 
+			val webViewRef = this
+
 			addJavascriptInterface(object {
 				@JavascriptInterface
 				fun onVideoEnded() {
@@ -126,14 +143,12 @@ class TrailerPlayerFragment : Fragment() {
 
 				@JavascriptInterface
 				fun onLoadFailed() {
-					Timber.w("TrailerPlayer: Invidious instance failed")
-					Handler(Looper.getMainLooper()).post { goBack() }
+					Timber.w("TrailerPlayer: Instance timed out or failed, trying next")
+					Handler(Looper.getMainLooper()).post { tryNextInstance(webViewRef) }
 				}
 			}, "Android")
 
 			webViewClient = object : WebViewClient() {
-				private var instanceIndex = 0
-
 				override fun onPageFinished(view: WebView?, url: String?) {
 					super.onPageFinished(view, url)
 					Timber.d("TrailerPlayer: Page loaded: $url")
@@ -148,15 +163,7 @@ class TrailerPlayerFragment : Fragment() {
 				) {
 					super.onReceivedError(view, errorCode, description, failingUrl)
 					Timber.w("TrailerPlayer: WebView error $errorCode: $description")
-					instanceIndex++
-					if (instanceIndex < invidiousInstances.size) {
-						val nextStartParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
-						val nextUrl = "https://${invidiousInstances[instanceIndex]}/embed/$videoId?autoplay=1&controls=0&quality=dash$nextStartParam"
-						Timber.d("TrailerPlayer: Trying next instance: $nextUrl")
-						view?.loadUrl(nextUrl)
-					} else {
-						Handler(Looper.getMainLooper()).post { goBack() }
-					}
+					view?.let { tryNextInstance(it) }
 				}
 			}
 
@@ -181,120 +188,6 @@ class TrailerPlayerFragment : Fragment() {
 			wv.destroy()
 		}
 		webView = null
-	}
-
-	/**
-	 * Builds JS injected after the Invidious embed page loads.
-	 * Unlike the media bar version, sound is enabled (not muted).
-	 */
-	private fun buildInjectionScript(
-		segments: List<SponsorBlockApi.Segment>,
-		videoId: String,
-		startSeconds: Double,
-	): String {
-		val segmentsJs = segments.joinToString(",") { s ->
-			"""{"start":${s.startTime},"end":${s.endTime}}"""
-		}
-		return """
-(function() {
-  var style = document.createElement('style');
-  style.textContent = '* { cursor: none !important; } ' +
-    '.vjs-control-bar, .vjs-big-play-button, .vjs-loading-spinner, ' +
-    '.vjs-text-track-display, .vjs-modal-dialog, .vjs-poster, ' +
-    '.vjs-title-bar, .vjs-title-bar-title, .vjs-title-bar-description, ' +
-    '#player-container > :not(video), .video-js .vjs-tech { ' +
-    '  cursor: none !important; } ' +
-    '.vjs-big-play-button, .vjs-title-bar { display: none !important; } ' +
-    'h1, h2, h3, .title, [class*="title"], [class*="info"], ' +
-    '.vjs-info-overlay, .vjs-overlay { display: none !important; } ' +
-    'body { background: #000 !important; overflow: hidden !important; margin: 0 !important; } ' +
-    'video { object-fit: contain !important; width: 100vw !important; height: 100vh !important; }';
-  document.head.appendChild(style);
-
-  var segments = [$segmentsJs];
-
-  var attempts = 0;
-  var maxAttempts = 50;
-  var waitForVideo = setInterval(function() {
-    attempts++;
-    var video = document.querySelector('video');
-
-    if (video) {
-      clearInterval(waitForVideo);
-      setupVideo(video);
-    } else if (attempts >= maxAttempts) {
-      clearInterval(waitForVideo);
-      try { Android.onVideoError('no_video_element'); } catch(e) {}
-    }
-  }, 100);
-
-  function setupVideo(video) {
-    video.muted = false;
-    video.autoplay = true;
-    video.controls = false;
-
-    var playBtn = document.querySelector('.vjs-big-play-button');
-    if (playBtn) playBtn.click();
-
-    video.addEventListener('ended', function() {
-      try { Android.onVideoEnded(); } catch(e) {}
-    });
-    video.addEventListener('playing', function() {
-      try { Android.onVideoPlaying(); } catch(e) {}
-    });
-    video.addEventListener('error', function() {
-      try { Android.onVideoError('media_error'); } catch(e) {}
-    });
-
-    if (segments.length > 0) {
-      var skipInterval = setInterval(function() {
-        if (!video || video.paused) return;
-        var t = video.currentTime;
-        for (var i = 0; i < segments.length; i++) {
-          var seg = segments[i];
-          if (t >= seg.start && t < seg.end - 0.5) {
-            video.currentTime = seg.end;
-            break;
-          }
-        }
-      }, 500);
-      video.addEventListener('ended', function() { clearInterval(skipInterval); });
-      setTimeout(function() { clearInterval(skipInterval); }, 300000);
-    }
-
-    // Force highest quality in DASH player
-    try {
-      var vjsEl = document.querySelector('.video-js');
-      if (vjsEl && vjsEl.player && vjsEl.player.qualityLevels) {
-        var ql = vjsEl.player.qualityLevels();
-        var best = -1, bestIdx = -1;
-        for (var i = 0; i < ql.length; i++) {
-          if (ql[i].height > best) { best = ql[i].height; bestIdx = i; }
-        }
-        if (bestIdx >= 0) {
-          for (var i = 0; i < ql.length; i++) { ql[i].enabled = (i === bestIdx); }
-        }
-      }
-    } catch(qe) {}
-
-    var playPromise = video.play();
-    if (playPromise) {
-      playPromise.catch(function(e) {
-        // Autoplay with sound may be blocked — try muted first, then unmute
-        video.muted = true;
-        video.play().then(function() {
-          setTimeout(function() { video.muted = false; }, 500);
-        }).catch(function(e2) {
-          var player = document.querySelector('.video-js');
-          if (player && player.player && player.player.play) {
-            player.player.play();
-          }
-        });
-      });
-    }
-  }
-})();
-""".trimIndent()
 	}
 }
 
