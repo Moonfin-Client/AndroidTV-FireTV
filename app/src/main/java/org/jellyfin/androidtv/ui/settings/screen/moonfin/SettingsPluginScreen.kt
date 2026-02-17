@@ -227,6 +227,28 @@ fun SettingsPluginScreen() {
 			)
 		}
 
+		item {
+			val mediaBarEnabled by rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarEnabled)
+			var trailerPreview by rememberPreference(userSettingPreferences, UserSettingPreferences.mediaBarTrailerPreview)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_media_bar_trailer_preview)) },
+				captionContent = { Text(stringResource(R.string.pref_media_bar_trailer_preview_summary)) },
+				trailingContent = { Checkbox(checked = trailerPreview) },
+				enabled = mediaBarEnabled,
+				onClick = { trailerPreview = !trailerPreview }
+			)
+		}
+
+		item {
+			var episodePreview by rememberPreference(userSettingPreferences, UserSettingPreferences.episodePreviewEnabled)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_episode_preview)) },
+				captionContent = { Text(stringResource(R.string.pref_episode_preview_summary)) },
+				trailingContent = { Checkbox(checked = episodePreview) },
+				onClick = { episodePreview = !episodePreview }
+			)
+		}
+
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_theme_music_title)) }) }
 
 		item {

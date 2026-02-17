@@ -17,6 +17,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- YouTube trailer WebView overlay (on top of background image) -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/trailerWebView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <!-- Toolbar at top using Compose -->
     <FrameLayout
         android:id="@+id/toolbar_actions"

@@ -8,6 +8,9 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -23,6 +26,8 @@ import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.constant.NavbarPosition
 import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowViewModel
+import org.jellyfin.androidtv.ui.home.mediabar.TrailerPreviewState
+import org.jellyfin.androidtv.ui.home.mediabar.YouTubeTrailerWebView
 import org.jellyfin.androidtv.ui.shared.toolbar.LeftSidebarNavigation
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
@@ -38,6 +43,7 @@ class HomeFragment : Fragment() {
 	private var infoRowView: SimpleInfoRowView? = null
 	private var summaryView: TextView? = null
 	private var backgroundImage: ImageView? = null
+	private var trailerWebView: ComposeView? = null
 	private var rowsFragment: HomeRowsFragment? = null
 	private var snowfallView: SnowfallView? = null
 	private var petalfallView: PetalfallView? = null
@@ -58,6 +64,7 @@ class HomeFragment : Fragment() {
 		infoRowView = view.findViewById(R.id.infoRow)
 		summaryView = view.findViewById(R.id.summary)
 		backgroundImage = view.findViewById(R.id.backgroundImage)
+		trailerWebView = view.findViewById(R.id.trailerWebView)
 		snowfallView = view.findViewById(R.id.snowfallView)
 		petalfallView = view.findViewById(R.id.petalfallView)
 		leaffallView = view.findViewById(R.id.leaffallView)
@@ -153,6 +160,38 @@ class HomeFragment : Fragment() {
 				updateMediaBarBackground()
 			}
 			.launchIn(lifecycleScope)
+
+		trailerWebView?.setContent {
+			val trailerState by mediaBarViewModel.trailerState.collectAsState()
+
+			val activeInfo = when (val state = trailerState) {
+				is TrailerPreviewState.Buffering -> state.info
+				is TrailerPreviewState.Playing -> state.info
+				else -> null
+			}
+			val showTrailer = trailerState is TrailerPreviewState.Playing
+
+			if (activeInfo != null) {
+				key(activeInfo.youtubeVideoId) {
+					YouTubeTrailerWebView(
+						videoId = activeInfo.youtubeVideoId,
+						startSeconds = activeInfo.startSeconds,
+						segments = activeInfo.segments,
+						isVisible = showTrailer,
+						onVideoEnded = { mediaBarViewModel.onTrailerEnded() },
+					)
+				}
+			}
+		}
+
+		mediaBarViewModel.trailerState
+			.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+			.onEach { trailerState ->
+				val hasTrailer = trailerState is TrailerPreviewState.Buffering ||
+					trailerState is TrailerPreviewState.Playing
+				trailerWebView?.isVisible = hasTrailer
+			}
+			.launchIn(lifecycleScope)
 	}
 
 	private fun updateMediaBarBackground() {
@@ -238,6 +277,16 @@ class HomeFragment : Fragment() {
 		}
 	}
 
+	override fun onPause() {
+		super.onPause()
+		mediaBarViewModel.stopTrailer()
+	}
+
+	override fun onResume() {
+		super.onResume()
+		mediaBarViewModel.restartTrailerForCurrentSlide()
+	}
+
 	override fun onDestroyView() {
 		super.onDestroyView()
 		snowfallView?.stopSnowing()
@@ -250,6 +299,7 @@ class HomeFragment : Fragment() {
 		summaryView = null
 		infoRowView = null
 		backgroundImage = null
+		trailerWebView = null
 		rowsFragment = null
 		snowfallView = null
 		petalfallView = null

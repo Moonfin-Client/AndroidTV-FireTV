@@ -43,10 +43,13 @@ import org.jellyfin.androidtv.constant.ImageType
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.composable.AsyncImage
+import org.jellyfin.androidtv.ui.composable.item.EpisodePreviewOverlay
 import org.jellyfin.androidtv.ui.composable.item.ItemCard
 import org.jellyfin.androidtv.ui.composable.item.ItemCardBaseItemOverlay
 import org.jellyfin.androidtv.ui.composable.item.ItemCardJellyseerrOverlay
 import org.jellyfin.androidtv.ui.composable.item.ItemPreview
+import org.jellyfin.androidtv.ui.composable.item.isEligibleForPreview
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.getJellyseerrJson
 import org.jellyfin.androidtv.data.service.jellyseerr.isJellyseerrItem
@@ -416,6 +419,16 @@ private fun CardViewHolderContent(
 				}
 			},
 			overlay = {
+				val userSettingPrefs = koinInject<UserSettingPreferences>()
+				val episodePreviewEnabled = remember { userSettingPrefs[UserSettingPreferences.episodePreviewEnabled] }
+				val baseItem = item.baseItem
+				if (episodePreviewEnabled && baseItem != null && isEligibleForPreview(baseItem)) {
+					EpisodePreviewOverlay(
+						item = baseItem,
+						focused = focused,
+					)
+				}
+
 				val showInfo = !usePreview && item.showCardInfoOverlay
 				val jellyseerrItem = when {
 					item is JellyseerrMediaBaseRowItem -> item.item

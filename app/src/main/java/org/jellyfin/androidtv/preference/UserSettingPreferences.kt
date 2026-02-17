@@ -52,6 +52,10 @@ class UserSettingPreferences(
 		val mediaBarItemCount = stringPreference("mediaBarItemCount", "10")
 		val mediaBarOverlayOpacity = intPreference("mediaBarOverlayOpacity", 50)
 		val mediaBarOverlayColor = stringPreference("mediaBarOverlayColor", "gray")
+		val mediaBarTrailerPreview = booleanPreference("mediaBarTrailerPreview", true)
+
+		// Episode preview settings
+		val episodePreviewEnabled = booleanPreference("episodePreviewEnabled", true)
 		
 		// Home rows image type settings
 		val homeRowsUniversalOverride = booleanPreference("homeRowsUniversalOverride", false)

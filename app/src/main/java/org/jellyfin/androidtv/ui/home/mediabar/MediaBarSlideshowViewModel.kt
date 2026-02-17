@@ -62,9 +62,15 @@ class MediaBarSlideshowViewModel(
 	private val _isFocused = MutableStateFlow(false)
 	val isFocused: StateFlow<Boolean> = _isFocused.asStateFlow()
 
+	private val _trailerState = MutableStateFlow<TrailerPreviewState>(TrailerPreviewState.Idle)
+	val trailerState: StateFlow<TrailerPreviewState> = _trailerState.asStateFlow()
+
 	private var items: List<MediaBarSlideItem> = emptyList()
 	private var autoAdvanceJob: Job? = null
 	private var currentUserId: UUID? = null
+	private var trailerJob: Job? = null
+	// Cache: maps serverId -> ApiClient for trailer resolution
+	private var serverApiClients: MutableMap<UUID?, ApiClient> = mutableMapOf()
 
 	init {
 		// Observe user changes and reload content when user switches
@@ -83,9 +89,9 @@ class MediaBarSlideshowViewModel(
 	fun setFocused(focused: Boolean) {
 		_isFocused.value = focused
 
-		// When losing focus, stop auto-advance
 		if (!focused) {
 			autoAdvanceJob?.cancel()
+			stopTrailer()
 		} else {
 			// When gaining focus, refresh non-visible items for variety
 			// but keep the current and adjacent items to prevent flickering
@@ -97,6 +103,8 @@ class MediaBarSlideshowViewModel(
 			if (!_playbackState.value.isPaused) {
 				resetAutoAdvanceTimer()
 			}
+
+			restartTrailerForCurrentSlide()
 		}
 	}
 
@@ -296,6 +304,11 @@ class MediaBarSlideshowViewModel(
 				.shuffled()
 				.take(config.maxItems)
 
+			allItemsWithApiClients.forEach { (_, itemApiClient, serverId) ->
+				serverApiClients[serverId] = itemApiClient
+			}
+			serverApiClients[null] = api
+
 			items = allItemsWithApiClients.map { (item, itemApiClient, serverId) ->
 				MediaBarSlideItem(
 					itemId = item.id,
@@ -336,6 +349,7 @@ class MediaBarSlideshowViewModel(
 					// Preload images for initial slide and adjacent ones
 					preloadAdjacentImages(0)
 					startAutoPlay()
+					startTrailerResolution(0)
 				} else {
 					_state.value = MediaBarState.Error("No items found")
 				}
@@ -385,8 +399,9 @@ class MediaBarSlideshowViewModel(
 	 * - Manual refresh requested
 	 */
 	fun reloadContent() {
-		// Cancel auto-advance
 		autoAdvanceJob?.cancel()
+		trailerJob?.cancel()
+		_trailerState.value = TrailerPreviewState.Idle
 		_playbackState.value = SlideshowPlaybackState()
 		loadSlideshowItems()
 	}
@@ -422,6 +437,7 @@ class MediaBarSlideshowViewModel(
 			preloadAdjacentImages(nextIndex)
 			// Reset the auto-advance timer after manual or automatic navigation
 			resetAutoAdvanceTimer()
+			startTrailerResolution(nextIndex)
 		}
 	}
 
@@ -446,8 +462,8 @@ class MediaBarSlideshowViewModel(
 			_playbackState.value = _playbackState.value.copy(isTransitioning = false)
 			// Preload adjacent images after transition completes
 			preloadAdjacentImages(previousIndex)
-			// Reset the auto-advance timer after manual navigation
 			resetAutoAdvanceTimer()
+			startTrailerResolution(previousIndex)
 		}
 	}
 
@@ -695,5 +711,86 @@ class MediaBarSlideshowViewModel(
 		_playbackState.value = _playbackState.value.copy(
 			isPaused = !_playbackState.value.isPaused
 		)
+	}
+
+	/**
+	 * Start trailer resolution for a given slide index.
+	 * Shows the backdrop image for a delay period, then fades in the
+	 * YouTube trailer WebView if a trailer is available.
+	 *
+	 * @param index The slide index to resolve a trailer for
+	 */
+	private fun startTrailerResolution(index: Int) {
+		trailerJob?.cancel()
+		_trailerState.value = TrailerPreviewState.Idle
+
+		if (!userSettingPreferences[UserSettingPreferences.mediaBarTrailerPreview]) {
+			return
+		}
+
+		val item = items.getOrNull(index) ?: return
+		val apiClient = serverApiClients[item.serverId] ?: api
+		val userId = currentUserId ?: return
+
+		trailerJob = viewModelScope.launch {
+			try {
+				_trailerState.value = TrailerPreviewState.WaitingToPlay
+				val startTime = System.currentTimeMillis()
+
+				// Resolve trailer info first (API calls to Jellyfin + SponsorBlock)
+				val trailerInfo = withContext(Dispatchers.IO) {
+					TrailerResolver.resolveTrailerPreview(apiClient, item.itemId, userId)
+				}
+
+				if (trailerInfo != null) {
+					_trailerState.value = TrailerPreviewState.Buffering(trailerInfo)
+					Timber.d("MediaBar: Buffering trailer for ${item.title} (YT: ${trailerInfo.youtubeVideoId})")
+
+					// Wait the remaining image display time
+					val elapsed = System.currentTimeMillis() - startTime
+					val remaining = IMAGE_DISPLAY_DELAY_MS - elapsed
+					if (remaining > 0) delay(remaining)
+
+					if (_playbackState.value.currentIndex != index) return@launch
+					if (_playbackState.value.isPaused) return@launch
+
+					autoAdvanceJob?.cancel()
+					_trailerState.value = TrailerPreviewState.Playing(trailerInfo)
+					Timber.d("MediaBar: Playing trailer for ${item.title} (YT: ${trailerInfo.youtubeVideoId}, start: ${trailerInfo.startSeconds}s)")
+				} else {
+					_trailerState.value = TrailerPreviewState.Unavailable
+					Timber.d("MediaBar: No trailer available for ${item.title}")
+				}
+			} catch (e: Exception) {
+				Timber.w(e, "MediaBar: Trailer resolution failed for ${item.title}")
+				_trailerState.value = TrailerPreviewState.Unavailable
+			}
+		}
+	}
+
+	/**
+	 * Called when the trailer video ends. Advances to the next slide.
+	 */
+	fun onTrailerEnded() {
+		_trailerState.value = TrailerPreviewState.Idle
+		nextSlide()
+	}
+
+	/** Stop any currently playing trailer immediately. */
+	fun stopTrailer() {
+		trailerJob?.cancel()
+		_trailerState.value = TrailerPreviewState.Idle
+	}
+
+	/** Restart trailer resolution for the current slide. */
+	fun restartTrailerForCurrentSlide() {
+		if (items.isNotEmpty()) {
+			startTrailerResolution(_playbackState.value.currentIndex)
+		}
+	}
+
+	companion object {
+		/** How long to show the backdrop image before transitioning to trailer (ms) */
+		const val IMAGE_DISPLAY_DELAY_MS = 4000L
 	}
 }

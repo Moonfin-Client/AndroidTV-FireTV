@@ -786,6 +786,10 @@
     <string name="lbl_media_bar_next">Next slide</string>
     <string name="lbl_media_bar_pause">Pause slideshow</string>
     <string name="lbl_media_bar_play">Resume slideshow</string>
+    <string name="pref_media_bar_trailer_preview">Trailer preview</string>
+    <string name="pref_media_bar_trailer_preview_summary">Play muted YouTube trailers after 4 seconds, using SponsorBlock to skip intros</string>
+    <string name="pref_episode_preview">Episode preview</string>
+    <string name="pref_episode_preview_summary">Play a muted video preview on focused cards, skipping past intro segments</string>
     
     <!-- Theme Music Settings -->
     <string name="pref_theme_music_title">Theme Music</string>
