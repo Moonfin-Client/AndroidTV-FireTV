@@ -101,6 +101,7 @@ import org.jellyfin.androidtv.util.apiclient.parentBackdropImages
 import org.jellyfin.androidtv.util.sdk.compat.canResume
 import org.jellyfin.androidtv.util.sdk.TrailerUtils.getExternalTrailerIntent
 import org.jellyfin.androidtv.util.sdk.TrailerUtils.hasPlayableTrailers
+import org.jellyfin.androidtv.ui.home.mediabar.TrailerResolver
 import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowMultipleRatings
 import org.jellyfin.androidtv.ui.shared.toolbar.LeftSidebarNavigation
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
@@ -1863,16 +1864,46 @@ class ItemDetailsFragment : Fragment() {
 		val localTrailerCount = item.localTrailerCount ?: 0
 
 		if (localTrailerCount < 1) {
-			// External trailer
-			try {
-				val intent = getExternalTrailerIntent(requireContext(), item)
-				if (intent != null) {
-					val chooser = Intent.createChooser(intent, getString(R.string.lbl_play_trailers))
-					startActivity(chooser)
+			// External trailer — resolve YouTube video and play in-app WebView
+			lifecycleScope.launch {
+				try {
+					val trailerInfo = withContext(Dispatchers.IO) {
+						TrailerResolver.resolveTrailerFromItem(item)
+					}
+
+					if (trailerInfo != null) {
+						val segmentsJson = trailerInfo.segments.joinToString(",", "[", "]") { seg ->
+							"""{"start":${seg.startTime},"end":${seg.endTime},"category":"${seg.category}","action":"${seg.actionType}"}"""
+						}
+						navigationRepository.navigate(Destinations.trailerPlayer(
+							videoId = trailerInfo.youtubeVideoId,
+							startSeconds = trailerInfo.startSeconds,
+							segmentsJson = segmentsJson,
+						))
+					} else {
+						// No YouTube trailer found — fall back to external intent
+						val intent = getExternalTrailerIntent(requireContext(), item)
+						if (intent != null) {
+							val chooser = Intent.createChooser(intent, getString(R.string.lbl_play_trailers))
+							startActivity(chooser)
+						} else {
+							Toast.makeText(requireContext(), getString(R.string.no_player_message), Toast.LENGTH_LONG).show()
+						}
+					}
+				} catch (e: Exception) {
+					Timber.w(e, "Failed to resolve trailer")
+					// Fall back to external intent
+					try {
+						val intent = getExternalTrailerIntent(requireContext(), item)
+						if (intent != null) {
+							val chooser = Intent.createChooser(intent, getString(R.string.lbl_play_trailers))
+							startActivity(chooser)
+						}
+					} catch (e2: ActivityNotFoundException) {
+						Timber.w(e2, "Unable to open external trailer")
+						Toast.makeText(requireContext(), getString(R.string.no_player_message), Toast.LENGTH_LONG).show()
+					}
 				}
-			} catch (e: ActivityNotFoundException) {
-				Timber.w(e, "Unable to open external trailer")
-				Toast.makeText(requireContext(), getString(R.string.no_player_message), Toast.LENGTH_LONG).show()
 			}
 		} else {
 			// Local trailer

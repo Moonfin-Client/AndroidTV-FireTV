@@ -20,6 +20,7 @@ import org.jellyfin.androidtv.ui.home.HomeFragment
 import org.jellyfin.androidtv.ui.itemdetail.FullDetailsFragment
 import org.jellyfin.androidtv.ui.itemdetail.ItemListFragment
 import org.jellyfin.androidtv.ui.itemdetail.v2.ItemDetailsFragment
+import org.jellyfin.androidtv.ui.itemdetail.v2.TrailerPlayerFragment
 import org.jellyfin.androidtv.ui.itemdetail.MusicFavoritesListFragment
 import org.jellyfin.androidtv.ui.jellyseerr.BrowseFilterType
 import org.jellyfin.androidtv.ui.jellyseerr.DiscoverFragment
@@ -176,6 +177,17 @@ object Destinations {
 
 	fun musicFavorites(parent: UUID) = fragmentDestination<MusicFavoritesListFragment>(
 		"ParentId" to parent.toString(),
+	)
+
+	// Trailer player
+	fun trailerPlayer(
+		videoId: String,
+		startSeconds: Double = 0.0,
+		segmentsJson: String = "[]",
+	) = fragmentDestination<TrailerPlayerFragment>(
+		TrailerPlayerFragment.ARG_VIDEO_ID to videoId,
+		TrailerPlayerFragment.ARG_START_SECONDS to startSeconds,
+		TrailerPlayerFragment.ARG_SEGMENTS_JSON to segmentsJson,
 	)
 
 	// Live TV
