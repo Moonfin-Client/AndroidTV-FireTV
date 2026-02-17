@@ -16,7 +16,7 @@
         android:pivotX="21"
         android:pivotY="21">
         <path
-            android:strokeColor="#6366F1"
+            android:strokeColor="#7C3AED"
             android:strokeWidth="5"
             android:strokeLineCap="round"
             android:fillColor="@android:color/transparent"

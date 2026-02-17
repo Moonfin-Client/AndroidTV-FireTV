@@ -108,7 +108,7 @@ private fun AvailabilityIndicator(
 		Icon(
 			imageVector = ImageVector.vectorResource(iconRes),
 			contentDescription = null,
-			tint = Color.White,
+			tint = Color.Unspecified,
 			modifier = modifier
 				.size(20.dp)
 				.rotate(rotation),

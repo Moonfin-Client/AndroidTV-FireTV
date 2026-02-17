@@ -126,6 +126,7 @@ class AdvancedRequestOptionsDialog(
 		
 		// Loading indicator
 		loadingIndicator = ProgressBar(context).apply {
+			indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#7C3AED"))
 			layoutParams = LinearLayout.LayoutParams(
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
