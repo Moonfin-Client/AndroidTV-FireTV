@@ -68,8 +68,9 @@
                 android:id="@+id/server_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/login_text_muted"
-                android:textSize="16sp"
+                android:textColor="@color/white"
+                android:textSize="32sp"
+                android:textStyle="bold"
                 android:visibility="gone"
                 tools:text="My Jellyfin Server"
                 tools:visibility="visible" />
@@ -79,9 +80,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/who_is_watching"
-                android:textColor="@color/white"
-                android:textSize="32sp"
-                android:textStyle="bold" />
+                android:textColor="@color/login_text_muted"
+                android:textSize="16sp" />
 
             <androidx.leanback.widget.HorizontalGridView
                 android:id="@+id/users"

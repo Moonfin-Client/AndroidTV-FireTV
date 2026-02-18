@@ -7,7 +7,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,7 +38,7 @@ fun showAddToPlaylistDialog(
 					val multiServerRepository = koinInject<MultiServerRepository>()
 					val scope = rememberCoroutineScope()
 					var showDialog by remember { mutableStateOf(true) }
-					var activeApiForCreate by remember { mutableStateOf<ApiClient?>(null) }
+					var showCreatePlaylistFor by remember { mutableStateOf<ApiClient?>(null) }
 
 					val enableMultiServer = remember { 
 						userPreferences[UserPreferences.enableMultiServerLibraries]
@@ -53,31 +52,28 @@ fun showAddToPlaylistDialog(
 							}
 						}
 					}
-
-					LaunchedEffect(activeApiForCreate) {
-						activeApiForCreate?.let { serverApi ->
-							val activity = context as? FragmentActivity
-							if (activity != null) {
-								showDialog = false
-								dialog.hide()
-								val fragment = CreatePlaylistDialogFragment.newInstance(
-									itemId = itemId,
-									apiClient = serverApi,
-									onPlaylistCreated = {
-										dialog.dismiss()
-									},
-									onBackPressed = {
-
-										dialog.show()
-										showDialog = true
-									}
-								)
-								fragment.show(activity.supportFragmentManager, "create_playlist")
-							}
-							activeApiForCreate = null
-						}
-					}
 					
+					if (showCreatePlaylistFor != null) {
+						CreatePlaylistDialog(
+							itemId = itemId,
+							apiClient = showCreatePlaylistFor!!,
+							onDismiss = {
+								showCreatePlaylistFor = null
+								showDialog = false
+								dialog.dismiss()
+							},
+							onBack = {
+								showCreatePlaylistFor = null
+								showDialog = true
+							},
+							onPlaylistCreated = {
+								showCreatePlaylistFor = null
+								showDialog = false
+								dialog.dismiss()
+							},
+						)
+					}
+
 					if (showDialog) {
 						AddToPlaylistDialog(
 							itemId = itemId,
@@ -119,9 +115,8 @@ fun showAddToPlaylistDialog(
 								}
 							},
 							onCreateNewPlaylist = { serverApi ->
-								// Hide compose dialog and show XML dialog
 								showDialog = false
-								activeApiForCreate = serverApi
+								showCreatePlaylistFor = serverApi
 							}
 						)
 					}
