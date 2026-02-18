@@ -285,7 +285,8 @@ public class VideoManager {
         // Create audio delay processor
         mAudioDelayProcessor = new AudioDelayProcessor();
         
-        // Create custom renderers factory with audio processor
+        // Create custom renderers factory that appends audio delay processor
+        // to the default processor chain (instead of replacing it)
         DefaultRenderersFactory defaultRendererFactory = new DefaultRenderersFactory(context) {
             @Override
             protected androidx.media3.exoplayer.audio.AudioSink buildAudioSink(
@@ -295,7 +296,11 @@ public class VideoManager {
                 return new androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
                         .setEnableFloatOutput(enableFloatOutput)
                         .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                        .setAudioProcessors(new androidx.media3.common.audio.AudioProcessor[]{mAudioDelayProcessor})
+                        .setAudioProcessors(new androidx.media3.common.audio.AudioProcessor[]{
+                                new androidx.media3.common.audio.SonicAudioProcessor(),
+                                new androidx.media3.exoplayer.audio.SilenceSkippingAudioProcessor(),
+                                mAudioDelayProcessor
+                        })
                         .build();
             }
         };
