@@ -26,7 +26,7 @@ import org.koin.compose.koinInject
 import timber.log.Timber
 
 /** Delay before starting trailer resolution to debounce quick scrolling. */
-private const val TRAILER_START_DELAY_MS = 1500L
+private const val TRAILER_START_DELAY_MS = 500L
 
 /**
  * A composable overlay that plays a muted YouTube trailer preview of a Series
@@ -47,6 +47,7 @@ private const val TRAILER_START_DELAY_MS = 1500L
 fun SeriesTrailerOverlay(
 	item: BaseItemDto,
 	focused: Boolean,
+	muted: Boolean = true,
 	modifier: Modifier = Modifier,
 ) {
 	val api = koinInject<ApiClient>()
@@ -104,6 +105,7 @@ fun SeriesTrailerOverlay(
 			videoId = info.youtubeVideoId,
 			startSeconds = info.startSeconds,
 			segments = info.segments,
+			muted = muted,
 			isVisible = true,
 			onVideoEnded = { trailerInfo = null },
 			modifier = modifier

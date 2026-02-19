@@ -249,6 +249,16 @@ fun SettingsPluginScreen() {
 			)
 		}
 
+		item {
+			var previewAudio by rememberPreference(userSettingPreferences, UserSettingPreferences.previewAudioEnabled)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_preview_audio)) },
+				captionContent = { Text(stringResource(R.string.pref_preview_audio_summary)) },
+				trailingContent = { Checkbox(checked = previewAudio) },
+				onClick = { previewAudio = !previewAudio }
+			)
+		}
+
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_theme_music_title)) }) }
 
 		item {

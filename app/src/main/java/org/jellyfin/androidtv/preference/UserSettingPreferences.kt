@@ -56,6 +56,7 @@ class UserSettingPreferences(
 
 		// Episode preview settings
 		val episodePreviewEnabled = booleanPreference("episodePreviewEnabled", true)
+		val previewAudioEnabled = booleanPreference("previewAudioEnabled", true)
 		
 		// Home rows image type settings
 		val homeRowsUniversalOverride = booleanPreference("homeRowsUniversalOverride", false)

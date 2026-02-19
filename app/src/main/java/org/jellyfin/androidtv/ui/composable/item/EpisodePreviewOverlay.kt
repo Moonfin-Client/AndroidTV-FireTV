@@ -47,7 +47,7 @@ import org.koin.compose.koinInject
 import timber.log.Timber
 
 /** Delay before starting preview playback to debounce quick scrolling. */
-private const val PREVIEW_START_DELAY_MS = 1500L
+private const val PREVIEW_START_DELAY_MS = 500L
 
 /** Seek to 20% of runtime as a fallback when no intro segment or resume position is available. */
 private fun runtimeFallbackMs(item: BaseItemDto): Long {
@@ -76,6 +76,7 @@ private fun runtimeFallbackMs(item: BaseItemDto): Long {
 fun EpisodePreviewOverlay(
 	item: BaseItemDto,
 	focused: Boolean,
+	muted: Boolean = true,
 	modifier: Modifier = Modifier,
 ) {
 	val context = LocalContext.current
@@ -176,7 +177,7 @@ fun EpisodePreviewOverlay(
 				.setRenderersFactory(renderersFactory)
 				.build()
 				.apply {
-					volume = 0f
+					volume = if (muted) 0f else 1f
 					repeatMode = Player.REPEAT_MODE_OFF
 					playWhenReady = true
 					videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING

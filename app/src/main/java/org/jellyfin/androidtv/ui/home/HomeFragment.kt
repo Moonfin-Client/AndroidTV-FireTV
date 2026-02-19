@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -151,6 +152,7 @@ class HomeFragment : Fragment() {
 
 		trailerWebView?.setContent {
 			val trailerState by mediaBarViewModel.trailerState.collectAsState()
+			val previewAudioEnabled = remember { userSettingPreferences[UserSettingPreferences.previewAudioEnabled] }
 
 			val activeInfo = when (val state = trailerState) {
 				is TrailerPreviewState.Buffering -> state.info
@@ -165,6 +167,7 @@ class HomeFragment : Fragment() {
 						videoId = activeInfo.youtubeVideoId,
 						startSeconds = activeInfo.startSeconds,
 						segments = activeInfo.segments,
+						muted = !previewAudioEnabled,
 						isVisible = showTrailer,
 						onVideoEnded = { mediaBarViewModel.onTrailerEnded() },
 						onVideoReady = { mediaBarViewModel.onTrailerReady() },

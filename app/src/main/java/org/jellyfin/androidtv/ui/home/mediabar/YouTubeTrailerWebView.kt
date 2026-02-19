@@ -54,6 +54,7 @@ fun YouTubeTrailerWebView(
 	videoId: String,
 	startSeconds: Double,
 	segments: List<SponsorBlockApi.Segment>,
+	muted: Boolean = true,
 	isVisible: Boolean,
 	onVideoEnded: () -> Unit = {},
 	onVideoReady: () -> Unit = {},
@@ -70,13 +71,12 @@ fun YouTubeTrailerWebView(
 		)
 	}
 
-	val embedUrl = remember(videoId, startSeconds, invidiousInstances) {
-		val startParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
-		"https://${invidiousInstances[0]}/embed/$videoId?autoplay=1&muted=true&controls=0&quality=dash$startParam"
+	val embedUrl = remember(videoId, startSeconds, invidiousInstances, muted) {
+		buildEmbedUrl(invidiousInstances[0], videoId, startSeconds, muted)
 	}
 
-	val injectionScript = remember(segments, videoId, startSeconds) {
-		TrailerJsBuilder.build(segments = segments, muted = true)
+	val injectionScript = remember(segments, videoId, startSeconds, muted) {
+		TrailerJsBuilder.build(segments = segments, muted = muted)
 	}
 
 	val trailerAlpha by animateFloatAsState(
@@ -132,8 +132,7 @@ fun YouTubeTrailerWebView(
 					fun tryNextInstance() {
 						instanceIndex++
 						if (instanceIndex < invidiousInstances.size) {
-							val startParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
-							val nextUrl = "https://${invidiousInstances[instanceIndex]}/embed/$videoId?autoplay=1&muted=true&controls=0&quality=dash$startParam"
+								val nextUrl = buildEmbedUrl(invidiousInstances[instanceIndex], videoId, startSeconds, muted)
 							Timber.d("YouTubeTrailer: Trying next instance: $nextUrl")
 							loadUrl(nextUrl)
 						} else {
@@ -194,4 +193,15 @@ fun YouTubeTrailerWebView(
 			modifier = Modifier.fillMaxSize()
 		)
 	}
+}
+
+private fun buildEmbedUrl(
+	instance: String,
+	videoId: String,
+	startSeconds: Double,
+	muted: Boolean,
+): String {
+	val startParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
+	val mutedParam = if (muted) "&muted=true" else ""
+	return "https://$instance/embed/$videoId?autoplay=1${mutedParam}&controls=0&quality=dash$startParam"
 }
