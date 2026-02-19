@@ -33,6 +33,20 @@ android {
 		isCoreLibraryDesugaringEnabled = true
 	}
 
+	flavorDimensions += "distribution"
+
+	productFlavors {
+		create("github") {
+			dimension = "distribution"
+			buildConfigField("boolean", "ENABLE_OTA_UPDATES", "true")
+		}
+
+		create("playstore") {
+			dimension = "distribution"
+			buildConfigField("boolean", "ENABLE_OTA_UPDATES", "false")
+		}
+	}
+
 	signingConfigs {
 		create("release") {
 			// Load keystore properties from keystore.properties file
@@ -60,10 +74,10 @@ android {
 			isShrinkResources = true
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
-			// Set package names used in various XML files
-			resValue("string", "app_id", namespace!!)
-			resValue("string", "app_search_suggest_authority", "${namespace}.content")
-			resValue("string", "app_search_suggest_intent_data", "content://${namespace}.content/intent")
+			// Set package names used in various XML files (must match applicationId for provider authorities)
+			resValue("string", "app_id", defaultConfig.applicationId!!)
+			resValue("string", "app_search_suggest_authority", "${defaultConfig.applicationId}.content")
+			resValue("string", "app_search_suggest_intent_data", "content://${defaultConfig.applicationId}.content/intent")
 
 			// Set flavored application name
 			resValue("string", "app_name", "Moonfin")
@@ -78,10 +92,11 @@ android {
 			isShrinkResources = true
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 			
-			// Set package names used in various XML files
-			resValue("string", "app_id", namespace + applicationIdSuffix)
-			resValue("string", "app_search_suggest_authority", "${namespace + applicationIdSuffix}.content")
-			resValue("string", "app_search_suggest_intent_data", "content://${namespace + applicationIdSuffix}.content/intent")
+			// Set package names used in various XML files (must match applicationId for provider authorities)
+			val debugAppId = defaultConfig.applicationId + applicationIdSuffix
+			resValue("string", "app_id", debugAppId)
+			resValue("string", "app_search_suggest_authority", "${debugAppId}.content")
+			resValue("string", "app_search_suggest_intent_data", "content://${debugAppId}.content/intent")
 
 			// Set flavored application name
 			resValue("string", "app_name", "Moonfin Debug")

@@ -397,10 +397,10 @@
     <string name="user_picker_last_user_title">Most recently used</string>
     <string name="user_picker_last_user_summary">Use the last active account</string>
     <string name="lbl_switch_user">Switch account</string>
-    <string name="no_network_permissions">Jellyfin requires network permissions to function</string>
+    <string name="no_network_permissions">Moonfin requires network permissions to function</string>
     <string name="press_to_close">Press to close</string>
     <string name="saved_servers">Saved servers</string>
-    <string name="welcome_title">Welcome to Jellyfin!</string>
+    <string name="welcome_title">Welcome to Moonfin!</string>
     <string name="welcome_content">Connect to your server to get started.</string>
     <string name="no_user_warning">We couldn\'t find any accounts!\nAdd a new account by pressing the \"Add account\" button.</string>
     <string name="who_is_watching">Who\'s watching?</string>
@@ -458,7 +458,7 @@
     <string name="lbl_forgot_pin">Forgot PIN?</string>
     <string name="select_version">Version</string>
     <string name="licenses_link">Licenses</string>
-    <string name="licenses_link_description">View the licenses of the libraries used by the Jellyfin app</string>
+    <string name="licenses_link_description">View the licenses of the libraries used by the Moonfin app</string>
     <string name="license_description">Description</string>
     <string name="license_version">Version</string>
     <string name="license_artifact">Artifact</string>
@@ -500,7 +500,7 @@
     <string name="pref_home_favorites_button_summary">Toggle the favorites button in the top toolbar</string>
     <string name="pref_show_libraries_in_toolbar">Show library buttons in toolbar</string>
     <string name="pref_show_libraries_in_toolbar_description">Toggle library buttons in the top toolbar</string>
-    <string name="searchable_hint">Search Jellyfin</string>
+    <string name="searchable_hint">Search Moonfin</string>
     <string name="searchable_settings_description">Media</string>
     <string name="pref_subtitles_background_title">Enable background</string>
     <string name="pref_subtitles_background_summary">Show a black background behind the subtitles</string>
@@ -581,7 +581,7 @@
     <string name="crash_report_toast">Oops! Something went wrong, a crash report was sent to your Jellyfin server.</string>
     <string name="server_setup_incomplete">The setup of this server has not been completed. Open Jellyfin in a web browser to finish setup before signing in.</string>
     <string name="episode_name_special">special</string>
-    <string name="app_notification_beta">App updated to %1$s\nThank you for participating in the Jellyfin beta program.</string>
+    <string name="app_notification_beta">App updated to %1$s\nThank you for participating in the Moonfin beta program.</string>
     <string name="item_deleted">%1$s deleted</string>
     <string name="item_deletion_failed">Unable to delete %1$s</string>
     <string name="pref_enable_media_management">Enable media management</string>
@@ -702,7 +702,7 @@
     <string name="playback_video_player">Video player</string>
     <string name="video_player_internal">Built-in video player</string>
     <string name="video_player_external">External app</string>
-    <string name="playback_video_player_external_empty">You don\'t have any video player apps installed on your device that can open Jellyfin videos.</string>
+    <string name="playback_video_player_external_empty">You don\'t have any video player apps installed on your device that can open videos from your server.</string>
     <string name="filters">Filters</string>
     <plurals name="seconds">
         <item quantity="one">%1$s second</item>

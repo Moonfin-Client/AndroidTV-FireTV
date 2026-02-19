@@ -156,32 +156,34 @@ fun SettingsMainScreen() {
 			)
 		}
 
-		item {
-			ListButton(
-				leadingContent = {
-					Icon(
-						painterResource(R.drawable.ic_get_app),
-						contentDescription = null
-					)
-				},
-				headingContent = { Text("Check for Updates") },
-				captionContent = { Text("Download latest Moonfin version") },
-				onClick = {
-					checkForUpdates(context, updateChecker) { info ->
-						updateInfoForDialog = info
+		if (org.jellyfin.androidtv.BuildConfig.ENABLE_OTA_UPDATES) {
+			item {
+				ListButton(
+					leadingContent = {
+						Icon(
+							painterResource(R.drawable.ic_get_app),
+							contentDescription = null
+						)
+					},
+					headingContent = { Text("Check for Updates") },
+					captionContent = { Text("Download latest Moonfin version") },
+					onClick = {
+						checkForUpdates(context, updateChecker) { info ->
+							updateInfoForDialog = info
+						}
 					}
-				}
-			)
-		}
+				)
+			}
 
-		item {
-			var updateNotificationsEnabled by rememberPreference(userPreferences, UserPreferences.updateNotificationsEnabled)
-			ListButton(
-				headingContent = { Text("Update Notifications") },
-				captionContent = { Text("Show notification on app launch when updates are available") },
-				trailingContent = { Checkbox(checked = updateNotificationsEnabled) },
-				onClick = { updateNotificationsEnabled = !updateNotificationsEnabled }
-			)
+			item {
+				var updateNotificationsEnabled by rememberPreference(userPreferences, UserPreferences.updateNotificationsEnabled)
+				ListButton(
+					headingContent = { Text("Update Notifications") },
+					captionContent = { Text("Show notification on app launch when updates are available") },
+					trailingContent = { Checkbox(checked = updateNotificationsEnabled) },
+					onClick = { updateNotificationsEnabled = !updateNotificationsEnabled }
+				)
+			}
 		}
 
 		item {

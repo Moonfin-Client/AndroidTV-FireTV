@@ -99,14 +99,16 @@ class JellyfinApplication : Application(), SingletonImageLoader.Factory {
 					.build()
 			).await()
 
-			// Schedule update check worker (daily)
-			workManager.enqueueUniquePeriodicWork(
-				UpdateCheckWorker.WORK_NAME,
-				ExistingPeriodicWorkPolicy.KEEP,
-				PeriodicWorkRequestBuilder<UpdateCheckWorker>(1, TimeUnit.DAYS)
-					.setBackoffCriteria(BackoffPolicy.LINEAR, 1, TimeUnit.HOURS)
-					.build()
-			).await()
+			// Schedule update check worker (daily) — libre builds only
+			if (BuildConfig.ENABLE_OTA_UPDATES) {
+				workManager.enqueueUniquePeriodicWork(
+					UpdateCheckWorker.WORK_NAME,
+					ExistingPeriodicWorkPolicy.KEEP,
+					PeriodicWorkRequestBuilder<UpdateCheckWorker>(1, TimeUnit.DAYS)
+						.setBackoffCriteria(BackoffPolicy.LINEAR, 1, TimeUnit.HOURS)
+						.build()
+				).await()
+			}
 		}
 
 		launch { socketListener.updateSession() }

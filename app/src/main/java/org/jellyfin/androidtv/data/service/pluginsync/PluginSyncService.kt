@@ -178,7 +178,9 @@ class PluginSyncService(
 		}
 
 		registerChangeListeners()
-		checkForPluginUpdate(baseUrl, token)
+		if (org.jellyfin.androidtv.BuildConfig.ENABLE_OTA_UPDATES) {
+			checkForPluginUpdate(baseUrl, token)
+		}
 	}
 
 	/**

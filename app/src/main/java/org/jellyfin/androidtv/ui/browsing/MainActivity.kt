@@ -125,8 +125,10 @@ class MainActivity : FragmentActivity() {
 		}
 		setContentView(binding.root)
 
-		// Check for updates on app launch
-		checkForUpdatesOnLaunch()
+		// Check for updates on app launch (libre builds only)
+		if (org.jellyfin.androidtv.BuildConfig.ENABLE_OTA_UPDATES) {
+			checkForUpdatesOnLaunch()
+		}
 	}
 	
 	private fun setupSyncPlayQueueLauncher() {
