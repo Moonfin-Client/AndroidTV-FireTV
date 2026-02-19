@@ -45,6 +45,7 @@ import timber.log.Timber
  * @param segments SponsorBlock segments to skip during playback
  * @param isVisible Whether the WebView should be visible (controls fade in/out)
  * @param onVideoEnded Called when the video finishes or encounters an error
+ * @param onVideoReady Called when the video has buffered enough to play smoothly
  * @param modifier Standard Compose modifier
  */
 @SuppressLint("SetJavaScriptEnabled")
@@ -55,11 +56,11 @@ fun YouTubeTrailerWebView(
 	segments: List<SponsorBlockApi.Segment>,
 	isVisible: Boolean,
 	onVideoEnded: () -> Unit = {},
+	onVideoReady: () -> Unit = {},
 	modifier: Modifier = Modifier,
 ) {
 	var webView by remember { mutableStateOf<WebView?>(null) }
 
-	// Invidious instances to try (in order of reliability)
 	val invidiousInstances = remember {
 		listOf(
 			"inv.nadeko.net",
@@ -69,13 +70,11 @@ fun YouTubeTrailerWebView(
 		)
 	}
 
-	// Build the embed URL for the first instance (fallback handled via JS)
 	val embedUrl = remember(videoId, startSeconds, invidiousInstances) {
 		val startParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
 		"https://${invidiousInstances[0]}/embed/$videoId?autoplay=1&muted=true&controls=0&quality=dash$startParam"
 	}
 
-	// Build the post-load injection script
 	val injectionScript = remember(segments, videoId, startSeconds) {
 		TrailerJsBuilder.build(segments = segments, muted = true)
 	}
@@ -158,6 +157,7 @@ fun YouTubeTrailerWebView(
 						@JavascriptInterface
 						fun onVideoPlaying() {
 							Timber.d("YouTubeTrailer: Video playing for $videoId")
+							Handler(Looper.getMainLooper()).post { onVideoReady() }
 						}
 
 						@JavascriptInterface

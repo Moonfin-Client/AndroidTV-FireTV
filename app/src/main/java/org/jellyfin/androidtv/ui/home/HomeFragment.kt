@@ -1,7 +1,6 @@
 package org.jellyfin.androidtv.ui.home
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -58,7 +57,6 @@ class HomeFragment : Fragment() {
 	): View {
 		val view = inflater.inflate(R.layout.fragment_home, container, false)
 
-		// Get references to views
 		titleView = view.findViewById(R.id.title)
 		logoView = view.findViewById(R.id.logo)
 		infoRowView = view.findViewById(R.id.infoRow)
@@ -110,25 +108,19 @@ class HomeFragment : Fragment() {
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 
-		// Setup seasonal surprise (snowfall effect)
 		setupSeasonalSurprise()
 
-		// Observe selected item state from HomeRowsFragment
 		rowsFragment = childFragmentManager.findFragmentById(R.id.rowsFragment) as? HomeRowsFragment
 
 		rowsFragment?.selectedItemStateFlow
 			?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
 			?.onEach { state ->
-				// Update views directly - lightweight View updates (no Compose overhead)
 				titleView?.text = state.title
 				summaryView?.text = state.summary
-				
-				// Update info row with metadata - simple property assignment
 				infoRowView?.setItem(state.baseItem)
 			}
 			?.launchIn(lifecycleScope)
 
-		// Observe selected row position to hide media bar backdrop when moving to other rows
 		rowsFragment?.selectedPositionFlow
 			?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
 			?.onEach { position ->
@@ -136,7 +128,6 @@ class HomeFragment : Fragment() {
 			}
 			?.launchIn(lifecycleScope)
 
-		// Observe media bar state changes (Loading -> Ready transition)
 		mediaBarViewModel.state
 			.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
 			.onEach { state ->
@@ -144,7 +135,6 @@ class HomeFragment : Fragment() {
 			}
 			.launchIn(lifecycleScope)
 
-		// Observe media bar focus state for background
 		mediaBarViewModel.isFocused
 			.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
 			.onEach { isFocused ->
@@ -152,11 +142,9 @@ class HomeFragment : Fragment() {
 			}
 			.launchIn(lifecycleScope)
 
-		// Observe playback state changes for background updates
 		mediaBarViewModel.playbackState
 			.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
-			.onEach { playbackState ->
-				// Update background when current index changes
+			.onEach {
 				updateMediaBarBackground()
 			}
 			.launchIn(lifecycleScope)
@@ -179,6 +167,7 @@ class HomeFragment : Fragment() {
 						segments = activeInfo.segments,
 						isVisible = showTrailer,
 						onVideoEnded = { mediaBarViewModel.onTrailerEnded() },
+						onVideoReady = { mediaBarViewModel.onTrailerReady() },
 					)
 				}
 			}
@@ -199,12 +188,7 @@ class HomeFragment : Fragment() {
 		val isFocused = mediaBarViewModel.isFocused.value
 		val selectedPosition = rowsFragment?.selectedPositionFlow?.value ?: -1
 		
-		// Check if the media bar is enabled in Moonfin settings
 		val isMediaBarEnabled = userSettingPreferences[UserSettingPreferences.mediaBarEnabled]
-		
-		// Determine if we should show media bar content
-		// Show if: media bar is focused OR (we're at position 0 AND media bar is enabled) OR position is -1 (toolbar/no selection)
-		// Important: If media bar is disabled, we should NEVER show its backdrop (even if isFocused somehow becomes true)
 		val shouldShowMediaBar = isMediaBarEnabled && (isFocused || (selectedPosition == 0) || selectedPosition == -1)
 		
 		if (state is org.jellyfin.androidtv.ui.home.mediabar.MediaBarState.Ready && shouldShowMediaBar) {
@@ -212,7 +196,6 @@ class HomeFragment : Fragment() {
 			val currentItem = state.items.getOrNull(playbackState.currentIndex)
 			val backdropUrl = currentItem?.backdropUrl
 			
-			// Show background if we have a backdrop URL
 			if (backdropUrl != null) {
 				backgroundImage?.isVisible = true
 				backgroundImage?.load(backdropUrl) {
@@ -222,11 +205,9 @@ class HomeFragment : Fragment() {
 				backgroundImage?.isVisible = false
 			}
 			
-			// Hide logo and title when on media bar - MediaBarSlideshowView handles its own logo display
 			logoView?.isVisible = false
 			titleView?.isVisible = false
 		} else {
-			// Hide background and logo when media bar is disabled or on other rows
 			backgroundImage?.isVisible = false
 			logoView?.isVisible = false
 			titleView?.isVisible = true
@@ -239,8 +220,7 @@ class HomeFragment : Fragment() {
 	 */
 	private fun setupSeasonalSurprise() {
 		val selection = userPreferences[UserPreferences.seasonalSurprise]
-		
-		// Stop all effects first
+
 		snowfallView?.isVisible = false
 		snowfallView?.stopSnowing()
 		petalfallView?.isVisible = false

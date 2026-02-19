@@ -63,6 +63,7 @@ object TrailerJsBuilder {
   var segments = [$segmentsJs];
   var isMuted = $mutedJs;
   var hasPlayed = false;
+  var hasSignaledReady = false;
 
   // Instance-level timeout: if video doesn't play within ${INSTANCE_TIMEOUT_MS}ms, report failure
   var instanceTimeout = setTimeout(function() {
@@ -98,13 +99,31 @@ object TrailerJsBuilder {
     video.addEventListener('playing', function() {
       hasPlayed = true;
       clearTimeout(instanceTimeout);
-      try { Android.onVideoPlaying(); } catch(e) {}
+      if (!hasSignaledReady) {
+        (function checkBuffer(attempts) {
+          if (hasSignaledReady) return;
+          var buffered = video.buffered;
+          if (buffered.length > 0) {
+            var bufferAhead = buffered.end(buffered.length - 1) - video.currentTime;
+            if (bufferAhead >= 2.0 || video.readyState >= 4) {
+              hasSignaledReady = true;
+              try { Android.onVideoPlaying(); } catch(e) {}
+              return;
+            }
+          }
+          if (attempts < 50) {
+            setTimeout(function() { checkBuffer(attempts + 1); }, 200);
+          } else {
+            hasSignaledReady = true;
+            try { Android.onVideoPlaying(); } catch(e) {}
+          }
+        })(0);
+      }
     });
     video.addEventListener('error', function() {
       try { Android.onVideoError('media_error'); } catch(e) {}
     });
 
-    // SponsorBlock segment skipping
     if (segments.length > 0) {
       var skipInterval = setInterval(function() {
         if (!video || video.paused) return;
@@ -121,9 +140,7 @@ object TrailerJsBuilder {
       setTimeout(function() { clearInterval(skipInterval); }, 300000);
     }
 
-    // Force highest quality via Video.js qualityLevels API.
-    // Hook 'addqualitylevel' so we constrain quality as each level registers,
-    // rather than waiting until all are loaded.
+    // Force highest quality via Video.js qualityLevels API
     try {
       var vjsEl = document.querySelector('.video-js');
       if (vjsEl && vjsEl.player && vjsEl.player.qualityLevels) {

@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.ui.home.mediabar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -71,9 +72,12 @@ class MediaBarSlideshowViewModel(
 	private var trailerJob: Job? = null
 	// Cache: maps serverId -> ApiClient for trailer resolution
 	private var serverApiClients: MutableMap<UUID?, ApiClient> = mutableMapOf()
+	// Cache: maps itemId -> pre-resolved trailer info (null = no trailer available)
+	private val trailerCache: MutableMap<UUID, TrailerPreviewInfo?> = mutableMapOf()
+	private var preResolveJob: Job? = null
+	private var trailerReadyDeferred: CompletableDeferred<Unit>? = null
 
 	init {
-		// Observe user changes and reload content when user switches
 		userRepository.currentUser
 			.filterNotNull()
 			.onEach { user ->
@@ -346,10 +350,10 @@ class MediaBarSlideshowViewModel(
 
 			if (items.isNotEmpty()) {
 					_state.value = MediaBarState.Ready(items)
-					// Preload images for initial slide and adjacent ones
 					preloadAdjacentImages(0)
 					startAutoPlay()
 					startTrailerResolution(0)
+					preResolveAdjacentTrailers(0)
 				} else {
 					_state.value = MediaBarState.Error("No items found")
 				}
@@ -372,7 +376,6 @@ class MediaBarSlideshowViewModel(
 	private fun startAutoPlay() {
 		autoAdvanceJob?.cancel()
 
-		// Only start auto-play if the media bar is focused
 		if (!_isFocused.value) return
 
 		val config = getConfig()
@@ -384,9 +387,6 @@ class MediaBarSlideshowViewModel(
 		}
 	}
 
-	/**
-	 * Reset the auto-advance timer
-	 */
 	private fun resetAutoAdvanceTimer() {
 		startAutoPlay()
 	}
@@ -401,6 +401,8 @@ class MediaBarSlideshowViewModel(
 	fun reloadContent() {
 		autoAdvanceJob?.cancel()
 		trailerJob?.cancel()
+		preResolveJob?.cancel()
+		trailerCache.clear()
 		_trailerState.value = TrailerPreviewState.Idle
 		_playbackState.value = SlideshowPlaybackState()
 		loadSlideshowItems()
@@ -433,11 +435,10 @@ class MediaBarSlideshowViewModel(
 		viewModelScope.launch {
 			delay(config.fadeTransitionDurationMs)
 			_playbackState.value = _playbackState.value.copy(isTransitioning = false)
-			// Preload adjacent images after transition completes
 			preloadAdjacentImages(nextIndex)
-			// Reset the auto-advance timer after manual or automatic navigation
 			resetAutoAdvanceTimer()
 			startTrailerResolution(nextIndex)
+			preResolveAdjacentTrailers(nextIndex)
 		}
 	}
 
@@ -460,10 +461,10 @@ class MediaBarSlideshowViewModel(
 		viewModelScope.launch {
 			delay(config.fadeTransitionDurationMs)
 			_playbackState.value = _playbackState.value.copy(isTransitioning = false)
-			// Preload adjacent images after transition completes
 			preloadAdjacentImages(previousIndex)
 			resetAutoAdvanceTimer()
 			startTrailerResolution(previousIndex)
+			preResolveAdjacentTrailers(previousIndex)
 		}
 	}
 
@@ -715,13 +716,15 @@ class MediaBarSlideshowViewModel(
 
 	/**
 	 * Start trailer resolution for a given slide index.
-	 * Shows the backdrop image for a delay period, then fades in the
-	 * YouTube trailer WebView if a trailer is available.
+	 * If the trailer info is already cached (pre-resolved), starts the WebView
+	 * immediately behind the backdrop image so it has the full [IMAGE_DISPLAY_DELAY_MS]
+	 * to buffer. After the delay, the image fades away to reveal the ready stream.
 	 *
 	 * @param index The slide index to resolve a trailer for
 	 */
 	private fun startTrailerResolution(index: Int) {
 		trailerJob?.cancel()
+		trailerReadyDeferred = null
 		_trailerState.value = TrailerPreviewState.Idle
 
 		if (!userSettingPreferences[UserSettingPreferences.mediaBarTrailerPreview]) {
@@ -732,38 +735,96 @@ class MediaBarSlideshowViewModel(
 		val apiClient = serverApiClients[item.serverId] ?: api
 		val userId = currentUserId ?: return
 
+		val cachedInfo = trailerCache[item.itemId]
+
 		trailerJob = viewModelScope.launch {
 			try {
-				_trailerState.value = TrailerPreviewState.WaitingToPlay
 				val startTime = System.currentTimeMillis()
 
-				// Resolve trailer info first (API calls to Jellyfin + SponsorBlock)
-				val trailerInfo = withContext(Dispatchers.IO) {
-					TrailerResolver.resolveTrailerPreview(apiClient, item.itemId, userId)
-				}
+				if (cachedInfo != null) {
+					trailerReadyDeferred = CompletableDeferred()
+					_trailerState.value = TrailerPreviewState.Buffering(cachedInfo)
+					Timber.d("MediaBar: Cache hit - immediately buffering trailer for ${item.title} (YT: ${cachedInfo.youtubeVideoId})")
 
-				if (trailerInfo != null) {
-					_trailerState.value = TrailerPreviewState.Buffering(trailerInfo)
-					Timber.d("MediaBar: Buffering trailer for ${item.title} (YT: ${trailerInfo.youtubeVideoId})")
-
-					// Wait the remaining image display time
-					val elapsed = System.currentTimeMillis() - startTime
-					val remaining = IMAGE_DISPLAY_DELAY_MS - elapsed
-					if (remaining > 0) delay(remaining)
-
-					if (_playbackState.value.currentIndex != index) return@launch
-					if (_playbackState.value.isPaused) return@launch
-
-					autoAdvanceJob?.cancel()
-					_trailerState.value = TrailerPreviewState.Playing(trailerInfo)
-					Timber.d("MediaBar: Playing trailer for ${item.title} (YT: ${trailerInfo.youtubeVideoId}, start: ${trailerInfo.startSeconds}s)")
-				} else {
+					delay(IMAGE_DISPLAY_DELAY_MS)
+					withTimeoutOrNull(MAX_TRAILER_BUFFER_WAIT_MS) {
+						trailerReadyDeferred?.await()
+					}
+				} else if (item.itemId in trailerCache) {
+					// Cached as null = no trailer available for this item
 					_trailerState.value = TrailerPreviewState.Unavailable
-					Timber.d("MediaBar: No trailer available for ${item.title}")
+					Timber.d("MediaBar: Cache hit (no trailer) for ${item.title}")
+					return@launch
+				} else {
+					_trailerState.value = TrailerPreviewState.WaitingToPlay
+
+					val trailerInfo = withContext(Dispatchers.IO) {
+						TrailerResolver.resolveTrailerPreview(apiClient, item.itemId, userId)
+					}
+
+					trailerCache[item.itemId] = trailerInfo
+
+					if (trailerInfo != null) {
+						trailerReadyDeferred = CompletableDeferred()
+						_trailerState.value = TrailerPreviewState.Buffering(trailerInfo)
+						Timber.d("MediaBar: Buffering trailer for ${item.title} (YT: ${trailerInfo.youtubeVideoId})")
+
+						val elapsed = System.currentTimeMillis() - startTime
+						val remaining = IMAGE_DISPLAY_DELAY_MS - elapsed
+						if (remaining > 0) delay(remaining)
+						withTimeoutOrNull(MAX_TRAILER_BUFFER_WAIT_MS) {
+							trailerReadyDeferred?.await()
+						}
+					} else {
+						_trailerState.value = TrailerPreviewState.Unavailable
+						Timber.d("MediaBar: No trailer available for ${item.title}")
+						return@launch
+					}
 				}
+
+				if (_playbackState.value.currentIndex != index) return@launch
+				if (_playbackState.value.isPaused) return@launch
+
+				val playingInfo = cachedInfo ?: trailerCache[item.itemId] ?: return@launch
+				autoAdvanceJob?.cancel()
+				_trailerState.value = TrailerPreviewState.Playing(playingInfo)
+				Timber.d("MediaBar: Playing trailer for ${item.title} (YT: ${playingInfo.youtubeVideoId}, start: ${playingInfo.startSeconds}s)")
 			} catch (e: Exception) {
 				Timber.w(e, "MediaBar: Trailer resolution failed for ${item.title}")
 				_trailerState.value = TrailerPreviewState.Unavailable
+			}
+		}
+	}
+
+	/**
+	 * Pre-resolve trailers for slides adjacent to the current one.
+	 * This runs in the background so that when navigating to the next/previous slide,
+	 * the trailer info is already cached and the WebView can start immediately.
+	 */
+	private fun preResolveAdjacentTrailers(currentIndex: Int) {
+		if (!userSettingPreferences[UserSettingPreferences.mediaBarTrailerPreview]) return
+		if (items.isEmpty()) return
+		val userId = currentUserId ?: return
+
+		preResolveJob?.cancel()
+		preResolveJob = viewModelScope.launch(Dispatchers.IO) {
+			val indicesToPreResolve = mutableSetOf<Int>()
+			indicesToPreResolve.add((currentIndex + 1) % items.size)
+			indicesToPreResolve.add(if (currentIndex == 0) items.size - 1 else currentIndex - 1)
+			indicesToPreResolve.add((currentIndex + 2) % items.size)
+
+			for (idx in indicesToPreResolve) {
+				val item = items.getOrNull(idx) ?: continue
+				if (item.itemId in trailerCache) continue
+
+				try {
+					val apiClient = serverApiClients[item.serverId] ?: api
+					val info = TrailerResolver.resolveTrailerPreview(apiClient, item.itemId, userId)
+					trailerCache[item.itemId] = info
+					Timber.d("MediaBar: Pre-resolved trailer for ${item.title}: ${if (info != null) "YT:${info.youtubeVideoId}" else "none"}")
+				} catch (e: Exception) {
+					Timber.d("MediaBar: Pre-resolve failed for ${item.title}: ${e.message}")
+				}
 			}
 		}
 	}
@@ -776,9 +837,18 @@ class MediaBarSlideshowViewModel(
 		nextSlide()
 	}
 
+	/**
+	 * Called by the WebView when the video has actually started playing.
+	 * Signals the trailer resolution coroutine to transition to Playing state.
+	 */
+	fun onTrailerReady() {
+		trailerReadyDeferred?.complete(Unit)
+	}
+
 	/** Stop any currently playing trailer immediately. */
 	fun stopTrailer() {
 		trailerJob?.cancel()
+		trailerReadyDeferred = null
 		_trailerState.value = TrailerPreviewState.Idle
 	}
 
@@ -792,5 +862,7 @@ class MediaBarSlideshowViewModel(
 	companion object {
 		/** How long to show the backdrop image before transitioning to trailer (ms) */
 		const val IMAGE_DISPLAY_DELAY_MS = 4000L
+		/** Max additional time to wait for the WebView video to be ready after the image delay (ms) */
+		const val MAX_TRAILER_BUFFER_WAIT_MS = 8000L
 	}
 }
