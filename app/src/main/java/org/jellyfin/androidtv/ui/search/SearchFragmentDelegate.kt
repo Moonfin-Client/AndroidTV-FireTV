@@ -7,6 +7,7 @@ import androidx.leanback.widget.ListRow
 import androidx.leanback.widget.OnItemViewClickedListener
 import androidx.leanback.widget.OnItemViewSelectedListener
 import androidx.leanback.widget.Row
+import org.jellyfin.androidtv.constant.ImageType
 import org.jellyfin.androidtv.constant.QueryType
 import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.data.service.BlurContext
@@ -32,10 +33,11 @@ class SearchFragmentDelegate(
 		rowsAdapter.clear()
 		val adapters = mutableListOf<ItemRowAdapter>()
 		for ((labelRes, baseItems) in searchResultGroups) {
+			val enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
 			val adapter = ItemRowAdapter(
 				context,
 				baseItems.toList(),
-				CardPresenter(),
+				CardPresenter(showInfo = true, imageType = ImageType.POSTER, staticHeight = 150, uniformAspect = false, showServerBadge = enableMultiServer),
 				rowsAdapter,
 				QueryType.Search
 			).apply {

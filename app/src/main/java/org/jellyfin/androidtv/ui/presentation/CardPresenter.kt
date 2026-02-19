@@ -107,11 +107,12 @@ private class FocusAwareCardContainer(context: Context) : FrameLayout(context) {
 	}
 }
 
-class CardPresenter(
+class CardPresenter @JvmOverloads constructor(
 	val showInfo: Boolean,
 	val imageType: ImageType,
 	val staticHeight: Int,
 	val uniformAspect: Boolean,
+	val showServerBadge: Boolean = false,
 ) : Presenter() {
 	constructor(showInfo: Boolean, imageType: ImageType, staticHeight: Int) : this(showInfo, imageType, staticHeight, false)
 	constructor(showInfo: Boolean, staticHeight: Int) : this(showInfo, ImageType.POSTER, staticHeight)
@@ -171,6 +172,7 @@ class CardPresenter(
 					imageType = imageType,
 					staticHeight = staticHeight,
 					uniformAspect = uniformAspect,
+					showServerBadge = showServerBadge,
 				)
 			}
 
@@ -348,6 +350,7 @@ private fun CardViewHolderContent(
 	imageType: ImageType,
 	staticHeight: Int,
 	uniformAspect: Boolean,
+	showServerBadge: Boolean = false,
 ) {
 	val context = LocalContext.current
 	val localDensity = LocalDensity.current
@@ -454,6 +457,7 @@ private fun CardViewHolderContent(
 					item.baseItem?.let { baseItem ->
 						ItemCardBaseItemOverlay(
 							item = baseItem,
+							showServerBadge = showServerBadge,
 							footer = {
 								if (showInfo && title != null) {
 									val focusModifier = if (focused) Modifier.basicMarquee(
