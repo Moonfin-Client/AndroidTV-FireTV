@@ -1,0 +1,42 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20">
+
+    <!-- White filled circle background -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,18
+            a8,8 0 1,0 0,-16
+            a8,8 0 0,0 0,16
+            z" />
+
+    <!-- Red border circle -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#EF4444"
+        android:strokeWidth="1.5"
+        android:pathData="M10,18
+            a8,8 0 1,0 0,-16
+            a8,8 0 0,0 0,16
+            z" />
+
+    <!-- X mark (Heroicons XCircle mini interior) -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M8.28,7.22
+            a0.75,0.75 0 0,0 -1.06,1.06
+            L8.94,10
+            l-1.72,1.72
+            a0.75,0.75 0 1,0 1.06,1.06
+            L10,11.06
+            l1.72,1.72
+            a0.75,0.75 0 1,0 1.06,-1.06
+            L11.06,10
+            l1.72,-1.72
+            a0.75,0.75 0 0,0 -1.06,-1.06
+            L10,8.94
+            L8.28,7.22
+            z" />
+</vector>
