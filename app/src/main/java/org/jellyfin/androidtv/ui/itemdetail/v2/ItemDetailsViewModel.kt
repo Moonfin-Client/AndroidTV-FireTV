@@ -221,10 +221,10 @@ class ItemDetailsViewModel(
 	private suspend fun loadCollectionItems(collectionId: UUID) {
 		try {
 			val collectionItems = withContext(Dispatchers.IO) {
-				effectiveApi.libraryApi.getSimilarItems(
-					itemId = collectionId,
-					limit = 50,
+				effectiveApi.itemsApi.getItems(
+					parentId = collectionId,
 					fields = ItemRepository.itemFields,
+					sortBy = setOf(ItemSortBy.SORT_NAME),
 				).content
 			}
 			_uiState.value = _uiState.value.copy(collectionItems = collectionItems.items)

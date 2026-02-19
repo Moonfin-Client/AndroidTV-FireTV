@@ -143,7 +143,7 @@ public class ItemLauncher {
                         return;
 
                     case BOX_SET:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.collectionBrowser(baseItem, serverId, userId));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(baseItem.getId(), serverId));
                         return;
 
                     case PHOTO:

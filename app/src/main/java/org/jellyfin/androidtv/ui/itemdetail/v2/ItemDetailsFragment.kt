@@ -433,6 +433,7 @@ class ItemDetailsFragment : Fragment() {
 		val item = uiState.item ?: return
 		val listState = rememberLazyListState()
 		val playButtonFocusRequester = remember { FocusRequester() }
+		val collectionFirstItemFocusRequester = remember { FocusRequester() }
 		val titleFocusRequester = contentFocusRequester
 
 		val isEpisode = item.type == BaseItemKind.EPISODE
@@ -611,8 +612,11 @@ class ItemDetailsFragment : Fragment() {
 								if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
 									when (keyEvent.key) {
 										Key.DirectionDown -> {
-											// Move focus to play button
-											try { playButtonFocusRequester.requestFocus() } catch (_: Exception) {}
+											if (isBoxSet) {
+												try { collectionFirstItemFocusRequester.requestFocus() } catch (_: Exception) {}
+											} else {
+												try { playButtonFocusRequester.requestFocus() } catch (_: Exception) {}
+											}
 											true
 										}
 										else -> false
@@ -793,6 +797,7 @@ class ItemDetailsFragment : Fragment() {
 						SectionWithCards(
 							title = "Items in Collection",
 							items = uiState.collectionItems,
+							firstItemFocusRequester = collectionFirstItemFocusRequester,
 						)
 					}
 				}
