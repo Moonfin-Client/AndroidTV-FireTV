@@ -1,9 +1,12 @@
 package org.jellyfin.androidtv.data.repository
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.shareIn
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.userViewsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -21,19 +24,21 @@ interface UserViewsRepository {
 class UserViewsRepositoryImpl(
 	private val api: ApiClient,
 ) : UserViewsRepository {
-	override val views = flow {
+	private val scope = CoroutineScope(Dispatchers.IO)
+
+	override val views: Flow<Collection<BaseItemDto>> = flow {
 		val views by api.userViewsApi.getUserViews(includeHidden = false)
 		val filteredViews = views.items
 			.filter { isSupported(it.collectionType) }
 		emit(filteredViews)
-	}.flowOn(Dispatchers.IO)
+	}.flowOn(Dispatchers.IO).shareIn(scope, SharingStarted.Lazily, replay = 1)
 
-	override val allViews = flow {
+	override val allViews: Flow<Collection<BaseItemDto>> = flow {
 		val views by api.userViewsApi.getUserViews(includeHidden = true)
 		val filteredViews = views.items
 			.filter { isSupported(it.collectionType) }
 		emit(filteredViews)
-	}.flowOn(Dispatchers.IO)
+	}.flowOn(Dispatchers.IO).shareIn(scope, SharingStarted.Lazily, replay = 1)
 
 	override fun isSupported(collectionType: CollectionType?) = collectionType !in unsupportedCollectionTypes
 	override fun allowViewSelection(collectionType: CollectionType?) = collectionType !in disallowViewSelectionCollectionTypes

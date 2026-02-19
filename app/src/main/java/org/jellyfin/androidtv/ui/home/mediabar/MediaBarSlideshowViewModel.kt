@@ -70,10 +70,13 @@ class MediaBarSlideshowViewModel(
 	private var autoAdvanceJob: Job? = null
 	private var currentUserId: UUID? = null
 	private var trailerJob: Job? = null
+	private var loadingJob: Job? = null
 	// Cache: maps serverId -> ApiClient for trailer resolution
 	private var serverApiClients: MutableMap<UUID?, ApiClient> = mutableMapOf()
 	// Cache: maps itemId -> pre-resolved trailer info (null = no trailer available)
 	private val trailerCache: MutableMap<UUID, TrailerPreviewInfo?> = mutableMapOf()
+	// Cache: maps (apiClient identity, userId) -> list of CollectionFolder libraries
+	private val libraryCache: MutableMap<UUID, List<BaseItemDto>> = mutableMapOf()
 	private var preResolveJob: Job? = null
 	private var trailerReadyDeferred: CompletableDeferred<Unit>? = null
 
@@ -96,7 +99,7 @@ class MediaBarSlideshowViewModel(
 		if (!focused) {
 			autoAdvanceJob?.cancel()
 			stopTrailer()
-		} else {
+		} else if (loadingJob?.isActive != true) {
 			// When gaining focus, refresh non-visible items for variety
 			// but keep the current and adjacent items to prevent flickering
 			if (items.isNotEmpty()) {
@@ -139,12 +142,23 @@ class MediaBarSlideshowViewModel(
 		
 		// Get parent library IDs that match the requested item type
 		// This prevents scanning through unrelated libraries (e.g., music, recordings, live TV)
-		val matchingLibraries = try {
-			val viewsResponse by apiClient.itemsApi.getItems(
-				includeItemTypes = setOf(org.jellyfin.sdk.model.api.BaseItemKind.COLLECTION_FOLDER),
-				userId = userId,
-			)
-			viewsResponse.items.orEmpty()
+		val allLibraries = libraryCache.getOrPut(userId) {
+			try {
+				val viewsResponse by apiClient.itemsApi.getItems(
+					includeItemTypes = setOf(org.jellyfin.sdk.model.api.BaseItemKind.COLLECTION_FOLDER),
+					userId = userId,
+				)
+				viewsResponse.items.orEmpty()
+			} catch (e: Exception) {
+				if (e is InvalidStatusException && e.status in 500..599) {
+					Timber.w("Failed to get library views: Server error ${e.status} - ${e.message}")
+				} else {
+					Timber.w(e, "Failed to get library views")
+				}
+				emptyList()
+			}
+		}
+		val matchingLibraries = allLibraries
 				.filter { view ->
 					// ONLY include movie or TV show libraries based on what we're fetching
 					// Excludes: music, recordings, live TV, photos, books, etc.
@@ -155,14 +169,6 @@ class MediaBarSlideshowViewModel(
 						else -> false
 					}
 				}
-		} catch (e: Exception) {
-			if (e is InvalidStatusException && e.status in 500..599) {
-				Timber.w("Failed to get library views: Server error ${e.status} - ${e.message}")
-			} else {
-				Timber.w(e, "Failed to get library views")
-			}
-			emptyList()
-		}
 		
 		// If no matching libraries found, return empty list immediately
 		// This prevents slow recursive searches through all libraries
@@ -171,34 +177,38 @@ class MediaBarSlideshowViewModel(
 			return emptyList()
 		}
 		
-		// Fetch from ALL matching libraries and combine results
+		// Fetch from ALL matching libraries in parallel and combine results
 		// Distribute the item count across libraries for better variety
 		val itemsPerLibrary = (maxItems * 1.5 / matchingLibraries.size).toInt().coerceAtLeast(5)
 		
-		return matchingLibraries.mapNotNull { library ->
-			try {
-				val response by apiClient.itemsApi.getItems(
-					includeItemTypes = setOf(itemType),
-					excludeItemTypes = setOf(org.jellyfin.sdk.model.api.BaseItemKind.BOX_SET),
-					parentId = library.id,
-					recursive = true,
-					sortBy = setOf(org.jellyfin.sdk.model.api.ItemSortBy.RANDOM),
-					limit = itemsPerLibrary,
-					filters = filters,
-					fields = setOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.PROVIDER_IDS),
-					imageTypeLimit = 1,
-					enableImageTypes = setOf(ImageType.BACKDROP, ImageType.LOGO),
-				)
-				response.items.orEmpty()
-			} catch (e: Exception) {
-				if (e is InvalidStatusException && e.status in 500..599) {
-					Timber.w("Failed to fetch from library ${library.name}: Server error ${e.status} - ${e.message}")
-				} else {
-					Timber.w(e, "Failed to fetch from library ${library.name}")
+		return kotlinx.coroutines.coroutineScope {
+			matchingLibraries.map { library ->
+				async {
+					try {
+						val response by apiClient.itemsApi.getItems(
+							includeItemTypes = setOf(itemType),
+							excludeItemTypes = setOf(org.jellyfin.sdk.model.api.BaseItemKind.BOX_SET),
+							parentId = library.id,
+							recursive = true,
+							sortBy = setOf(org.jellyfin.sdk.model.api.ItemSortBy.RANDOM),
+							limit = itemsPerLibrary,
+							filters = filters,
+							fields = setOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.PROVIDER_IDS),
+							imageTypeLimit = 1,
+							enableImageTypes = setOf(ImageType.BACKDROP, ImageType.LOGO),
+						)
+						response.items.orEmpty()
+					} catch (e: Exception) {
+						if (e is InvalidStatusException && e.status in 500..599) {
+							Timber.w("Failed to fetch from library ${library.name}: Server error ${e.status} - ${e.message}")
+						} else {
+							Timber.w(e, "Failed to fetch from library ${library.name}")
+						}
+						emptyList()
+					}
 				}
-				null
-			}
-		}.flatten()
+			}.awaitAll().flatten()
+		}
 	}
 
 	/**
@@ -224,7 +234,11 @@ class MediaBarSlideshowViewModel(
 	 * - If only one server, uses current behavior (default API client)
 	 */
 	private fun loadSlideshowItems() {
-		viewModelScope.launch {
+		loadingJob?.cancel()
+		trailerJob?.cancel()
+		trailerReadyDeferred = null
+		_trailerState.value = TrailerPreviewState.Idle
+		loadingJob = viewModelScope.launch {
 		try {
 			_state.value = MediaBarState.Loading
 			val config = getConfig()
@@ -401,8 +415,10 @@ class MediaBarSlideshowViewModel(
 	fun reloadContent() {
 		autoAdvanceJob?.cancel()
 		trailerJob?.cancel()
+		loadingJob?.cancel()
 		preResolveJob?.cancel()
 		trailerCache.clear()
+		libraryCache.clear()
 		_trailerState.value = TrailerPreviewState.Idle
 		_playbackState.value = SlideshowPlaybackState()
 		loadSlideshowItems()
@@ -536,6 +552,7 @@ class MediaBarSlideshowViewModel(
 	 */
 	private fun refreshBackgroundItems() {
 		if (items.isEmpty()) return
+		if (loadingJob?.isActive == true) return
 		
 		viewModelScope.launch(Dispatchers.IO) {
 			try {
@@ -854,6 +871,7 @@ class MediaBarSlideshowViewModel(
 
 	/** Restart trailer resolution for the current slide. */
 	fun restartTrailerForCurrentSlide() {
+		if (loadingJob?.isActive == true) return
 		if (items.isNotEmpty()) {
 			startTrailerResolution(_playbackState.value.currentIndex)
 		}

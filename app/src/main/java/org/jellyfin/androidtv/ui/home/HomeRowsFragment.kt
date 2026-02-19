@@ -17,6 +17,7 @@ import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -149,18 +150,25 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 			val homesections = userSettingPreferences.activeHomesections
 			var includeLiveTvRows = false
 
-			// Check for live TV support
-			if (homesections.contains(HomeSectionType.LIVE_TV) && currentUser.policy?.enableLiveTvAccess == true) {
-				// This is kind of ugly, but it mirrors how web handles the live TV rows on the home screen
-				// If we can retrieve one live TV recommendation, then we should display the rows
-				val recommendedPrograms by api.liveTvApi.getRecommendedPrograms(
-					enableTotalRecordCount = false,
-					imageTypeLimit = 1,
-					isAiring = true,
-					limit = 1,
-				)
-				includeLiveTvRows = recommendedPrograms.items.isNotEmpty()
-			}
+			// Pre-fetch views and check live TV support in parallel
+			val viewsDeferred = if (homesections.contains(HomeSectionType.LATEST_MEDIA)) {
+				async { userViewsRepository.views.first() }
+			} else null
+
+			val liveTvDeferred = if (homesections.contains(HomeSectionType.LIVE_TV) && currentUser.policy?.enableLiveTvAccess == true) {
+				async {
+					val recommendedPrograms by api.liveTvApi.getRecommendedPrograms(
+						enableTotalRecordCount = false,
+						imageTypeLimit = 1,
+						isAiring = true,
+						limit = 1,
+					)
+					recommendedPrograms.items.isNotEmpty()
+				}
+			} else null
+
+			includeLiveTvRows = liveTvDeferred?.await() ?: false
+			val cachedViews = viewsDeferred?.await()
 
 			// Make sure the rows are empty
 			val rows = mutableListOf<HomeFragmentRow>()
@@ -179,7 +187,7 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 			
 			for (section in homesections) when (section) {
 				HomeSectionType.MEDIA_BAR -> { /* Now handled by separate toggle above */ }
-				HomeSectionType.LATEST_MEDIA -> rows.add(helper.loadRecentlyAdded(userViewsRepository.views.first()))
+				HomeSectionType.LATEST_MEDIA -> rows.add(helper.loadRecentlyAdded(cachedViews ?: userViewsRepository.views.first()))
 				HomeSectionType.RECENTLY_RELEASED -> rows.add(helper.loadRecentlyReleased())
 				HomeSectionType.LIBRARY_TILES_SMALL -> rows.add(HomeFragmentViewsRow(small = false))
 				HomeSectionType.LIBRARY_BUTTONS -> rows.add(HomeFragmentViewsRow(small = true))
