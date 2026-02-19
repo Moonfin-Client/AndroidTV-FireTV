@@ -39,21 +39,23 @@ Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted 
 - Remove from Playlist on long press
 - Replaced the previous local-only Watchlist feature
 
-### Jellyseerr Integration
+### Jellyseerr & Seerr Integration
 
-Moonfin is the first Android TV client with native Jellyseerr support.
+Moonfin is the first Android TV client with native Jellyseerr and Seerr support.
 
 - Browse trending, popular, and recommended movies/shows and filter content by Series/Movie Genres, Studio, Network, and keywords
 - Request content in HD or 4K directly from your TV  
-- **Moonfin Proxy Mode** — route all Jellyseerr requests through the Moonfin server plugin (no direct connection needed)  
+- **Moonfin Proxy Mode** — route all Jellyseerr/Seerr requests through the Moonfin server plugin (no direct connection needed)  
 - **NSFW Content Filtering** (optional) using Jellyseerr/TMDB metadata  
 - Smart season selection when requesting TV shows  
-- View all your pending, approved, and available requests  
-- Authenticate via Moonfin plugin (recommended) or direct Jellyfin/local login  
+- View all your pending, approved, and available requests with distinct status icons  
+- Jellyseerr badges on search results for quick discovery status  
+- Per-user Jellyseerr settings — each user on the device can have their own configuration  
+- CSRF token handling for secure state-changing requests  
 - Global search includes Jellyseerr results  
 - Rich backdrop images for a more cinematic discovery experience  
 
-> **Deprecation Notice:** In **v1.6.0**, the legacy authentication methods (Jellyfin auth and local account login from within the app) will be removed. All Jellyseerr connections will be managed exclusively through the Moonfin server plugin.
+> **Deprecation Notice:** In future versions, the legacy authentication methods (Jellyfin auth and local account login from within the app) will be removed. All Jellyseerr/Seerr connections will be managed exclusively through the Moonfin server plugin.
 
 ### Plugin Sync
 - **Bidirectional Settings Sync** — sync preferences between the app and the Moonfin server plugin
@@ -94,47 +96,76 @@ Moonfin is the first Android TV client with native Jellyseerr support.
 - One-click navigation to any library or collection directly from the toolbar
 - Cleaner icon-based design for frequently used actions
 
+### In-App Trailer Previews
+- **Trailer playback** directly inside the app via Invidious (privacy-friendly YouTube frontend)
+- **SponsorBlock integration** — automatically skips intros and sponsor segments in trailers
+- **Episode preview overlays** on card focus in home rows
+- **Series trailer overlays** for YouTube-hosted trailers on the Featured Media Bar
+- **DASH quality support** for trailer playback
+- **Preview Audio toggle** — control whether previews play muted or with sound
+
+### Redesigned Libraries (Compose)
+- Libraries rebuilt in Jetpack Compose with a modern, fluid grid UI
+- Adaptive card sizing with filter/sort dialogs and infinite scroll
+- Dedicated views for Movies, Series, Music, Live TV, Recordings, and Schedules
+- Genre grid browser with search and filtering
+
+### Redesigned Details Screen (Compose)
+- Full-featured Compose details view for Movies, Series, Episodes, Music Albums, Playlists, and Collections
+- Action buttons for play, trailer, favorite, watched, shuffle, and more
+- Playlist item reordering and track action dialogs for music
+
 ### 🎵 Playback & Media Control
-- **ASS/SSA Subtitle Support** - Direct-play and rendering support for ASS/SSA subtitle formats
+- **ASS/SSA Subtitle Support** - Direct-play and rendering support for ASS/SSA subtitle formats with customizable font scaling
 - **Subtitle Delay & Positioning** - Fine-tune subtitle sync and adjust position/size for wide aspect ratio videos
 - **Max Video Resolution** - New preference to limit video resolution
 - **Unpause Rewind** - Automatically rewinds a configurable amount when unpausing playback
-- **Theme Music Playback** - Background theme music support for TV shows and movies with volume control
+- **Theme Music Playback** - Background theme music support for TV shows and movies with volume control, plays on details screens
 - **Pre-Playback Track Selection** - Choose your preferred audio track and subtitle before playback starts (configurable in settings)
 - **Next Episode Countdown** - Skip button shows countdown timer when next episode is available
 - **Subtitles Default to None** - Option to default subtitle selection to none instead of auto-selecting
+- **Trickplay Scrub** - Auto-confirm seeking with improved caching
 - **Automatic Screensaver Dimming** - Reduces brightness after 90 seconds of playback inactivity to prevent screen burn-in with dynamic logo/clock movement
 - **Exit Confirmation Dialog** - Optional confirmation prompt when exiting the app (configurable in settings)
 - **OTA Update System** - Automatic check for new Moonfin versions with in-app update notifications
 
-### 📊 Improved Details Screen
-- Metadata organized into clear sections: genres, directors, writers, studios, and runtime
-- Taglines displayed above the description where available
-- Cast photos appear as circles for a cleaner look
-- Fits more useful information on screen without feeling cramped
+### Centralized Shuffle System
+- Hybrid approach: server-side random sort first, client-side fallback if needed
+- Configurable shuffle content type (Movies, TV Shows, or Both)
+- Genre-specific shuffle on long press
 
-### 🎨 UI Polish
-- **Adjustable Backdrop Blur** - Customizable background blur amount with slider control for personal preference
+### UI Polish
+- **Focus Color** - Replaced the old App Theme system with a customizable accent color for focus highlights, stored per-user
+- **Card Focus Expansion** - Cards expand on focus with a configurable toggle
+- **Home Rows Image Size Preference** - Choose your preferred poster size
+- **Adjustable Backdrop Blur** - Customizable background blur amount with slider control
 - **Media Bar Opacity Control** - Slider-based opacity adjustment for the featured media bar overlay
-- Item details show up right in the row, no need to open every title to see what it is
+- **Show/Hide Rating Labels** - Toggle rating source labels on or off
+- **Clock Display** - Optional clock in toolbar and sidebar
+- Compose-based dialogs for Exit, Create Playlist, Add to Playlist, Shuffle, Release Notes, and Donate
 - Buttons look better when not focused (transparent instead of distracting)
 - Better contrast makes text easier to read
 - Transitions and animations feel responsive
 - Consistent icons and visual elements throughout
 
 ## Screenshots
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/6af5aa5a-b1eb-4db7-9fca-ea736bf7a686" />
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/afe9818e-360c-4ce0-a50c-ff0ed0cbc81a" />
+<img width="1920" height="1080" alt="Screenshot_20260219_115555" src="https://github.com/user-attachments/assets/11d61a01-b9be-4a30-9c28-ea355f962dd2" />
+<img width="1920" height="1080" alt="Screenshot_20260219_115456" src="https://github.com/user-attachments/assets/481665ea-0e22-42e4-9424-058b21f968c1" />
 
+<img width="1920" height="1080" alt="Screenshot_20260219_120753" src="https://github.com/user-attachments/assets/2beceee0-2c15-4f7d-927b-5de079aa53b8" />
+<img width="1920" height="1080" alt="Screenshot_20260219_115429" src="https://github.com/user-attachments/assets/bff08ce4-a31e-4859-87aa-6246d9494460" />
 
-<img width="1920" height="1080" alt="Screenshot_20251121_212922" src="https://github.com/user-attachments/assets/9cb2fd75-c336-4721-9842-d614d106b38a" />
-<img width="1920" height="1080" alt="Screenshot_20251121_212955" src="https://github.com/user-attachments/assets/d7c7d13f-501c-4ca1-9441-8e9294124302" />
+<img width="1920" height="1080" alt="Screenshot_20260219_121254" src="https://github.com/user-attachments/assets/96a5b744-2b25-426a-bb6e-44374240fe24" />
+<img width="1920" height="1080" alt="Screenshot_20260219_121317" src="https://github.com/user-attachments/assets/5321e05b-96d8-453f-ab05-766e78f871e4" />
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/0da9d98e-cd02-45fb-a86d-f177fcaa58f2" />
+<img width="1920" height="1080" alt="Screenshot_20260219_121032" src="https://github.com/user-attachments/assets/d94d0fdc-f9f2-4a31-9a62-162604fa9682" />
 
 ## Videos
-https://github.com/user-attachments/assets/5d89961b-8067-4af4-9757-b4de51474fcf
 
-https://github.com/user-attachments/assets/0414ffca-60f4-470a-94b9-6b3405b3570c
+https://github.com/user-attachments/assets/c52e96c9-30e9-4478-8940-64c2418aeea0
 
+https://github.com/user-attachments/assets/113fa9d8-039c-4f14-8c95-785ca6d47c9b
 
 ---
 
@@ -153,15 +184,14 @@ Download the latest APK from the [Releases page](https://github.com/Moonfin-Clie
 - Amazon Fire TV / Fire TV Stick
 - Google TV (Chromecast with Google TV)
 
-### Jellyseerr Setup (Optional)
+### Jellyseerr / Seerr Setup (Optional)
 To enable media discovery and requesting:
 
-**Recommended (via Moonfin Plugin):**
-1. Install the Moonfin plugin on your Jellyfin server and configure Jellyseerr in the plugin settings
+1. Install the **Moonfin server plugin** on your Jellyfin server and configure Jellyseerr/Seerr in the plugin settings
 2. In Moonfin, go to **Settings → Plugin** and enable **Plugin Sync**
-3. Jellyseerr will be configured automatically via the server plugin proxy
+3. Jellyseerr/Seerr will be configured automatically via the server plugin proxy
 
-**Legacy (Direct Connection) — will be removed in v1.6.0:**
+**Legacy (Direct Connection) — will be removed in next update:**
 1. Install and configure Jellyseerr on your network ([jellyseerr.dev](https://jellyseerr.dev))
 2. In Moonfin, go to **Settings → Plugin → Jellyseerr**
 3. Enter your Jellyseerr server URL (e.g., `http://192.168.1.100:5055`)
