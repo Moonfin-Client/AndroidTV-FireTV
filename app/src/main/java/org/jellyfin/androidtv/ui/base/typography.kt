@@ -23,7 +23,7 @@ object TypographyDefaults {
 	)
 	val ListHeadline: TextStyle = Default.copy(
 		fontSize = 14.sp,
-		lineHeight = 28.sp,
+		lineHeight = 20.sp,
 		fontWeight = FontWeight.W600,
 	)
 	val ListCaption: TextStyle = Default.copy(

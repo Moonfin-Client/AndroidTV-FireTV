@@ -28,6 +28,7 @@ fun SettingsHomePosterSizeScreen() {
 			ListSection(
 				overlineContent = { Text(stringResource(R.string.home_prefs).uppercase()) },
 				headingContent = { Text(stringResource(R.string.pref_poster_size)) },
+				captionContent = { Text(stringResource(R.string.pref_poster_size)) },
 			)
 		}
 

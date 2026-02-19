@@ -48,7 +48,7 @@ fun SettingsMoonfinHomeRowsImageScreen() {
 	SettingsColumn {
 		item {
 			ListSection(
-				overlineContent = { Text(stringResource(R.string.pref_appearance).uppercase()) },
+				overlineContent = { Text(stringResource(R.string.home_prefs).uppercase()) },
 				headingContent = { Text(stringResource(R.string.pref_home_rows_image_type)) },
 			)
 		}

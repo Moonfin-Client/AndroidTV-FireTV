@@ -69,13 +69,23 @@ fun SettingsHomeScreen() {
 			)
 		}
 		
-		// Poster Size
+		// Home Rows Image Size
 		item {
 			val posterSize by org.jellyfin.androidtv.ui.settings.compat.rememberPreference(userPreferences, org.jellyfin.androidtv.preference.UserPreferences.posterSize)
 			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_aspect_ratio), contentDescription = null) },
 				headingContent = { Text(stringResource(R.string.pref_poster_size)) },
 				captionContent = { Text(stringResource(posterSize.nameRes)) },
 				onClick = { router.push(org.jellyfin.androidtv.ui.settings.Routes.HOME_POSTER_SIZE) }
+			)
+		}
+
+		// Home Rows Image Type
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_grid), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_home_rows_image_type)) },
+				onClick = { router.push(org.jellyfin.androidtv.ui.settings.Routes.HOME_ROWS_IMAGE_TYPE) }
 			)
 		}
 

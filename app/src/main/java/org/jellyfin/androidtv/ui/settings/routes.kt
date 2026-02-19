@@ -104,6 +104,7 @@ object Routes {
 	const val HOME = "/home"
 	const val HOME_SECTION = "/home/section/{index}"
 	const val HOME_POSTER_SIZE = "/home/poster-size"
+	const val HOME_ROWS_IMAGE_TYPE = "/home/rows-image-type"
 	const val LIVETV_GUIDE_FILTERS = "/livetv/guide/filters"
 	const val LIVETV_GUIDE_OPTIONS = "/livetv/guide/options"
 	const val LIVETV_GUIDE_CHANNEL_ORDER = "/livetv/guide/channel-order"
@@ -133,6 +134,7 @@ object Routes {
 	const val MOONFIN_MEDIA_BAR_COLOR = "/moonfin/media-bar-color"
 	const val MOONFIN_THEME_MUSIC_VOLUME = "/moonfin/theme-music-volume"
 	const val MOONFIN_SEASONAL_SURPRISE = "/moonfin/seasonal-surprise"
+	@Deprecated("Moved to HOME_ROWS_IMAGE_TYPE", replaceWith = ReplaceWith("HOME_ROWS_IMAGE_TYPE"))
 	const val MOONFIN_HOME_ROWS_IMAGE = "/moonfin/home-rows-image"
 	const val MOONFIN_DETAILS_BLUR = "/moonfin/details-blur"
 	const val MOONFIN_BROWSING_BLUR = "/moonfin/browsing-blur"
@@ -299,6 +301,9 @@ val routes = mapOf<String, RouteComposable>(
 	},
 	Routes.HOME_POSTER_SIZE to {
 		SettingsHomePosterSizeScreen()
+	},
+	Routes.HOME_ROWS_IMAGE_TYPE to {
+		SettingsMoonfinHomeRowsImageScreen()
 	},
 	Routes.LIVETV_GUIDE_FILTERS to {
 		SettingsLiveTvGuideFiltersScreen()

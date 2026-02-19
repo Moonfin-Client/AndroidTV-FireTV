@@ -296,14 +296,6 @@ fun SettingsPluginScreen() {
 		}
 
 		item {
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_grid), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.pref_home_rows_image_type)) },
-				onClick = { router.push(Routes.MOONFIN_HOME_ROWS_IMAGE) }
-			)
-		}
-
-		item {
 			val detailsBlur by rememberPreference(userSettingPreferences, UserSettingPreferences.detailsBackgroundBlurAmount)
 			ListButton(
 				headingContent = { Text(stringResource(R.string.pref_details_background_blur_amount)) },
