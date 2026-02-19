@@ -20,8 +20,19 @@ class LogInitializer : Initializer<Unit> {
 		}
 
 		// Initialize the logging library
-		Timber.plant(Timber.DebugTree())
-		Timber.i("Debug tree planted")
+		if (BuildConfig.DEBUG) {
+			Timber.plant(Timber.DebugTree())
+		} else {
+			// Release builds: only log warnings and errors
+			Timber.plant(object : Timber.Tree() {
+				override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+					if (priority >= android.util.Log.WARN) {
+						android.util.Log.println(priority, tag ?: "Moonfin", message)
+					}
+				}
+			})
+		}
+		Timber.i("Timber initialized")
 	}
 
 	override fun dependencies() = emptyList<Class<out Initializer<*>>>()

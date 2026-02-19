@@ -32,7 +32,7 @@ object TelemetryService {
 	 * Call in the attachBaseContext function of the application.
 	 */
 	fun init(context: Application) {
-		ACRA.DEV_LOGGING = true
+		ACRA.DEV_LOGGING = BuildConfig.DEBUG
 		context.initAcra {
 			buildConfigClass = BuildConfig::class.java
 			sharedPreferencesName = TelemetryPreferences.SHARED_PREFERENCES_NAME
