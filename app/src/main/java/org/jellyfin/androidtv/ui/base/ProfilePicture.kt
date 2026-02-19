@@ -26,8 +26,7 @@ fun ProfilePicture(
 	iconPadding: PaddingValues = PaddingValues.Zero,
 ) {
 	Box(
-		modifier = modifier,
-		contentAlignment = Alignment.Center,
+		modifier = modifier
 	) {
 		val userImagePainter = rememberAsyncImagePainter(url)
 		val userImageState by userImagePainter.state.collectAsState()
@@ -38,6 +37,7 @@ fun ProfilePicture(
 				imageVector = ImageVector.vectorResource(R.drawable.ic_user),
 				contentDescription = contentDescription,
 				modifier = Modifier
+					.align(Alignment.Center)
 					.padding(iconPadding)
 					.fillMaxSize()
 			)

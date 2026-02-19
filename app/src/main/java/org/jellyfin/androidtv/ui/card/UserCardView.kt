@@ -16,13 +16,14 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,54 +54,48 @@ fun UserCard(
 	onClick: () -> Unit,
 	modifier: Modifier = Modifier,
 	interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
-	shape: Shape = RoundedCornerShape(12.dp),
+	shape: Shape = CircleShape,
 ) {
 	val focused by interactionSource.collectIsFocusedAsState()
 
+	// Mix button background with input foreground because we display text beneath the profile picture on a transparent background similar
+	// to the input text
 	val focusColor = focusBorderColor()
-	val borderColor = when {
-		focused -> focusColor
-		else -> JellyfinTheme.colorScheme.button
-	}
-	val textColor = when {
-		focused -> JellyfinTheme.colorScheme.onInputFocused
-		else -> JellyfinTheme.colorScheme.onInput
+	val color = when {
+		focused -> focusColor to JellyfinTheme.colorScheme.onInputFocused
+		else -> JellyfinTheme.colorScheme.button to JellyfinTheme.colorScheme.onInput
 	}
 	val scale by animateFloatAsState(if (focused) 1.1f else 1f, label = "UserCardFocusScale")
 
 	Column(
 		modifier = modifier
 			.scale(scale)
-			.aspectRatio(1f)
-			.clip(shape)
-			.background(JellyfinTheme.colorScheme.button.copy(alpha = 0.35f), shape)
-			.border(2.dp, borderColor, shape)
 			.focusable(interactionSource = interactionSource)
-			.clickable(interactionSource = interactionSource, onClick = onClick, indication = null),
-		horizontalAlignment = Alignment.CenterHorizontally,
+			.clickable(interactionSource = interactionSource, onClick = onClick, indication = null)
 	) {
 		Box(
 			modifier = Modifier
-				.fillMaxWidth()
-				.weight(1f),
-			contentAlignment = Alignment.Center,
+				.aspectRatio(1f)
+				.clip(shape)
+				.border(2.dp, color.first, shape)
 		) {
 			image()
 		}
 
+		Spacer(Modifier.height(8.dp))
+
 		Box(
 			modifier = Modifier
 				.fillMaxWidth()
-				.padding(horizontal = 8.dp, vertical = 6.dp)
 				.basicMarquee(
 					iterations = if (focused) Int.MAX_VALUE else 0,
 					initialDelayMillis = 0,
 				),
-			contentAlignment = Alignment.Center,
+			contentAlignment = Alignment.TopCenter,
 		) {
 			ProvideTextStyle(
 				LocalTextStyle.current.copy(
-					color = textColor,
+					color = color.second,
 				)
 			) {
 				name()
