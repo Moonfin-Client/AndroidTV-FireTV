@@ -10,12 +10,17 @@ object RatingIconProvider {
 	}
 
 	fun getIcon(baseUrl: String?, source: String, scorePercent: Int? = null): RatingIcon? {
+		// Prefer local drawable when available (always works, no plugin dependency)
+		val localIcon = getLocalFallbackIcon(source, scorePercent)
+		if (localIcon != null) return localIcon
+
+		// Fall back to server-hosted icon (requires Moonfin plugin)
 		if (baseUrl != null) {
 			getServerIconFile(source, scorePercent)?.let { file ->
 				return RatingIcon.ServerUrl("$baseUrl/Moonfin/Assets/$file")
 			}
 		}
-		return getLocalFallbackIcon(source, scorePercent)
+		return null
 	}
 
 	private fun getServerIconFile(source: String, scorePercent: Int?): String? = when (source) {
