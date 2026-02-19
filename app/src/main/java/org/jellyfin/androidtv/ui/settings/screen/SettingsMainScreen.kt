@@ -9,13 +9,39 @@ import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,7 +54,8 @@ import org.jellyfin.androidtv.ui.base.form.Checkbox
 import org.jellyfin.androidtv.ui.base.list.ListButton
 import org.jellyfin.androidtv.ui.base.list.ListSection
 import org.jellyfin.androidtv.ui.navigation.LocalRouter
-import org.jellyfin.androidtv.ui.preference.category.showDonateDialog
+import org.jellyfin.androidtv.ui.preference.category.DonateDialog
+import org.jellyfin.androidtv.ui.preference.category.GlassDialogButton
 import org.jellyfin.androidtv.ui.settings.Routes
 import org.jellyfin.androidtv.ui.settings.compat.rememberPreference
 import org.jellyfin.androidtv.ui.settings.composable.SettingsColumn
@@ -42,6 +69,10 @@ fun SettingsMainScreen() {
 	val context = LocalContext.current
 	val updateChecker by inject<UpdateCheckerService>(UpdateCheckerService::class.java)
 	val userPreferences = koinInject<UserPreferences>()
+
+	var showDonateDialog by remember { mutableStateOf(false) }
+	var updateInfoForDialog by remember { mutableStateOf<UpdateCheckerService.UpdateInfo?>(null) }
+	var showReleaseNotes by remember { mutableStateOf(false) }
 
 	SettingsColumn {
 		item {
@@ -136,7 +167,9 @@ fun SettingsMainScreen() {
 				headingContent = { Text("Check for Updates") },
 				captionContent = { Text("Download latest Moonfin version") },
 				onClick = {
-					checkForUpdates(context, updateChecker)
+					checkForUpdates(context, updateChecker) { info ->
+						updateInfoForDialog = info
+					}
 				}
 			)
 		}
@@ -163,7 +196,7 @@ fun SettingsMainScreen() {
 				headingContent = { Text("Support Moonfin") },
 				captionContent = { Text("Help us continue development") },
 				onClick = {
-					showDonateDialog(context)
+					showDonateDialog = true
 				}
 			)
 		}
@@ -176,9 +209,49 @@ fun SettingsMainScreen() {
 			)
 		}
 	}
+
+	// Dialogs
+	if (showDonateDialog) {
+		DonateDialog(onDismiss = { showDonateDialog = false })
+	}
+
+	val currentUpdateInfo = updateInfoForDialog
+	if (currentUpdateInfo != null && !showReleaseNotes) {
+		UpdateAvailableDialog(
+			updateInfo = currentUpdateInfo,
+			onDownload = {
+				updateInfoForDialog = null
+				downloadAndInstall(context, updateChecker, currentUpdateInfo)
+			},
+			onReleaseNotes = { showReleaseNotes = true },
+			onDismiss = { updateInfoForDialog = null },
+		)
+	}
+
+	if (currentUpdateInfo != null && showReleaseNotes) {
+		ReleaseNotesDialog(
+			updateInfo = currentUpdateInfo,
+			onDownload = {
+				showReleaseNotes = false
+				updateInfoForDialog = null
+				downloadAndInstall(context, updateChecker, currentUpdateInfo)
+			},
+			onViewOnGitHub = {
+				openUrl(context, currentUpdateInfo.releaseUrl)
+			},
+			onDismiss = {
+				showReleaseNotes = false
+				updateInfoForDialog = null
+			},
+		)
+	}
 }
 
-private fun checkForUpdates(context: Context, updateChecker: UpdateCheckerService) {
+private fun checkForUpdates(
+	context: Context,
+	updateChecker: UpdateCheckerService,
+	onUpdateFound: (UpdateCheckerService.UpdateInfo) -> Unit,
+) {
 	CoroutineScope(Dispatchers.Main).launch {
 		Toast.makeText(context, "Checking for updates…", Toast.LENGTH_SHORT).show()
 
@@ -191,7 +264,7 @@ private fun checkForUpdates(context: Context, updateChecker: UpdateCheckerServic
 					} else if (!updateInfo.isNewer) {
 						Toast.makeText(context, "No updates available", Toast.LENGTH_LONG).show()
 					} else {
-						showUpdateAvailableDialog(context, updateChecker, updateInfo)
+						onUpdateFound(updateInfo)
 					}
 				},
 				onFailure = { error ->
@@ -206,48 +279,129 @@ private fun checkForUpdates(context: Context, updateChecker: UpdateCheckerServic
 	}
 }
 
-private fun showUpdateAvailableDialog(
-	context: Context,
-	updateChecker: UpdateCheckerService,
-	updateInfo: UpdateCheckerService.UpdateInfo
+@Composable
+private fun UpdateAvailableDialog(
+	updateInfo: UpdateCheckerService.UpdateInfo,
+	onDownload: () -> Unit,
+	onReleaseNotes: () -> Unit,
+	onDismiss: () -> Unit,
 ) {
+	val downloadFocusRequester = remember { FocusRequester() }
 	val sizeMB = updateInfo.apkSize / (1024.0 * 1024.0)
-	val message = "New version ${updateInfo.version} is available!\n\nSize: ${String.format("%.1f", sizeMB)} MB"
 
-	androidx.appcompat.app.AlertDialog.Builder(context)
-		.setTitle("Update Available")
-		.setMessage(message)
-		.setPositiveButton("Download") { _, _ ->
-			downloadAndInstall(context, updateChecker, updateInfo)
+	Dialog(
+		onDismissRequest = onDismiss,
+		properties = DialogProperties(usePlatformDefaultWidth = false),
+	) {
+		Box(
+			modifier = Modifier.fillMaxSize(),
+			contentAlignment = Alignment.Center,
+		) {
+			Column(
+				modifier = Modifier
+					.widthIn(min = 340.dp, max = 460.dp)
+					.clip(RoundedCornerShape(20.dp))
+					.background(Color(0xE6141414))
+					.border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
+					.padding(vertical = 20.dp),
+			) {
+				// Title
+				Text(
+					text = "Update Available",
+					fontSize = 20.sp,
+					fontWeight = FontWeight.W600,
+					color = Color.White,
+					modifier = Modifier
+						.padding(horizontal = 24.dp)
+						.padding(bottom = 12.dp),
+				)
+
+				// Divider
+				Box(
+					modifier = Modifier
+						.fillMaxWidth()
+						.height(1.dp)
+						.background(Color.White.copy(alpha = 0.08f)),
+				)
+
+				Spacer(modifier = Modifier.height(16.dp))
+
+				// Version info
+				Text(
+					text = "New version ${updateInfo.version} is available!",
+					fontSize = 16.sp,
+					color = Color.White.copy(alpha = 0.85f),
+					modifier = Modifier.padding(horizontal = 24.dp),
+				)
+
+				Spacer(modifier = Modifier.height(8.dp))
+
+				Text(
+					text = "Size: ${String.format("%.1f", sizeMB)} MB",
+					fontSize = 14.sp,
+					color = Color.White.copy(alpha = 0.5f),
+					modifier = Modifier.padding(horizontal = 24.dp),
+				)
+
+				Spacer(modifier = Modifier.height(24.dp))
+
+				// Divider
+				Box(
+					modifier = Modifier
+						.fillMaxWidth()
+						.height(1.dp)
+						.background(Color.White.copy(alpha = 0.08f)),
+				)
+
+				Spacer(modifier = Modifier.height(16.dp))
+
+				// Buttons
+				Column(
+					modifier = Modifier.padding(horizontal = 24.dp),
+					verticalArrangement = Arrangement.spacedBy(8.dp),
+				) {
+					GlassDialogButton(
+						text = "Download",
+						onClick = onDownload,
+						isPrimary = true,
+						modifier = Modifier.focusRequester(downloadFocusRequester),
+					)
+
+					GlassDialogButton(
+						text = "Release Notes",
+						onClick = onReleaseNotes,
+					)
+
+					GlassDialogButton(
+						text = "Later",
+						onClick = onDismiss,
+					)
+				}
+			}
 		}
-		.setNegativeButton("Later", null)
-		.setNeutralButton("Release Notes") { _, _ ->
-			showReleaseNotesDialog(context, updateChecker, updateInfo)
-		}
-		.show()
+	}
+
+	LaunchedEffect(Unit) {
+		downloadFocusRequester.requestFocus()
+	}
 }
 
-private fun showReleaseNotesDialog(
-	context: Context,
-	updateChecker: UpdateCheckerService,
-	updateInfo: UpdateCheckerService.UpdateInfo
+@Composable
+private fun ReleaseNotesDialog(
+	updateInfo: UpdateCheckerService.UpdateInfo,
+	onDownload: () -> Unit,
+	onViewOnGitHub: () -> Unit,
+	onDismiss: () -> Unit,
 ) {
+	val downloadFocusRequester = remember { FocusRequester() }
 	val sizeMB = updateInfo.apkSize / (1024.0 * 1024.0)
-	val webView = WebView(context).apply {
-		layoutParams = LinearLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT,
-			(context.resources.displayMetrics.heightPixels * 0.85).toInt()
-		)
-		settings.apply {
-			javaScriptEnabled = false
-			defaultTextEncodingName = "utf-8"
-		}
 
-		val htmlContent = buildString {
+	val htmlContent = remember(updateInfo) {
+		buildString {
 			append("<!DOCTYPE html><html><head>")
 			append("<meta name='viewport' content='width=device-width, initial-scale=1.0'>")
 			append("<style>")
-			append("body { font-family: sans-serif; padding: 16px; background-color: #1a1a1a; color: #e0e0e0; margin: 0; }")
+			append("body { font-family: sans-serif; padding: 16px; background-color: transparent; color: #e0e0e0; margin: 0; }")
 			append("h1, h2, h3 { color: #ffffff; margin-top: 16px; margin-bottom: 8px; }")
 			append("h1 { font-size: 1.5em; }")
 			append("h2 { font-size: 1.3em; }")
@@ -255,13 +409,13 @@ private fun showReleaseNotesDialog(
 			append("p { margin: 8px 0; line-height: 1.5; }")
 			append("ul, ol { margin: 8px 0; padding-left: 24px; line-height: 1.6; }")
 			append("li { margin: 4px 0; }")
-			append("code { background-color: #2d2d2d; padding: 2px 6px; border-radius: 3px; font-family: monospace; color: #f0f0f0; }")
-			append("pre { background-color: #2d2d2d; padding: 12px; border-radius: 4px; overflow-x: auto; }")
+			append("code { background-color: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 3px; font-family: monospace; color: #f0f0f0; }")
+			append("pre { background-color: rgba(255,255,255,0.06); padding: 12px; border-radius: 4px; overflow-x: auto; }")
 			append("pre code { background-color: transparent; padding: 0; }")
-			append("a { color: #64b5f6; text-decoration: none; }")
-			append("blockquote { border-left: 3px solid #64b5f6; margin: 8px 0; padding-left: 12px; color: #b0b0b0; }")
+			append("a { color: #00A4DC; text-decoration: none; }")
+			append("blockquote { border-left: 3px solid #00A4DC; margin: 8px 0; padding-left: 12px; color: #b0b0b0; }")
 			append("strong { color: #ffffff; }")
-			append("hr { border: none; border-top: 1px solid #404040; margin: 16px 0; }")
+			append("hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 16px 0; }")
 			append("</style></head><body>")
 			append("<h2>Version ${updateInfo.version}</h2>")
 			append("<p><strong>Size:</strong> ${String.format("%.1f", sizeMB)} MB</p>")
@@ -284,33 +438,103 @@ private fun showReleaseNotesDialog(
 			append(releaseNotes)
 			append("</body></html>")
 		}
-
-		loadDataWithBaseURL(null, htmlContent, "text/html", "utf-8", null)
 	}
 
-	val container = LinearLayout(context).apply {
-		orientation = LinearLayout.VERTICAL
-		setPadding(48, 24, 48, 24)
-		addView(webView)
+	Dialog(
+		onDismissRequest = onDismiss,
+		properties = DialogProperties(usePlatformDefaultWidth = false),
+	) {
+		Box(
+			modifier = Modifier.fillMaxSize(),
+			contentAlignment = Alignment.Center,
+		) {
+			Column(
+				modifier = Modifier
+					.widthIn(min = 500.dp, max = 800.dp)
+					.clip(RoundedCornerShape(20.dp))
+					.background(Color(0xE6141414))
+					.border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
+					.padding(vertical = 20.dp),
+			) {
+				// Title
+				Text(
+					text = "Release Notes",
+					fontSize = 20.sp,
+					fontWeight = FontWeight.W600,
+					color = Color.White,
+					modifier = Modifier
+						.padding(horizontal = 24.dp)
+						.padding(bottom = 12.dp),
+				)
+
+				// Divider
+				Box(
+					modifier = Modifier
+						.fillMaxWidth()
+						.height(1.dp)
+						.background(Color.White.copy(alpha = 0.08f)),
+				)
+
+				// WebView for release notes content
+				AndroidView(
+					factory = { ctx ->
+						WebView(ctx).apply {
+							layoutParams = LinearLayout.LayoutParams(
+								ViewGroup.LayoutParams.MATCH_PARENT,
+								(ctx.resources.displayMetrics.heightPixels * 0.55).toInt()
+							)
+							setBackgroundColor(android.graphics.Color.TRANSPARENT)
+							settings.apply {
+								javaScriptEnabled = false
+								defaultTextEncodingName = "utf-8"
+							}
+							loadDataWithBaseURL(null, htmlContent, "text/html", "utf-8", null)
+						}
+					},
+					modifier = Modifier
+						.fillMaxWidth()
+						.padding(horizontal = 4.dp),
+				)
+
+				// Divider
+				Box(
+					modifier = Modifier
+						.fillMaxWidth()
+						.height(1.dp)
+						.background(Color.White.copy(alpha = 0.08f)),
+				)
+
+				Spacer(modifier = Modifier.height(16.dp))
+
+				// Buttons
+				Column(
+					modifier = Modifier.padding(horizontal = 24.dp),
+					verticalArrangement = Arrangement.spacedBy(8.dp),
+				) {
+					GlassDialogButton(
+						text = "Download",
+						onClick = onDownload,
+						isPrimary = true,
+						modifier = Modifier.focusRequester(downloadFocusRequester),
+					)
+
+					GlassDialogButton(
+						text = "View on GitHub",
+						onClick = onViewOnGitHub,
+					)
+
+					GlassDialogButton(
+						text = "Close",
+						onClick = onDismiss,
+					)
+				}
+			}
+		}
 	}
 
-	androidx.appcompat.app.AlertDialog.Builder(context)
-		.setTitle("Update Available")
-		.setView(container)
-		.setPositiveButton("Download") { _, _ ->
-			downloadAndInstall(context, updateChecker, updateInfo)
-		}
-		.setNegativeButton("Later", null)
-		.setNeutralButton("View on GitHub") { _, _ ->
-			openUrl(context, updateInfo.releaseUrl)
-		}
-		.show()
-		.apply {
-			window?.setLayout(
-				(context.resources.displayMetrics.widthPixels * 0.90).toInt(),
-				ViewGroup.LayoutParams.WRAP_CONTENT
-			)
-		}
+	LaunchedEffect(Unit) {
+		downloadFocusRequester.requestFocus()
+	}
 }
 
 private fun downloadAndInstall(
