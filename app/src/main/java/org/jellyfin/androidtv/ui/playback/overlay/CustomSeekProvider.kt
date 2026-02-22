@@ -363,9 +363,7 @@ class CustomSeekProvider(
 	}
 
 	override fun reset() {
-		diskCacheJob?.cancel()
 		memoryPreloadJob?.cancel()
-		diskCacheReady = false
 		for (request in imageRequests.values) {
 			if (!request.isDisposed) request.dispose()
 		}
