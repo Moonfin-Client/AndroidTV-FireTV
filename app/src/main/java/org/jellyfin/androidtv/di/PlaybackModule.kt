@@ -91,27 +91,10 @@ fun Scope.createPlaybackManager() = playbackManager(androidContext()) {
 	val deviceProfileBuilder = { createDeviceProfile(androidContext(), userPreferences, get()) }
 	
 	// Create API client resolver for cross-server support
+	// ApiClientFactory already prefers the current session's user for the current server
 	val apiClientFactory = get<org.jellyfin.androidtv.util.sdk.ApiClientFactory>()
-	val sessionRepository = get<org.jellyfin.androidtv.auth.repository.SessionRepository>()
-	val authenticationStore = get<org.jellyfin.androidtv.auth.store.AuthenticationStore>()
 	val apiClientResolver: (java.util.UUID?) -> org.jellyfin.sdk.api.client.ApiClient? = { serverId ->
-		serverId?.let { 
-			val currentSession = sessionRepository.currentSession.value
-			
-			val userId = if (currentSession?.serverId == it) {
-				currentSession.userId
-			} else {
-				authenticationStore.getServer(it)?.users?.entries
-					?.firstOrNull { (_, user) -> !user.accessToken.isNullOrBlank() }
-					?.key
-			}
-			
-			if (userId != null) {
-				apiClientFactory.getApiClient(it, userId) ?: apiClientFactory.getApiClientForServer(it)
-			} else {
-				apiClientFactory.getApiClientForServer(it)
-			}
-		}
+		serverId?.let { apiClientFactory.getApiClientForServer(it) }
 	}
 	
 	install(jellyfinPlugin(get(), deviceProfileBuilder, ProcessLifecycleOwner.get().lifecycle, apiClientResolver))

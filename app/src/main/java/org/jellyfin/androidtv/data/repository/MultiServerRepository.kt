@@ -5,6 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.jellyfin.androidtv.auth.model.AuthenticationStoreUser
 import org.jellyfin.androidtv.auth.model.Server
 import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.auth.repository.SessionRepository
@@ -100,9 +101,29 @@ class MultiServerRepositoryImpl(
 	private fun BaseItemDto.withServerId(serverId: UUID): BaseItemDto =
 		copy(serverId = serverId.toString())
 
+	/**
+	 * Find the first user with a valid access token in the given user map.
+	 * Returns a Pair of (userId, accessToken) or null if none found.
+	 */
+	private fun findFirstUserWithToken(
+		users: Map<UUID, AuthenticationStoreUser>,
+		serverName: String,
+	): Pair<UUID, String>? {
+		val entry = users.entries.firstOrNull { (_, user) ->
+			!user.accessToken.isNullOrBlank()
+		}
+		if (entry == null) {
+			Timber.d("MultiServerRepository: Server $serverName has no users with access tokens")
+			return null
+		}
+		return entry.key to entry.value.accessToken!!
+	}
+
 	override suspend fun getLoggedInServers(): List<ServerUserSession> = withContext(Dispatchers.IO) {
 		val servers = serverRepository.storedServers.value
 		Timber.d("MultiServerRepository: Checking ${servers.size} stored servers")
+
+		val currentSession = sessionRepository.currentSession.value
 
 		val loggedInServers = servers.mapNotNull { server ->
 			try {
@@ -113,24 +134,27 @@ class MultiServerRepositoryImpl(
 					return@mapNotNull null
 				}
 
-				// Find a user with valid access token for this server
-				val userWithToken = serverStore.users.entries.find { (_, user) ->
-					!user.accessToken.isNullOrBlank()
+				// Prefer the current session's user for the current server
+				val (userId, accessToken) = if (currentSession != null && currentSession.serverId == server.id) {
+					val currentUser = serverStore.users[currentSession.userId]
+					if (currentUser != null && !currentUser.accessToken.isNullOrBlank()) {
+						currentSession.userId to currentUser.accessToken
+					} else {
+						// Current session user has no stored token, fall back
+						findFirstUserWithToken(serverStore.users, server.name) ?: return@mapNotNull null
+					}
+				} else {
+					// Different server — pick first user with a valid token
+					findFirstUserWithToken(serverStore.users, server.name) ?: return@mapNotNull null
 				}
 
-				if (userWithToken == null) {
-					Timber.d("MultiServerRepository: Server ${server.name} has no users with access tokens")
-					return@mapNotNull null
-				}
-
-				val (userId, userInfo) = userWithToken
-				Timber.d("MultiServerRepository: Found logged-in user ${userInfo.name} on server ${server.name}")
+				Timber.d("MultiServerRepository: Found logged-in user on server ${server.name}")
 
 				// Create ApiClient for this server and user
 				val deviceInfo = defaultDeviceInfo.forUser(userId)
 				val apiClient = jellyfin.createApi(
 					baseUrl = server.address,
-					accessToken = userInfo.accessToken,
+					accessToken = accessToken,
 					deviceInfo = deviceInfo
 				)
 

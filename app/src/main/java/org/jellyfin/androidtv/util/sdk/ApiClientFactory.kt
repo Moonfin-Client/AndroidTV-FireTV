@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.util.sdk
 
+import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
 import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.sdk.Jellyfin
@@ -13,6 +14,7 @@ class ApiClientFactory(
 	private val jellyfin: Jellyfin,
 	private val authenticationStore: AuthenticationStore,
 	private val defaultDeviceInfo: DeviceInfo,
+	private val sessionRepository: SessionRepository,
 ) {
 	fun getApiClient(serverId: UUID, userId: UUID? = null): ApiClient? {
 		val server = authenticationStore.getServer(serverId)
@@ -21,34 +23,54 @@ class ApiClientFactory(
 			return null
 		}
 
-		val accessToken = if (userId != null) {
+		val resolvedUserId: UUID?
+		val accessToken: String?
+
+		if (userId != null) {
+			resolvedUserId = userId
 			val user = authenticationStore.getUser(serverId, userId)
 			if (user?.accessToken == null) {
 				Timber.w("ApiClientFactory: User $userId on server $serverId has no access token")
 				return null
 			}
-			user.accessToken
+			accessToken = user.accessToken
 		} else {
-			val users = authenticationStore.getServer(serverId)?.users
-			if (users.isNullOrEmpty()) {
-				Timber.w("ApiClientFactory: Server $serverId has no users")
-				return null
+			// Prefer the current session's user for the current server
+			val currentSession = sessionRepository.currentSession.value
+			val preferredEntry = if (currentSession != null && currentSession.serverId == serverId) {
+				val currentUser = authenticationStore.getUser(serverId, currentSession.userId)
+				if (currentUser?.accessToken != null) {
+					currentSession.userId to currentUser.accessToken
+				} else null
+			} else null
+
+			if (preferredEntry != null) {
+				resolvedUserId = preferredEntry.first
+				accessToken = preferredEntry.second
+			} else {
+				// Fallback: first user with a token (for non-current servers)
+				val users = authenticationStore.getServer(serverId)?.users
+				if (users.isNullOrEmpty()) {
+					Timber.w("ApiClientFactory: Server $serverId has no users")
+					return null
+				}
+
+				val userWithToken = users.entries.firstOrNull { (_, user) ->
+					!user.accessToken.isNullOrBlank()
+				}
+
+				if (userWithToken == null) {
+					Timber.w("ApiClientFactory: Server $serverId has no users with access tokens")
+					return null
+				}
+
+				resolvedUserId = userWithToken.key
+				accessToken = userWithToken.value.accessToken
 			}
-			
-			val userWithToken = users.entries.firstOrNull { (_, user) ->
-				!user.accessToken.isNullOrBlank()
-			}
-			
-			if (userWithToken == null) {
-				Timber.w("ApiClientFactory: Server $serverId has no users with access tokens")
-				return null
-			}
-			
-			userWithToken.value.accessToken
 		}
 
-		val deviceInfo = if (userId != null) {
-			defaultDeviceInfo.forUser(userId)
+		val deviceInfo = if (resolvedUserId != null) {
+			defaultDeviceInfo.forUser(resolvedUserId)
 		} else {
 			defaultDeviceInfo
 		}
