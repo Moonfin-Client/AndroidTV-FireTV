@@ -6,6 +6,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -202,16 +203,17 @@ fun ItemRowAdapter.retrieveMergedContinueWatchingItems(
 ) {
 	ProcessLifecycleOwner.get().lifecycleScope.launch {
 		runCatching {
-			// Fetch both resume and next up items concurrently
-			val resumeDeferred = async(Dispatchers.IO) {
-				api.itemsApi.getResumeItems(resumeQuery).content.items
+			// Use coroutineScope to properly contain async failures so they are
+			// caught by runCatching instead of propagating to the parent launch job.
+			val (resumeItems, nextUpItems) = coroutineScope {
+				val resumeDeferred = async(Dispatchers.IO) {
+					api.itemsApi.getResumeItems(resumeQuery).content.items
+				}
+				val nextUpDeferred = async(Dispatchers.IO) {
+					api.tvShowsApi.getNextUp(nextUpQuery).content.items
+				}
+				resumeDeferred.await() to nextUpDeferred.await()
 			}
-			val nextUpDeferred = async(Dispatchers.IO) {
-				api.tvShowsApi.getNextUp(nextUpQuery).content.items
-			}
-
-			val resumeItems = resumeDeferred.await()
-			val nextUpItems = nextUpDeferred.await()
 
 			// Create a set of resume item IDs for quick lookup
 			val resumeItemIds = resumeItems.mapTo(HashSet()) { it.id }
