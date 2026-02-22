@@ -744,9 +744,12 @@ class MediaBarSlideshowViewModel(
 		trailerReadyDeferred = null
 		_trailerState.value = TrailerPreviewState.Idle
 
-		if (!userSettingPreferences[UserSettingPreferences.mediaBarTrailerPreview]) {
+		if (!userSettingPreferences[UserSettingPreferences.mediaBarEnabled] ||
+			!userSettingPreferences[UserSettingPreferences.mediaBarTrailerPreview]) {
 			return
 		}
+
+		if (!_isFocused.value) return
 
 		val item = items.getOrNull(index) ?: return
 		val apiClient = serverApiClients[item.serverId] ?: api
@@ -801,11 +804,22 @@ class MediaBarSlideshowViewModel(
 
 				if (_playbackState.value.currentIndex != index) return@launch
 				if (_playbackState.value.isPaused) return@launch
+				if (!_isFocused.value) return@launch
 
 				val playingInfo = cachedInfo ?: trailerCache[item.itemId] ?: return@launch
 				autoAdvanceJob?.cancel()
 				_trailerState.value = TrailerPreviewState.Playing(playingInfo)
 				Timber.d("MediaBar: Playing trailer for ${item.title} (YT: ${playingInfo.youtubeVideoId}, start: ${playingInfo.startSeconds}s)")
+
+				// Safety timeout: if the WebView never fires onVideoEnded
+				// (Invidious flakiness, network stall, WebView quirk, etc.),
+				// force-advance to prevent the carousel from getting stuck.
+				delay(MAX_TRAILER_PLAY_DURATION_MS)
+				Timber.d("MediaBar: Safety timeout reached for ${item.title}, force-advancing")
+				_trailerState.value = TrailerPreviewState.Idle
+				if (_isFocused.value && !_playbackState.value.isPaused) {
+					nextSlide()
+				}
 			} catch (e: Exception) {
 				Timber.w(e, "MediaBar: Trailer resolution failed for ${item.title}")
 				_trailerState.value = TrailerPreviewState.Unavailable
@@ -819,6 +833,7 @@ class MediaBarSlideshowViewModel(
 	 * the trailer info is already cached and the WebView can start immediately.
 	 */
 	private fun preResolveAdjacentTrailers(currentIndex: Int) {
+		if (!userSettingPreferences[UserSettingPreferences.mediaBarEnabled]) return
 		if (!userSettingPreferences[UserSettingPreferences.mediaBarTrailerPreview]) return
 		if (items.isEmpty()) return
 		val userId = currentUserId ?: return
@@ -851,7 +866,9 @@ class MediaBarSlideshowViewModel(
 	 */
 	fun onTrailerEnded() {
 		_trailerState.value = TrailerPreviewState.Idle
-		nextSlide()
+		if (_isFocused.value) {
+			nextSlide()
+		}
 	}
 
 	/**
@@ -882,5 +899,7 @@ class MediaBarSlideshowViewModel(
 		const val IMAGE_DISPLAY_DELAY_MS = 4000L
 		/** Max additional time to wait for the WebView video to be ready after the image delay (ms) */
 		const val MAX_TRAILER_BUFFER_WAIT_MS = 8000L
+		/** Max time a trailer can play before force-advancing the carousel (ms) — 2 minutes */
+		const val MAX_TRAILER_PLAY_DURATION_MS = 120_000L
 	}
 }

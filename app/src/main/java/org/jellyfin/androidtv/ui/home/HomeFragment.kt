@@ -25,6 +25,7 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.constant.NavbarPosition
+import org.jellyfin.androidtv.ui.InteractionTrackerViewModel
 import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowViewModel
 import org.jellyfin.androidtv.ui.home.mediabar.TrailerPreviewState
 import org.jellyfin.androidtv.ui.home.mediabar.YouTubeTrailerWebView
@@ -35,6 +36,7 @@ import org.koin.android.ext.android.inject
 
 class HomeFragment : Fragment() {
 	private val mediaBarViewModel by inject<MediaBarSlideshowViewModel>()
+	private val interactionTrackerViewModel by inject<InteractionTrackerViewModel>()
 	private val userSettingPreferences by inject<UserSettingPreferences>()
 	private val userPreferences by inject<UserPreferences>()
 
@@ -182,6 +184,18 @@ class HomeFragment : Fragment() {
 				val hasTrailer = trailerState is TrailerPreviewState.Buffering ||
 					trailerState is TrailerPreviewState.Playing
 				trailerWebView?.isVisible = hasTrailer
+			}
+			.launchIn(lifecycleScope)
+
+		// Stop trailers when the in-app screensaver activates
+		interactionTrackerViewModel.visible
+			.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+			.onEach { screensaverVisible ->
+				if (screensaverVisible) {
+					mediaBarViewModel.stopTrailer()
+				} else {
+					mediaBarViewModel.restartTrailerForCurrentSlide()
+				}
 			}
 			.launchIn(lifecycleScope)
 	}
