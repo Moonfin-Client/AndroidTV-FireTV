@@ -218,7 +218,7 @@ private fun BaseRowItem.getDisplayConfig(imageType: ImageType, uniformAspect: Bo
 
 		val base = BaseRowItemDisplayConfig(
 			aspectRatio = when (imageType) {
-				ImageType.BANNER -> ImageHelper.ASPECT_RATIO_BANNER.toFloat()
+				ImageType.BANNER -> ImageHelper.ASPECT_RATIO_16_9.toFloat()
 				ImageType.THUMB -> ImageHelper.ASPECT_RATIO_16_9.toFloat()
 				else -> defaultAspectRatio
 			},
@@ -247,7 +247,6 @@ private fun BaseRowItem.getDisplayConfig(imageType: ImageType, uniformAspect: Bo
 			BaseItemKind.EPISODE -> base.copy(
 				aspectRatio = when {
 					preferSeriesPoster -> ImageHelper.ASPECT_RATIO_2_3.toFloat()
-					imageType == ImageType.BANNER -> ImageHelper.ASPECT_RATIO_BANNER.toFloat()
 					else -> ImageHelper.ASPECT_RATIO_16_9.toFloat()
 				},
 				iconRes = R.drawable.ic_tv,
@@ -284,7 +283,7 @@ private fun BaseRowItem.getDisplayConfig(imageType: ImageType, uniformAspect: Bo
 
 	BaseRowType.LiveTvChannel -> BaseRowItemDisplayConfig(
 		aspectRatio = when (imageType) {
-			ImageType.BANNER -> ImageHelper.ASPECT_RATIO_BANNER.toFloat()
+			ImageType.BANNER -> ImageHelper.ASPECT_RATIO_16_9.toFloat()
 			ImageType.THUMB -> ImageHelper.ASPECT_RATIO_16_9.toFloat()
 			else -> baseItem?.primaryImageAspectRatio?.toFloat() ?: 1f
 		},
@@ -295,7 +294,7 @@ private fun BaseRowItem.getDisplayConfig(imageType: ImageType, uniformAspect: Bo
 
 	BaseRowType.LiveTvProgram -> BaseRowItemDisplayConfig(
 		aspectRatio = when (imageType) {
-			ImageType.BANNER -> ImageHelper.ASPECT_RATIO_BANNER.toFloat()
+			ImageType.BANNER -> ImageHelper.ASPECT_RATIO_16_9.toFloat()
 			ImageType.THUMB -> ImageHelper.ASPECT_RATIO_16_9.toFloat()
 			else -> baseItem?.primaryImageAspectRatio?.toFloat() ?: ImageHelper.ASPECT_RATIO_7_9.toFloat()
 		},
@@ -306,7 +305,7 @@ private fun BaseRowItem.getDisplayConfig(imageType: ImageType, uniformAspect: Bo
 
 	BaseRowType.LiveTvRecording -> BaseRowItemDisplayConfig(
 		aspectRatio = when (imageType) {
-			ImageType.BANNER -> ImageHelper.ASPECT_RATIO_BANNER.toFloat()
+			ImageType.BANNER -> ImageHelper.ASPECT_RATIO_16_9.toFloat()
 			ImageType.THUMB -> ImageHelper.ASPECT_RATIO_16_9.toFloat()
 			else -> baseItem?.primaryImageAspectRatio?.toFloat() ?: ImageHelper.ASPECT_RATIO_7_9.toFloat()
 		},
