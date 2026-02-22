@@ -715,6 +715,7 @@ class ItemDetailsFragment : Fragment() {
 								imageUrl = posterUrl,
 								isLandscape = isEpisode,
 								isSquare = isMusicAlbum || isPlaylist,
+								item = item,
 							)
 						}
 					}
@@ -1054,11 +1055,12 @@ class ItemDetailsFragment : Fragment() {
 				}
 
 				if (item.userData != null && item.type != BaseItemKind.PERSON && item.type != BaseItemKind.MUSIC_ARTIST) {
-					DetailActionButton(
+						DetailActionButton(
 						label = if (item.userData?.played == true) "Watched" else "Unwatched",
 						icon = ImageVector.vectorResource(R.drawable.ic_check),
 						onClick = { viewModel.toggleWatched() },
 						isActive = item.userData?.played == true,
+						activeColor = Color(0xFF2196F3),
 					)
 				}
 
@@ -1249,6 +1251,7 @@ class ItemDetailsFragment : Fragment() {
 						onClick = {
 							navigationRepository.navigate(Destinations.itemDetails(season.id, viewModel.serverId))
 						},
+						item = season,
 					)
 				}
 			}
@@ -1275,6 +1278,7 @@ class ItemDetailsFragment : Fragment() {
 						imageUrl = getPosterUrl(ep),
 						progress = ep.userData?.playedPercentage ?: 0.0,
 						isCurrent = ep.id == currentEpisodeId,
+						isPlayed = ep.userData?.played == true,
 						onClick = {
 							navigationRepository.navigate(Destinations.itemDetails(ep.id, viewModel.serverId))
 						},
@@ -1343,6 +1347,7 @@ class ItemDetailsFragment : Fragment() {
 							},
 							onFocused = onItemFocused?.let { callback -> { callback(item) } },
 							modifier = cardModifier,
+							item = item,
 						)
 					} else {
 						SimilarItemCard(
@@ -1354,6 +1359,7 @@ class ItemDetailsFragment : Fragment() {
 							},
 							onFocused = onItemFocused?.let { callback -> { callback(item) } },
 							modifier = cardModifier,
+							item = item,
 						)
 					}
 				}
@@ -1477,6 +1483,7 @@ class ItemDetailsFragment : Fragment() {
 									icon = ImageVector.vectorResource(R.drawable.ic_check),
 									onClick = { viewModel.toggleWatched() },
 									isActive = item.userData?.played == true,
+									activeColor = Color(0xFF2196F3),
 								)
 
 								DetailActionButton(

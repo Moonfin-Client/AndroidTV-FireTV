@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -48,15 +50,24 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.constant.WatchedIndicatorBehavior
+import org.jellyfin.androidtv.ui.base.Badge
 import org.jellyfin.androidtv.ui.base.Icon
+import org.jellyfin.androidtv.ui.base.Seekbar
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.base.button.IconButton
 import org.jellyfin.androidtv.ui.base.button.IconButtonDefaults
 import org.jellyfin.androidtv.ui.base.focusBorderColor
+import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.design.Tokens
+import org.koin.compose.koinInject
 
 @Composable
 fun DetailActionButton(
@@ -304,6 +315,7 @@ fun SeasonCard(
 	unplayedCount: Int?,
 	onClick: () -> Unit,
 	modifier: Modifier = Modifier,
+	item: BaseItemDto? = null,
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
@@ -349,40 +361,19 @@ fun SeasonCard(
 				}
 			}
 
-			if (isWatched) {
-				Box(
+			if (item != null) {
+				DetailsWatchIndicator(
+					item = item,
 					modifier = Modifier
 						.align(Alignment.TopEnd)
-						.padding(8.dp)
-						.size(22.dp)
-						.background(Color(0xE600A4DC), CircleShape),
-					contentAlignment = Alignment.Center,
-				) {
-					Icon(
-						imageVector = ImageVector.vectorResource(R.drawable.ic_check),
-						contentDescription = null,
-						modifier = Modifier.size(12.dp),
-						tint = Color.White,
-					)
-				}
-			}
-
-			if (!isWatched && unplayedCount != null && unplayedCount > 0) {
-				Box(
-					modifier = Modifier
-						.align(Alignment.TopEnd)
-						.padding(6.dp)
-						.background(Color(0xFF00A4DC), RoundedCornerShape(10.dp))
-						.padding(horizontal = 5.dp),
-					contentAlignment = Alignment.Center,
-				) {
-					Text(
-						text = unplayedCount.toString(),
-						fontSize = 12.sp,
-						fontWeight = FontWeight.W700,
-						color = Color.White,
-					)
-				}
+						.padding(6.dp),
+				)
+			} else {
+				SeasonCardLegacyBadge(
+					isWatched = isWatched,
+					unplayedCount = unplayedCount,
+					modifier = Modifier.align(Alignment.TopEnd),
+				)
 			}
 		}
 
@@ -401,6 +392,43 @@ fun SeasonCard(
 }
 
 @Composable
+private fun SeasonCardLegacyBadge(
+	isWatched: Boolean,
+	unplayedCount: Int?,
+	modifier: Modifier = Modifier,
+) {
+	val userPreferences = koinInject<UserPreferences>()
+	val watchedIndicatorBehavior = userPreferences[UserPreferences.watchedIndicatorBehavior]
+	if (watchedIndicatorBehavior == WatchedIndicatorBehavior.NEVER) return
+
+	if (isWatched) {
+		Badge(
+			modifier = modifier
+				.padding(6.dp)
+				.size(22.dp),
+		) {
+			Icon(
+				imageVector = ImageVector.vectorResource(R.drawable.ic_watch),
+				contentDescription = null,
+				modifier = Modifier.size(12.dp),
+			)
+		}
+	} else if (unplayedCount != null && unplayedCount > 0) {
+		if (watchedIndicatorBehavior == WatchedIndicatorBehavior.HIDE_UNWATCHED) return
+
+		Badge(
+			modifier = modifier
+				.padding(6.dp)
+				.sizeIn(minWidth = 22.dp, minHeight = 22.dp),
+		) {
+			Text(
+				text = unplayedCount.toString(),
+			)
+		}
+	}
+}
+
+@Composable
 fun EpisodeCard(
 	episodeNumber: Int?,
 	title: String,
@@ -410,6 +438,7 @@ fun EpisodeCard(
 	isCurrent: Boolean,
 	onClick: () -> Unit,
 	modifier: Modifier = Modifier,
+	isPlayed: Boolean = false,
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
@@ -454,6 +483,14 @@ fun EpisodeCard(
 					contentDescription = title,
 					modifier = Modifier.fillMaxSize(),
 					contentScale = ContentScale.Crop,
+				)
+			}
+
+			if (isPlayed && progress <= 0) {
+				EpisodeWatchedBadge(
+					modifier = Modifier
+						.align(Alignment.TopEnd)
+						.padding(4.dp),
 				)
 			}
 
@@ -576,22 +613,12 @@ fun SeasonEpisodeItem(
 				}
 			}
 
-			if (isPlayed) {
-				Box(
+			if (isPlayed && progress <= 0) {
+				EpisodeWatchedBadge(
 					modifier = Modifier
 						.align(Alignment.TopEnd)
-						.padding(6.dp)
-						.size(22.dp)
-						.background(Color(0xE600A4DC), CircleShape),
-					contentAlignment = Alignment.Center,
-				) {
-					Icon(
-						imageVector = ImageVector.vectorResource(R.drawable.ic_check),
-						contentDescription = null,
-						modifier = Modifier.size(12.dp),
-						tint = Color.White,
-					)
-				}
+						.padding(6.dp),
+				)
 			}
 		}
 
@@ -668,6 +695,7 @@ fun PosterImage(
 	isLandscape: Boolean = false,
 	isSquare: Boolean = false,
 	modifier: Modifier = Modifier,
+	item: BaseItemDto? = null,
 ) {
 	Box(
 		modifier = modifier
@@ -702,6 +730,10 @@ fun PosterImage(
 				modifier = Modifier.size(64.dp),
 				tint = Color.White.copy(alpha = 0.15f),
 			)
+		}
+
+		if (item != null) {
+			ItemCardOverlays(item = item, iconSize = 20.dp, padding = 6.dp)
 		}
 	}
 }
@@ -752,6 +784,7 @@ fun SimilarItemCard(
 	onClick: () -> Unit,
 	modifier: Modifier = Modifier,
 	onFocused: (() -> Unit)? = null,
+	item: BaseItemDto? = null,
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
@@ -788,6 +821,10 @@ fun SimilarItemCard(
 					contentScale = ContentScale.Crop,
 				)
 			}
+
+			if (item != null) {
+				ItemCardOverlays(item = item)
+			}
 		}
 
 		Spacer(modifier = Modifier.height(6.dp))
@@ -819,6 +856,7 @@ fun LandscapeItemCard(
 	onClick: () -> Unit,
 	modifier: Modifier = Modifier,
 	onFocused: (() -> Unit)? = null,
+	item: BaseItemDto? = null,
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
@@ -854,6 +892,10 @@ fun LandscapeItemCard(
 					modifier = Modifier.fillMaxSize(),
 					contentScale = ContentScale.Crop,
 				)
+			}
+
+			if (item != null) {
+				ItemCardOverlays(item = item)
 			}
 		}
 
@@ -1238,5 +1280,122 @@ fun TrackActionDialog(
 		LaunchedEffect(Unit) {
 			initialFocusRequester.requestFocus()
 		}
+	}
+}
+
+/**
+ * Shared overlay layer for item cards showing favorite, watched, and progress indicators.
+ * Must be called from a [BoxScope] receiver.
+ */
+@Composable
+private fun BoxScope.ItemCardOverlays(
+	item: BaseItemDto,
+	iconSize: Dp = 18.dp,
+	padding: Dp = 4.dp,
+) {
+	if (item.userData?.isFavorite == true) {
+		Icon(
+			imageVector = ImageVector.vectorResource(R.drawable.ic_heart),
+			contentDescription = null,
+			tint = Tokens.Color.colorRed500,
+			modifier = Modifier
+				.align(Alignment.TopStart)
+				.padding(padding)
+				.size(iconSize),
+		)
+	}
+
+	DetailsWatchIndicator(
+		item = item,
+		modifier = Modifier
+			.align(Alignment.TopEnd)
+			.padding(padding),
+	)
+
+	val playedPercentage = item.userData?.playedPercentage
+		?.toFloat()?.div(100f)
+		?.coerceIn(0f, 1f)
+		?.takeIf { it > 0f && it < 1f }
+	if (playedPercentage != null) {
+		Box(
+			modifier = Modifier
+				.align(Alignment.BottomCenter)
+				.fillMaxWidth()
+				.padding(Tokens.Space.spaceXs),
+		) {
+			Seekbar(
+				progress = playedPercentage,
+				enabled = false,
+				modifier = Modifier
+					.fillMaxWidth()
+					.height(4.dp),
+			)
+		}
+	}
+}
+
+/**
+ * Watched/unplayed indicator for detail screen cards.
+ * Mirrors the behavior of [org.jellyfin.androidtv.ui.composable.item.ItemCardBaseItemOverlay]'s
+ * WatchIndicator, respecting the [WatchedIndicatorBehavior] user preference.
+ */
+@Composable
+private fun DetailsWatchIndicator(
+	item: BaseItemDto,
+	modifier: Modifier = Modifier,
+) {
+	val userPreferences = koinInject<UserPreferences>()
+	val watchedIndicatorBehavior = userPreferences[UserPreferences.watchedIndicatorBehavior]
+
+	if (watchedIndicatorBehavior == WatchedIndicatorBehavior.NEVER) return
+	if (watchedIndicatorBehavior == WatchedIndicatorBehavior.EPISODES_ONLY && item.type != BaseItemKind.EPISODE) return
+
+	val isPlayed = item.userData?.played == true
+	val unplayedItems = item.userData?.unplayedItemCount?.takeIf { it > 0 }
+
+	if (isPlayed) {
+		Badge(
+			modifier = modifier.size(20.dp),
+		) {
+			Icon(
+				imageVector = ImageVector.vectorResource(R.drawable.ic_watch),
+				contentDescription = null,
+				modifier = Modifier.size(10.dp),
+			)
+		}
+	} else if (unplayedItems != null) {
+		if (watchedIndicatorBehavior == WatchedIndicatorBehavior.HIDE_UNWATCHED) return
+
+		Badge(
+			modifier = modifier.sizeIn(minWidth = 20.dp, minHeight = 20.dp),
+		) {
+			Text(
+				text = unplayedItems.toString(),
+			)
+		}
+	}
+}
+
+/**
+ * Simple watched badge for episode cards.
+ * Respects the [WatchedIndicatorBehavior] user preference.
+ */
+@Composable
+private fun EpisodeWatchedBadge(
+	modifier: Modifier = Modifier,
+) {
+	val userPreferences = koinInject<UserPreferences>()
+	val watchedIndicatorBehavior = userPreferences[UserPreferences.watchedIndicatorBehavior]
+
+	if (watchedIndicatorBehavior == WatchedIndicatorBehavior.NEVER) return
+
+	Badge(
+		modifier = modifier.size(20.dp),
+	) {
+		Icon(
+			imageVector = ImageVector.vectorResource(R.drawable.ic_watch),
+			contentDescription = null,
+			modifier = Modifier.size(10.dp),
+		)
 	}
 }

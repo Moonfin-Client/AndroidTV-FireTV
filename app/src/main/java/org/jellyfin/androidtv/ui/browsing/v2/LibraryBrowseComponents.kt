@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,13 +50,19 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.constant.WatchedIndicatorBehavior
+import org.jellyfin.androidtv.ui.base.Badge
 import org.jellyfin.androidtv.ui.base.Icon
+import org.jellyfin.androidtv.ui.base.Seekbar
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowCompactRatings
 import org.jellyfin.androidtv.util.TimeUtils
+import org.jellyfin.design.Tokens
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.koin.compose.koinInject
 
 // Jellyfin accent blue
 val JellyfinBlue = Color(0xFF00A4DC)
@@ -191,6 +198,46 @@ fun LibraryPosterCard(
 							color = Color.White,
 						)
 					}
+				}
+			}
+
+			if (item.userData?.isFavorite == true) {
+				Icon(
+					imageVector = ImageVector.vectorResource(R.drawable.ic_heart),
+					contentDescription = null,
+					tint = Tokens.Color.colorRed500,
+					modifier = Modifier
+						.align(Alignment.TopStart)
+						.padding(4.dp)
+						.size(20.dp),
+				)
+			}
+
+			PosterWatchIndicator(
+				item = item,
+				modifier = Modifier
+					.align(Alignment.TopEnd)
+					.padding(4.dp),
+			)
+
+			val playedPercentage = item.userData?.playedPercentage
+				?.toFloat()?.div(100f)
+				?.coerceIn(0f, 1f)
+				?.takeIf { it > 0f && it < 1f }
+			if (playedPercentage != null) {
+				Box(
+					modifier = Modifier
+						.align(Alignment.BottomCenter)
+						.fillMaxWidth()
+						.padding(Tokens.Space.spaceXs),
+				) {
+					Seekbar(
+						progress = playedPercentage,
+						enabled = false,
+						modifier = Modifier
+							.fillMaxWidth()
+							.height(4.dp),
+					)
 				}
 			}
 		}
@@ -670,5 +717,45 @@ private fun FilterToggleRow(
 				else -> Color.White.copy(alpha = 0.8f)
 			},
 		)
+	}
+}
+
+/**
+ * Watched/unplayed indicator for library poster cards
+ */
+@Composable
+private fun PosterWatchIndicator(
+	item: BaseItemDto,
+	modifier: Modifier = Modifier,
+) {
+	val userPreferences = koinInject<UserPreferences>()
+	val watchedIndicatorBehavior = userPreferences[UserPreferences.watchedIndicatorBehavior]
+
+	if (watchedIndicatorBehavior == WatchedIndicatorBehavior.NEVER) return
+	if (watchedIndicatorBehavior == WatchedIndicatorBehavior.EPISODES_ONLY && item.type != BaseItemKind.EPISODE) return
+
+	val isPlayed = item.userData?.played == true
+	val unplayedItems = item.userData?.unplayedItemCount?.takeIf { it > 0 }
+
+	if (isPlayed) {
+		Badge(
+			modifier = modifier.size(22.dp),
+		) {
+			Icon(
+				imageVector = ImageVector.vectorResource(R.drawable.ic_watch),
+				contentDescription = null,
+				modifier = Modifier.size(12.dp),
+			)
+		}
+	} else if (unplayedItems != null) {
+		if (watchedIndicatorBehavior == WatchedIndicatorBehavior.HIDE_UNWATCHED) return
+
+		Badge(
+			modifier = modifier.sizeIn(minWidth = 22.dp, minHeight = 22.dp),
+		) {
+			Text(
+				text = unplayedItems.toString(),
+			)
+		}
 	}
 }
