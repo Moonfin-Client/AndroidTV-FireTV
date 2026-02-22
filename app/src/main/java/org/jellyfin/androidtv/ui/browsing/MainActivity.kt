@@ -156,6 +156,10 @@ class MainActivity : FragmentActivity() {
 	override fun onResume() {
 		super.onResume()
 
+		// Skip auth check while session is still restoring — onCreate handles it once READY.
+		// Prevents false bounce to StartupActivity when returning from external player after process death.
+		if (sessionRepository.state.value != SessionRepositoryState.READY) return
+
 		if (!validateAuthentication()) return
 
 		applyTheme()
