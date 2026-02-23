@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.lifecycle.Lifecycle
@@ -884,13 +885,19 @@ class ItemDetailsFragment : Fragment() {
 			}
 		}
 
-		// Auto-focus title area so page starts at the top
+		// Focus play button but keep page scrolled to the top
 		LaunchedEffect(item.id) {
 			for (attempt in 1..5) {
 				delay(if (attempt == 1) 300L else 200L)
-				listState.scrollToItem(0)
 				try {
-					titleFocusRequester.requestFocus()
+					if (!isBoxSet) {
+						playButtonFocusRequester.requestFocus()
+					} else {
+						titleFocusRequester.requestFocus()
+					}
+					delay(16)
+					listState.scroll(MutatePriority.UserInput) { scrollBy(0f) }
+					listState.scrollToItem(0)
 					break
 				} catch (_: Exception) {
 					// Composable not yet laid out, retry
@@ -1566,13 +1573,15 @@ class ItemDetailsFragment : Fragment() {
 			}
 		}
 
-		// Auto-focus title area so page starts at the top
+		// Focus play button but keep page scrolled to the top
 		LaunchedEffect(item.id) {
 			for (attempt in 1..5) {
 				delay(if (attempt == 1) 300L else 200L)
-				listState.scrollToItem(0)
 				try {
-					titleFocusRequester.requestFocus()
+					playButtonFocusRequester.requestFocus()
+					delay(16)
+					listState.scroll(MutatePriority.UserInput) { scrollBy(0f) }
+					listState.scrollToItem(0)
 					break
 				} catch (_: Exception) {
 					// Composable not yet laid out, retry
