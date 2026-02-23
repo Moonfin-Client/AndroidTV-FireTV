@@ -29,6 +29,7 @@ import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Dispatchers
@@ -120,12 +121,8 @@ fun EpisodePreviewOverlay(
 		Timber.d("EpisodePreview: Resolving stream URL for ${item.name}")
 
 		try {
-			val (directUrl, transcodedUrl, introEndMs) = withContext(Dispatchers.IO) {
-				val direct = effectiveApi.videosApi.getVideoStreamUrl(
-					itemId = item.id,
-					static = true,
-				)
-
+			val (primaryUrl, fallbackUrlResolved, introEndMs) = withContext(Dispatchers.IO) {
+				// Transcoded stream first: forces H.264 8-bit (SDR), no Dolby Vision/HDR
 				val transcoded = effectiveApi.videosApi.getVideoStreamUrl(
 					itemId = item.id,
 					static = false,
@@ -134,6 +131,12 @@ fun EpisodePreviewOverlay(
 					maxVideoBitDepth = 8,
 					audioBitRate = 128000,
 					audioChannels = 2,
+					subtitleMethod = org.jellyfin.sdk.model.api.SubtitleDeliveryMethod.DROP,
+				)
+
+				val direct = effectiveApi.videosApi.getVideoStreamUrl(
+					itemId = item.id,
+					static = true,
 				)
 
 				val seekMs = try {
@@ -152,13 +155,13 @@ fun EpisodePreviewOverlay(
 					if (positionTicks > 0) positionTicks / 10_000L else runtimeFallbackMs(item)
 				}
 
-				Triple(direct, transcoded, seekMs)
+				Triple(transcoded, direct, seekMs)
 			}
 
-			streamUrl = directUrl
-			fallbackUrl = transcodedUrl
+			streamUrl = primaryUrl
+			fallbackUrl = fallbackUrlResolved
 			seekPositionMs = introEndMs
-			Timber.d("EpisodePreview: Ready to play ${item.name}, seekTo=${introEndMs}ms, url=${directUrl.take(80)}...")
+			Timber.d("EpisodePreview: Ready to play ${item.name}, seekTo=${introEndMs}ms, url=${primaryUrl.take(80)}...")
 		} catch (e: Exception) {
 			Timber.w(e, "EpisodePreview: Failed to resolve stream URL for ${item.name}")
 		}
@@ -173,8 +176,15 @@ fun EpisodePreviewOverlay(
 				setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
 			}
 
+			val trackSelector = DefaultTrackSelector(context).apply {
+				parameters = parameters.buildUpon()
+					.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+					.build()
+			}
+
 			val player = ExoPlayer.Builder(context)
 				.setRenderersFactory(renderersFactory)
+				.setTrackSelector(trackSelector)
 				.build()
 				.apply {
 					volume = if (muted) 0f else 1f
@@ -212,7 +222,7 @@ fun EpisodePreviewOverlay(
 					isPlaying = false
 					val fb = fallbackUrl
 					if (fb != null) {
-						Timber.d("EpisodePreview: Retrying ${item.name} with transcoded H.264 stream")
+						Timber.d("EpisodePreview: Retrying ${item.name} with fallback stream")
 						fallbackUrl = null
 						streamUrl = fb
 					}
