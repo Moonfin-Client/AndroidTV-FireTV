@@ -112,6 +112,10 @@ class PluginSyncService(
 	@Volatile
 	private var serverAvailable = false
 
+	/** Schema version from last server response. 1 = flat, 2+ = profiled envelope. */
+	@Volatile
+	private var serverSchemaVersion = 1
+
 	/** Debounce job for push-on-change. */
 	private var pushJob: Job? = null
 
@@ -219,26 +223,17 @@ class PluginSyncService(
 	}
 
 	/**
-	 * Push current local settings to the server immediately.
-	 * Used when plugin sync is first enabled.
+	 * Initial sync when plugin sync is first enabled.
+	 * Clears the snapshot so the three-way merge falls back to server-wins,
+	 * ensuring existing server settings are pulled down rather than overwritten
+	 * by local defaults.
 	 */
-	suspend fun pushCurrentSettings() = withContext(Dispatchers.IO) {
-		val baseUrl = api.baseUrl
-		val token = api.accessToken
-		if (baseUrl.isNullOrBlank() || token.isNullOrBlank()) return@withContext
+	suspend fun initialSync() = withContext(Dispatchers.IO) {
+		// Clear snapshot so mergeThreeWay treats this as a first sync (server wins)
+		snapshotPrefs.edit().clear().apply()
+		Timber.i("$TAG: Snapshot cleared for initial server-wins sync")
 
-		serverAvailable = ping(baseUrl, token)
-		if (!serverAvailable) {
-			Timber.w("$TAG: Cannot push — server plugin not reachable")
-			return@withContext
-		}
-
-		val localSettings = collectLocalSettings()
-		pushSettings(baseUrl, token, localSettings)
-		saveSnapshot(localSettings)
-		Timber.i("$TAG: Pushed current settings to server")
-
-		registerChangeListeners()
+		syncOnStartup()
 	}
 
 	/**
@@ -281,6 +276,10 @@ class PluginSyncService(
 	 * Fetch settings from the server.
 	 * `GET {baseUrl}/Moonfin/Settings`
 	 *
+	 * Supports both v1 (flat key-value) and v2 (profiled envelope with
+	 * `global`, `desktop`, `mobile`, `tv` profiles) response formats.
+	 * For v2, resolves settings using TV → global fallback chain.
+	 *
 	 * @return Flat key-value map of server settings, or null if unavailable.
 	 */
 	private fun fetchServerSettings(baseUrl: String, token: String): Map<String, Any?>? {
@@ -303,15 +302,66 @@ class PluginSyncService(
 			Timber.d("$TAG: Raw server response (${body.length} bytes)")
 
 			val jsonObject = json.decodeFromString<JsonObject>(body)
-			val rawMap = jsonObjectToMap(jsonObject)
-			val mapped = rawMap.mapKeys { (key, _) -> toCamelCase(key) }
 
-			Timber.d("$TAG: Server keys received: ${mapped.keys}")
+			// Detect v2 envelope: schemaVersion >= 2 with nested profiles
+			val schemaVersion = (jsonObject["SchemaVersion"] ?: jsonObject["schemaVersion"])
+				?.let { (it as? JsonPrimitive)?.intOrNull } ?: 1
+			serverSchemaVersion = schemaVersion
+
+			val mapped = if (schemaVersion >= 2) {
+				// v2 envelope — resolve flat settings from TV → global profile chain
+				val globalProfile = (jsonObject["Global"] ?: jsonObject["global"])
+					as? JsonObject
+				val tvProfile = (jsonObject["Tv"] ?: jsonObject["tv"])
+					as? JsonObject
+				resolveV2Profile(globalProfile, tvProfile)
+			} else {
+				// v1 flat settings — parse directly
+				val rawMap = jsonObjectToMap(jsonObject)
+				rawMap.mapKeys { (key, _) -> toCamelCase(key) }
+			}
+
+			Timber.d("$TAG: Server keys received (v$schemaVersion): ${mapped.keys}")
 			mapped
 		} catch (e: Exception) {
 			Timber.w(e, "$TAG: Fetch settings failed")
 			null
 		}
+	}
+
+	/**
+	 * Resolve a flat settings map from v2 profiled envelope.
+	 * Resolution order: TV profile → global profile (matching server-side resolution).
+	 * Only includes keys that are in [PluginSyncConstants.ALL_SERVER_KEYS].
+	 */
+	private fun resolveV2Profile(
+		globalProfile: JsonObject?,
+		tvProfile: JsonObject?,
+	): Map<String, Any?> {
+		val resolved = mutableMapOf<String, Any?>()
+
+		// Start with global profile values
+		if (globalProfile != null) {
+			for ((key, element) in globalProfile) {
+				val camelKey = toCamelCase(key)
+				if (camelKey in PluginSyncConstants.ALL_SERVER_KEYS) {
+					resolved[camelKey] = jsonElementToValue(element)
+				}
+			}
+		}
+
+		// TV profile overrides global (non-null values only)
+		if (tvProfile != null) {
+			for ((key, element) in tvProfile) {
+				if (element is JsonNull) continue
+				val camelKey = toCamelCase(key)
+				if (camelKey in PluginSyncConstants.ALL_SERVER_KEYS) {
+					resolved[camelKey] = jsonElementToValue(element)
+				}
+			}
+		}
+
+		return resolved
 	}
 
 	/**
@@ -389,27 +439,52 @@ class PluginSyncService(
 
 	/**
 	 * Push settings to the server.
-	 * `POST {baseUrl}/Moonfin/Settings`
+	 *
+	 * For v1 servers: `POST {baseUrl}/Moonfin/Settings` with flat settings.
+	 * For v2 servers: `POST {baseUrl}/Moonfin/Settings/Profile/global` to
+	 * save into the global profile so settings are visible on all devices.
 	 */
 	private fun pushSettings(baseUrl: String, token: String, settings: Map<String, Any?>) {
 		try {
 			val settingsObj = settingsToJsonObject(settings)
-			val wrappedBody = JsonObject(mapOf(
-				"settings" to settingsObj,
-				"clientId" to JsonPrimitive(PluginSyncConstants.CLIENT_ID),
-			))
-			val jsonBody = json.encodeToString(JsonObject.serializer(), wrappedBody)
-			val requestBody = jsonBody.toRequestBody(JSON_MEDIA_TYPE)
-			val request = Request.Builder()
-				.url("$baseUrl$SETTINGS_PATH")
-				.header("Authorization", "MediaBrowser Token=\"$token\"")
-				.post(requestBody)
-				.build()
-			val response = httpClient.newCall(request).execute()
-			if (!response.isSuccessful) {
-				Timber.w("$TAG: Push settings failed (${response.code})")
+
+			if (serverSchemaVersion >= 2) {
+				// v2: push into the global profile directly
+				val wrappedBody = JsonObject(mapOf(
+					"profile" to settingsObj,
+					"clientId" to JsonPrimitive(PluginSyncConstants.CLIENT_ID),
+				))
+				val jsonBody = json.encodeToString(JsonObject.serializer(), wrappedBody)
+				val requestBody = jsonBody.toRequestBody(JSON_MEDIA_TYPE)
+				val request = Request.Builder()
+					.url("$baseUrl$SETTINGS_PATH/Profile/global")
+					.header("Authorization", "MediaBrowser Token=\"$token\"")
+					.post(requestBody)
+					.build()
+				val response = httpClient.newCall(request).execute()
+				if (!response.isSuccessful) {
+					Timber.w("$TAG: Push settings (v2 profile) failed (${response.code})")
+				}
+				response.close()
+			} else {
+				// v1: push flat settings
+				val wrappedBody = JsonObject(mapOf(
+					"settings" to settingsObj,
+					"clientId" to JsonPrimitive(PluginSyncConstants.CLIENT_ID),
+				))
+				val jsonBody = json.encodeToString(JsonObject.serializer(), wrappedBody)
+				val requestBody = jsonBody.toRequestBody(JSON_MEDIA_TYPE)
+				val request = Request.Builder()
+					.url("$baseUrl$SETTINGS_PATH")
+					.header("Authorization", "MediaBrowser Token=\"$token\"")
+					.post(requestBody)
+					.build()
+				val response = httpClient.newCall(request).execute()
+				if (!response.isSuccessful) {
+					Timber.w("$TAG: Push settings failed (${response.code})")
+				}
+				response.close()
 			}
-			response.close()
 		} catch (e: Exception) {
 			Timber.w(e, "$TAG: Push settings failed")
 		}

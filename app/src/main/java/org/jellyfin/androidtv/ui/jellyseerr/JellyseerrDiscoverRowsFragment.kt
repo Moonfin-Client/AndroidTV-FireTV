@@ -350,6 +350,18 @@ class JellyseerrDiscoverRowsFragment : RowsSupportFragment() {
 	}
 
 	private fun setupObservers() {
+		// Observe availability — when Moonfin proxy finishes configuring after
+		// the session is published, isAvailable flips to true. If loadContent()
+		// already ran while it was still false (race condition), retry here.
+		lifecycleScope.launch {
+			viewModel.isAvailable.collect { available ->
+				if (available && !viewModel.hasContent()) {
+					Timber.d("JellyseerrDiscoverRowsFragment: isAvailable became true, loading content")
+					loadContent()
+				}
+			}
+		}
+
 		// Observe loading state for errors
 		lifecycleScope.launch {
 			viewModel.loadingState.collect { state ->

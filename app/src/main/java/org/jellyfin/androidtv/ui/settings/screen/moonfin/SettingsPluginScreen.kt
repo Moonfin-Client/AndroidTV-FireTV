@@ -55,7 +55,7 @@ fun SettingsPluginScreen() {
 					pluginSyncEnabled = !pluginSyncEnabled
 					if (pluginSyncEnabled) {
 						coroutineScope.launch {
-							pluginSyncService.pushCurrentSettings()
+							pluginSyncService.initialSync()
 							pluginSyncService.configureJellyseerrProxy()
 						}
 					} else {
