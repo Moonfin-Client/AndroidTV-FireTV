@@ -45,17 +45,6 @@ fun SettingsAboutScreen(launchedFromLogin: Boolean = false) {
 		}
 
 		item {
-			val heading = "Base Jellyfin app version"
-			val caption = "jellyfin-androidtv 0.19.6"
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_jellyfin), contentDescription = null) },
-				headingContent = { Text(heading) },
-				captionContent = { Text(caption) },
-				onClick = copyAction(ClipData.newPlainText(heading, caption)),
-			)
-		}
-
-		item {
 			val heading = stringResource(R.string.pref_device_model)
 			val caption = "${Build.MANUFACTURER} ${Build.MODEL}"
 			ListButton(
