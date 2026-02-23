@@ -803,6 +803,16 @@ class ItemDetailsFragment : Fragment() {
 					}
 				}
 
+				// ---- Albums (Music Artist) ----
+				if (uiState.albums.isNotEmpty()) {
+					item {
+						SectionWithCards(
+							title = "Albums",
+							items = uiState.albums,
+						)
+					}
+				}
+
 				// ---- Tracks (Music Album / Playlist) ----
 				if (uiState.tracks.isNotEmpty()) {
 					val canReorder = isPlaylist && item.canDelete == true
@@ -976,7 +986,7 @@ class ItemDetailsFragment : Fragment() {
 			BaseItemKind.MOVIE, BaseItemKind.EPISODE, BaseItemKind.VIDEO,
 			BaseItemKind.RECORDING, BaseItemKind.TRAILER, BaseItemKind.MUSIC_VIDEO,
 			BaseItemKind.SERIES, BaseItemKind.SEASON, BaseItemKind.PROGRAM,
-			BaseItemKind.MUSIC_ALBUM, BaseItemKind.PLAYLIST,
+			BaseItemKind.MUSIC_ALBUM, BaseItemKind.PLAYLIST, BaseItemKind.MUSIC_ARTIST,
 		)
 
 		// Dialog state
@@ -1014,11 +1024,19 @@ class ItemDetailsFragment : Fragment() {
 					)
 				}
 
-				if (item.isFolder == true && item.type != BaseItemKind.BOX_SET) {
+				if ((item.isFolder == true || item.type == BaseItemKind.MUSIC_ARTIST) && item.type != BaseItemKind.BOX_SET) {
 					DetailActionButton(
 						label = "Shuffle",
 						icon = ImageVector.vectorResource(R.drawable.ic_shuffle),
 						onClick = { handleShuffle(item) },
+					)
+				}
+
+				if (item.type == BaseItemKind.MUSIC_ARTIST) {
+					DetailActionButton(
+						label = "Instant Mix",
+						icon = ImageVector.vectorResource(R.drawable.ic_mix),
+						onClick = { playbackHelper.playInstantMix(requireContext(), item) },
 					)
 				}
 

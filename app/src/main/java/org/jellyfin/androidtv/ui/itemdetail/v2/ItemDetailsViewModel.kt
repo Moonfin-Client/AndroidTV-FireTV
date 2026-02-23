@@ -40,6 +40,7 @@ data class ItemDetailsUiState(
 	val seasons: List<BaseItemDto> = emptyList(),
 	val episodes: List<BaseItemDto> = emptyList(),
 	val tracks: List<BaseItemDto> = emptyList(),
+	val albums: List<BaseItemDto> = emptyList(),
 	val similar: List<BaseItemDto> = emptyList(),
 	val cast: List<BaseItemPerson> = emptyList(),
 	val nextUp: List<BaseItemDto> = emptyList(),
@@ -144,6 +145,11 @@ class ItemDetailsViewModel(
 					loadFilmography(item.id)
 				}
 
+				BaseItemKind.MUSIC_ARTIST -> {
+					loadArtistAlbums(item.id)
+					loadSimilar(item.id)
+				}
+
 				BaseItemKind.MUSIC_ALBUM -> {
 					loadTracks(item.id)
 				}
@@ -215,6 +221,24 @@ class ItemDetailsViewModel(
 			_uiState.value = _uiState.value.copy(similar = similar.items)
 		} catch (err: ApiClientException) {
 			Timber.w(err, "Failed to load similar items")
+		}
+	}
+
+	private suspend fun loadArtistAlbums(artistId: UUID) {
+		try {
+			val albums = withContext(Dispatchers.IO) {
+				effectiveApi.itemsApi.getItems(
+					artistIds = setOf(artistId),
+					recursive = true,
+					includeItemTypes = setOf(BaseItemKind.MUSIC_ALBUM),
+					sortBy = setOf(ItemSortBy.SORT_NAME),
+					fields = ItemRepository.itemFields,
+					limit = 100,
+				).content
+			}
+			_uiState.value = _uiState.value.copy(albums = albums.items)
+		} catch (err: ApiClientException) {
+			Timber.w(err, "Failed to load artist albums")
 		}
 	}
 
