@@ -32,6 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
@@ -390,10 +392,18 @@ class LibraryBrowseFragment : Fragment() {
 		modifier: Modifier = Modifier,
 	) {
 		val gridState = rememberLazyGridState()
+		val firstItemFocusRequester = remember { FocusRequester() }
 
 		val (cardWidth, cardHeight) = imageTypeToCardDimensions(uiState.posterSize, uiState.imageType)
 
 		val columns = GridCells.Adaptive(minSize = (cardWidth + 16).dp)
+
+		// Auto-focus first item when grid loads
+		LaunchedEffect(uiState.items.isNotEmpty()) {
+			if (uiState.items.isNotEmpty()) {
+				try { firstItemFocusRequester.requestFocus() } catch (_: Exception) {}
+			}
+		}
 
 		// Infinite scroll
 		val shouldLoadMore by remember(uiState.items.size) {
@@ -416,9 +426,10 @@ class LibraryBrowseFragment : Fragment() {
 			horizontalArrangement = Arrangement.spacedBy(12.dp),
 			verticalArrangement = Arrangement.spacedBy(16.dp),
 		) {
-			itemsIndexed(uiState.items) { _, item ->
+			itemsIndexed(uiState.items) { index, item ->
 				LibraryPosterCard(
 					item = item,
+					modifier = if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier,
 					imageUrl = getItemImageUrl(item, uiState.imageType),
 					cardWidth = cardWidth,
 					cardHeight = cardHeight,
