@@ -9,9 +9,6 @@ import androidx.recyclerview.widget.RecyclerView
 import coil3.load
 import org.jellyfin.androidtv.R
 import android.view.View
-import android.view.animation.Animation
-import android.view.animation.LinearInterpolator
-import android.view.animation.RotateAnimation
 import org.jellyfin.androidtv.databinding.ItemJellyseerrRequestBinding
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrRequestDto
 
@@ -76,22 +73,7 @@ class RequestsAdapter :
 				if (iconRes != null) {
 					statusIcon.setImageResource(iconRes)
 					statusIcon.visibility = View.VISIBLE
-					
-					// Spin the icon if downloading
-					if (isDownloading) {
-						val rotateAnim = RotateAnimation(
-							0f, 360f,
-							Animation.RELATIVE_TO_SELF, 0.5f,
-							Animation.RELATIVE_TO_SELF, 0.5f
-						).apply {
-							duration = 1000
-							repeatCount = Animation.INFINITE
-							interpolator = LinearInterpolator()
-						}
-						statusIcon.startAnimation(rotateAnim)
-					} else {
-						statusIcon.clearAnimation()
-					}
+					statusIcon.clearAnimation()
 				} else {
 					statusIcon.visibility = View.GONE
 					statusIcon.clearAnimation()

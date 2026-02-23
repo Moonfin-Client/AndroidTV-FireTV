@@ -1,11 +1,5 @@
 package org.jellyfin.androidtv.ui.composable.item
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,10 +8,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -94,31 +86,10 @@ private fun AvailabilityIndicator(
 		else -> return
 	}
 
-	if (status == 3) {
-		val infiniteTransition = rememberInfiniteTransition(label = "spinner")
-		val rotation by infiniteTransition.animateFloat(
-			initialValue = 0f,
-			targetValue = 360f,
-			animationSpec = infiniteRepeatable(
-				animation = tween(durationMillis = 1000, easing = LinearEasing),
-				repeatMode = RepeatMode.Restart,
-			),
-			label = "spinnerRotation",
-		)
-		Icon(
-			imageVector = ImageVector.vectorResource(iconRes),
-			contentDescription = null,
-			tint = Color.Unspecified,
-			modifier = modifier
-				.size(20.dp)
-				.rotate(rotation),
-		)
-	} else {
-		Icon(
-			imageVector = ImageVector.vectorResource(iconRes),
-			contentDescription = null,
-			tint = Color.Unspecified,
-			modifier = modifier.size(20.dp),
-		)
-	}
+	Icon(
+		imageVector = ImageVector.vectorResource(iconRes),
+		contentDescription = null,
+		tint = Color.Unspecified,
+		modifier = modifier.size(20.dp),
+	)
 }
