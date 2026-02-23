@@ -10,15 +10,18 @@ import coil3.request.crossfade
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrNetworkDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrStudioDto
+import org.jellyfin.androidtv.preference.UserPreferences
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import timber.log.Timber
 
 /**
  * Presenter for network and studio cards with logo display
  * Uses pre-filtered duotone URLs from Seerr for consistent white appearance
  */
-class NetworkStudioCardPresenter : Presenter() {
-	private val CARD_WIDTH = 280
-	private val CARD_HEIGHT = 140
+class NetworkStudioCardPresenter : Presenter(), KoinComponent {
+	private val userPreferences by inject<UserPreferences>()
+	private val ASPECT_RATIO = 2f // landscape 2:1
 
 	override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
 		val view = LayoutInflater.from(parent.context)
@@ -31,9 +34,14 @@ class NetworkStudioCardPresenter : Presenter() {
 		val container = viewHolder.view as FrameLayout
 		val logoView = container.findViewById<ImageView>(R.id.logo_image)
 
+		// Set card size to match poster height preference with landscape aspect ratio
+		val posterHeight = userPreferences[UserPreferences.posterSize].height
+		val density = container.context.resources.displayMetrics.density
+		val heightPx = (posterHeight * density).toInt()
+		val widthPx = (posterHeight * ASPECT_RATIO * density).toInt()
 		val layoutParams = container.layoutParams
-		layoutParams.width = CARD_WIDTH
-		layoutParams.height = CARD_HEIGHT
+		layoutParams.width = widthPx
+		layoutParams.height = heightPx
 		container.layoutParams = layoutParams
 
 		when (item) {

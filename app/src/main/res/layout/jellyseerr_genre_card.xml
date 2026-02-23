@@ -2,8 +2,8 @@
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/genre_card"
-    android:layout_width="260dp"
-    android:layout_height="130dp"
+    android:layout_width="300dp"
+    android:layout_height="150dp"
     android:layout_margin="4dp"
     app:cardCornerRadius="8dp"
     app:cardElevation="4dp">

@@ -364,14 +364,27 @@ private fun CardViewHolderContent(
 		?: image?.aspectRatio?.takeIf { it >= 0.1f } ?: 1f
 
 	val userPreferences = koinInject<UserPreferences>()
+	val posterSize = userPreferences[UserPreferences.posterSize]
 	val effectiveStaticHeight = if (staticHeight == 150) {
-		userPreferences[UserPreferences.posterSize].height
+		posterSize.height
 	} else {
 		staticHeight
 	}
 
+	// Use a shorter height for landscape cards (banner/thumb) so they don't
+	// visually dominate the row compared to portrait poster cards
+	val effectiveLandscapeHeight = if (staticHeight == 150) {
+		posterSize.landscapeHeight
+	} else {
+		(staticHeight * 0.73f).toInt()
+	}
+
 	val size = when (item.staticHeight) {
-		true -> DpSize(effectiveStaticHeight.dp * aspectRatio, effectiveStaticHeight.dp)
+		true -> if (aspectRatio > 1f) {
+			DpSize(effectiveLandscapeHeight.dp * aspectRatio, effectiveLandscapeHeight.dp)
+		} else {
+			DpSize(effectiveStaticHeight.dp * aspectRatio, effectiveStaticHeight.dp)
+		}
 		false if (aspectRatio > 1f) -> DpSize(130.dp * aspectRatio, 130.dp)
 		else -> DpSize(150.dp * aspectRatio, 150.dp)
 	}

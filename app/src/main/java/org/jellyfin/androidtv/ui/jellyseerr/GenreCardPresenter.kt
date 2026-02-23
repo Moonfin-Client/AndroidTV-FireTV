@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.ui.jellyseerr
 
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -12,11 +13,14 @@ import coil3.load
 import coil3.request.crossfade
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrGenreDto
+import org.jellyfin.androidtv.preference.UserPreferences
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import kotlin.random.Random
 
-class GenreCardPresenter : Presenter() {
-	private val CARD_WIDTH = 260
-	private val CARD_HEIGHT = 130
+class GenreCardPresenter : Presenter(), KoinComponent {
+	private val userPreferences by inject<UserPreferences>()
+	private val ASPECT_RATIO = 2f // landscape 2:1
 	private val TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w780"
 
 	override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
@@ -40,10 +44,14 @@ class GenreCardPresenter : Presenter() {
 
 		titleView.text = genre.name
 
-		// Set card size
+		// Set card size to match poster height preference with landscape aspect ratio
+		val posterHeight = userPreferences[UserPreferences.posterSize].height
+		val density = context.resources.displayMetrics.density
+		val heightPx = (posterHeight * density).toInt()
+		val widthPx = (posterHeight * ASPECT_RATIO * density).toInt()
 		val layoutParams = cardView.layoutParams
-		layoutParams.width = CARD_WIDTH
-		layoutParams.height = CARD_HEIGHT
+		layoutParams.width = widthPx
+		layoutParams.height = heightPx
 		cardView.layoutParams = layoutParams
 
 		// Load backdrop image if available
