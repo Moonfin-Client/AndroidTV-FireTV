@@ -100,6 +100,7 @@ import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.itemBackdropImages
 import org.jellyfin.androidtv.util.apiclient.itemImages
 import org.jellyfin.androidtv.util.apiclient.parentBackdropImages
+import org.jellyfin.androidtv.util.apiclient.seriesPrimaryImage
 import org.jellyfin.androidtv.util.sdk.compat.canResume
 import org.jellyfin.androidtv.util.sdk.TrailerUtils.getExternalTrailerIntent
 import org.jellyfin.androidtv.util.sdk.TrailerUtils.hasPlayableTrailers
@@ -1823,6 +1824,11 @@ class ItemDetailsFragment : Fragment() {
 				val thumbImage = item.itemImages[ImageType.THUMB]
 				val primaryImage = item.itemImages[ImageType.PRIMARY]
 				(thumbImage ?: primaryImage)?.getUrl(viewModel.effectiveApi, maxWidth = 500)
+			}
+			item.type == BaseItemKind.SEASON -> {
+				val seasonImage = item.itemImages[ImageType.PRIMARY]
+				val fallback = seasonImage ?: item.seriesPrimaryImage
+				fallback?.getUrl(viewModel.effectiveApi, maxHeight = 600)
 			}
 			else -> {
 				item.itemImages[ImageType.PRIMARY]?.getUrl(viewModel.effectiveApi, maxHeight = 600)
