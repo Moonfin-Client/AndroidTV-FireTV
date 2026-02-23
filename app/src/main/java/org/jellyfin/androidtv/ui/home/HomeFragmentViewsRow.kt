@@ -15,7 +15,8 @@ class HomeFragmentViewsRow(
 ) : HomeFragmentRow {
 	private companion object {
 		val smallCardPresenter = CardPresenter(true, 75)
-		val largeCardPresenter = CardPresenter(true, 126)
+		// Use staticHeight=150 so the card height follows the user's poster size preference
+		val largeCardPresenter = CardPresenter(true, 150)
 	}
 
 	override fun addToRowsAdapter(context: Context, cardPresenter: CardPresenter, rowsAdapter: MutableObjectAdapter<Row>) {
