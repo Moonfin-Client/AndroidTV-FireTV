@@ -51,7 +51,7 @@ object YouTubeStreamResolver {
 				Timber.w("$TAG: NewPipe Extractor returned no usable streams for $videoId")
 			}
 			result
-		} catch (e: Exception) {
+		} catch (e: Throwable) {
 			Timber.w(e, "$TAG: NewPipe Extractor failed for $videoId")
 			null
 		}

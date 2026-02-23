@@ -68,7 +68,7 @@ object TrailerResolver {
 			)
 
 			resolveTrailerFromItem(item)
-		} catch (e: Exception) {
+		} catch (e: Throwable) {
 			Timber.w(e, "TrailerResolver: Failed to fetch item $itemId for trailer resolution")
 			null
 		}

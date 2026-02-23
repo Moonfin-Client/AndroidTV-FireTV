@@ -7,6 +7,9 @@ plugins {
 
 import java.util.Properties
 import java.io.FileInputStream
+import java.util.jar.JarEntry
+import java.util.jar.JarFile
+import java.util.jar.JarOutputStream
 
 android {
 	namespace = "org.jellyfin.androidtv"
@@ -130,6 +133,43 @@ tasks.register("versionTxt") {
 	}
 }
 
+// Strip Utils.class from NewPipe Extractor JAR — replaced by local shadow
+// (see app/src/main/java/org/schabi/newpipe/extractor/utils/Utils.java).
+val pipeExtractorJar: Configuration by configurations.creating {
+	isTransitive = false
+	isCanBeResolved = true
+	isCanBeConsumed = false
+}
+
+val stripPipeExtractorUtils by tasks.registering {
+	description = "Strips Utils.class from NewPipe Extractor JAR (replaced by local shadow)"
+
+	val inputFiles = pipeExtractorJar
+	val outputJar = layout.buildDirectory.file("stripped-libs/NewPipeExtractor-stripped.jar")
+
+	inputs.files(inputFiles)
+	outputs.file(outputJar)
+
+	doLast {
+		val output = outputJar.get().asFile
+		output.parentFile.mkdirs()
+
+		JarFile(inputFiles.singleFile).use { jar ->
+			JarOutputStream(output.outputStream()).use { jos ->
+				jar.entries().asSequence()
+					.filter { it.name != "org/schabi/newpipe/extractor/utils/Utils.class" }
+					.forEach { entry ->
+						jos.putNextEntry(JarEntry(entry.name))
+						if (!entry.isDirectory) {
+							jar.getInputStream(entry).use { it.copyTo(jos) }
+						}
+						jos.closeEntry()
+					}
+			}
+		}
+	}
+}
+
 dependencies {
 	// Jellyfin
 	implementation(projects.design)
@@ -201,7 +241,12 @@ dependencies {
 	implementation(libs.aboutlibraries)
 
 	// YouTube stream extraction (n-parameter descrambling)
-	implementation(libs.pipeextractor)
+	pipeExtractorJar(libs.pipeextractor)
+	compileOnly(libs.pipeextractor)
+	compileOnly(libs.findbugs.jsr305)
+	runtimeOnly(files(stripPipeExtractorUtils))
+	implementation(libs.pipeextractor.nanojson)
+	implementation(libs.pipeextractor.jsoup)
 
 	// Logging
 	implementation(libs.timber)

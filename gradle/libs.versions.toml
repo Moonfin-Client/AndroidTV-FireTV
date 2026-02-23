@@ -133,7 +133,10 @@ aboutlibraries = { module = "com.mikepenz:aboutlibraries-core", version.ref = "a
 
 # YouTube stream extraction
 pipeextractor = { module = "com.github.teamnewpipe:NewPipeExtractor", version.ref = "pipeextractor" }
-
+# NewPipe Extractor transitive dependencies (kept in sync with the library's POM)
+pipeextractor-nanojson = { module = "com.github.TeamNewPipe:nanojson", version = "e9d656ddb49a412a5a0a5d5ef20ca7ef09549996" }
+pipeextractor-jsoup = { module = "org.jsoup:jsoup", version = "1.22.1" }
+findbugs-jsr305 = { module = "com.google.code.findbugs:jsr305", version = "3.0.2" }
 # Logging
 slf4j-timber = { module = "io.github.unveloper:slf4j-timber", version.ref = "slf4j-timber" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
