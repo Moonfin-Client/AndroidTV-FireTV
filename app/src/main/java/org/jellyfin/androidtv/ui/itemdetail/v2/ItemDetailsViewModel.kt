@@ -248,7 +248,7 @@ class ItemDetailsViewModel(
 				effectiveApi.itemsApi.getItems(
 					parentId = collectionId,
 					fields = ItemRepository.itemFields,
-					sortBy = setOf(ItemSortBy.SORT_NAME),
+					sortBy = setOf(ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME),
 				).content
 			}
 			_uiState.value = _uiState.value.copy(collectionItems = collectionItems.items)
