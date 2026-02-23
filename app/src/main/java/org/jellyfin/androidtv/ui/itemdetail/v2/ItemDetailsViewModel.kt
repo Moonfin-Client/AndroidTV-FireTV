@@ -295,7 +295,6 @@ class ItemDetailsViewModel(
 			val items = withContext(Dispatchers.IO) {
 				effectiveApi.playlistsApi.getPlaylistItems(
 					playlistId = playlistId,
-					limit = 150,
 					fields = ItemRepository.itemFields,
 				).content
 			}
