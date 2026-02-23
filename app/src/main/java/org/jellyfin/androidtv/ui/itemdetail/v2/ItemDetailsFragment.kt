@@ -24,6 +24,8 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -612,12 +614,12 @@ class ItemDetailsFragment : Fragment() {
 								if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
 									when (keyEvent.key) {
 										Key.DirectionDown -> {
-											if (isBoxSet) {
-												try { collectionFirstItemFocusRequester.requestFocus() } catch (_: Exception) {}
+											val focused = if (isBoxSet) {
+												try { collectionFirstItemFocusRequester.requestFocus(); true } catch (_: Exception) { false }
 											} else {
-												try { playButtonFocusRequester.requestFocus() } catch (_: Exception) {}
+												try { playButtonFocusRequester.requestFocus(); true } catch (_: Exception) { false }
 											}
-											true
+											focused
 										}
 										else -> false
 									}
@@ -795,8 +797,7 @@ class ItemDetailsFragment : Fragment() {
 				// ---- Collection items ----
 				if (isBoxSet && uiState.collectionItems.isNotEmpty()) {
 					item {
-						SectionWithCards(
-							title = "Items in Collection",
+						CollectionItemsGrid(
 							items = uiState.collectionItems,
 							firstItemFocusRequester = collectionFirstItemFocusRequester,
 						)
@@ -1380,6 +1381,39 @@ class ItemDetailsFragment : Fragment() {
 							item = item,
 						)
 					}
+				}
+			}
+		}
+	}
+
+	@OptIn(ExperimentalLayoutApi::class)
+	@Composable
+	private fun CollectionItemsGrid(
+		items: List<BaseItemDto>,
+		firstItemFocusRequester: FocusRequester? = null,
+	) {
+		Column {
+			SectionHeader(title = "Items in Collection")
+			FlowRow(
+				modifier = Modifier.focusGroup(),
+				horizontalArrangement = Arrangement.spacedBy(16.dp),
+				verticalArrangement = Arrangement.spacedBy(16.dp),
+			) {
+				items.forEachIndexed { index, item ->
+					val cardModifier = if (index == 0 && firstItemFocusRequester != null)
+						Modifier.focusRequester(firstItemFocusRequester)
+					else Modifier
+
+					SimilarItemCard(
+						title = item.name ?: "",
+						imageUrl = getPosterUrl(item),
+						year = item.productionYear,
+						onClick = {
+							navigationRepository.navigate(Destinations.itemDetails(item.id, viewModel.serverId))
+						},
+						modifier = cardModifier,
+						item = item,
+					)
 				}
 			}
 		}
