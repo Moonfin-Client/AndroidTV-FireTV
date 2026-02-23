@@ -72,6 +72,7 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     private GetArtistsRequest mArtistsQuery;
     private GetAlbumArtistsRequest mAlbumArtistsQuery;
     private GetLatestMediaRequest mLatestQuery;
+    private List<BaseRowItem> cachedLatestItems; // For client-side pagination of LatestItems
     private GetResumeItemsRequest resumeQuery;
     private QueryType queryType;
 
@@ -237,14 +238,27 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     }
 
     public ItemRowAdapter(Context context, GetLatestMediaRequest query, boolean preferParentThumb, Presenter presenter, MutableObjectAdapter<Row> parent) {
+        this(context, query, 0, preferParentThumb, presenter, parent);
+    }
+
+    public ItemRowAdapter(Context context, GetLatestMediaRequest query, int chunkSize, boolean preferParentThumb, Presenter presenter, MutableObjectAdapter<Row> parent) {
         super(presenter);
         mPresenter = presenter;
         this.context = context;
         mParent = parent;
         mLatestQuery = query;
+        this.chunkSize = chunkSize;
         queryType = QueryType.LatestItems;
         this.preferParentThumb = preferParentThumb;
         staticHeight = true;
+    }
+
+    public List<BaseRowItem> getCachedLatestItems() {
+        return cachedLatestItems;
+    }
+
+    public void setCachedLatestItems(List<BaseRowItem> items) {
+        this.cachedLatestItems = items;
     }
 
     public ItemRowAdapter(List<BaseItemPerson> people, Context context, Presenter presenter, MutableObjectAdapter<Row> parent) {
@@ -430,6 +444,10 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
         return totalItems;
     }
 
+    public int getChunkSize() {
+        return chunkSize;
+    }
+
     public void setSortBy(BrowseGridFragment.SortOption option) {
         if (!option.value.equals(mSortBy) || !option.order.equals(sortOrder)) {
             mSortBy = option.value;
@@ -588,6 +606,14 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
                 ItemRowAdapterHelperKt.retrieveAlbumArtists(this, getApiClient(), mAlbumArtistsQuery, itemsLoaded, chunkSize);
                 break;
 
+            case LatestItems:
+                if (cachedLatestItems == null || cachedLatestItems.isEmpty()) {
+                    return;
+                }
+                notifyRetrieveStarted();
+                ItemRowAdapterHelperKt.retrieveNextLatestMedia(this);
+                break;
+
             default:
                 if (mQuery == null) {
                     return;
@@ -635,6 +661,8 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
         notifyRetrieveStarted();
         lastFullRetrieve = Instant.now();
         itemsLoaded = 0;
+        fullyLoaded = false;
+        cachedLatestItems = null;
         switch (queryType) {
             case Items:
                 if (mQuery.getStartIndex() != null && mQuery.getLimit() != null) {

@@ -34,7 +34,7 @@ class HomeFragmentBrowseRowDefRow(
 
 		val rowAdapter = when (browseRowDef.queryType) {
 			QueryType.NextUp -> ItemRowAdapter(context, browseRowDef.nextUpQuery, preferParentThumb, presenter, rowsAdapter)
-			QueryType.LatestItems -> ItemRowAdapter(context, browseRowDef.latestItemsQuery, userPreferences[UserPreferences.seriesThumbnailsEnabled], presenter, rowsAdapter)
+			QueryType.LatestItems -> ItemRowAdapter(context, browseRowDef.latestItemsQuery, browseRowDef.chunkSize, userPreferences[UserPreferences.seriesThumbnailsEnabled], presenter, rowsAdapter)
 			QueryType.Views -> ItemRowAdapter(context, GetUserViewsRequest, presenter, rowsAdapter)
 			QueryType.SimilarSeries -> ItemRowAdapter(context, browseRowDef.similarQuery, QueryType.SimilarSeries, presenter, rowsAdapter)
 			QueryType.SimilarMovies -> ItemRowAdapter(context, browseRowDef.similarQuery, QueryType.SimilarMovies, presenter, rowsAdapter)

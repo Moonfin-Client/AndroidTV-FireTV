@@ -275,9 +275,16 @@ fun ItemRowAdapter.retrieveLatestMedia(api: ApiClient, query: GetLatestMediaRequ
 				api.userLibraryApi.getLatestMedia(query).content
 			}
 
-			setItems(
-				items = response,
-				transform = { item, _ ->
+			if (response.isEmpty()) {
+				removeRow()
+				return@runCatching
+			}
+
+			// Transform all items
+			val parentalControlsRepository = parentalControlsRepositoryLazy.value
+			val allRowItems = response
+				.filter { item -> !parentalControlsRepository.isEnabled() || !parentalControlsRepository.shouldFilterItem(item) }
+				.mapNotNull { item ->
 					BaseItemDtoBaseRowItem(
 						item = item,
 						preferParentThumb = preferParentThumb,
@@ -286,13 +293,50 @@ fun ItemRowAdapter.retrieveLatestMedia(api: ApiClient, query: GetLatestMediaRequ
 						preferSeriesPoster = cardPresenter?.imageType == org.jellyfin.androidtv.constant.ImageType.POSTER
 					)
 				}
-			)
 
-			if (response.isEmpty()) removeRow()
+			if (allRowItems.isEmpty()) {
+				removeRow()
+				return@runCatching
+			}
+
+			// Cache all items for client-side pagination
+			cachedLatestItems = allRowItems
+			totalItems = allRowItems.size
+
+			// Load only the first chunk (or all if no chunkSize set)
+			val effectiveChunk = if (chunkSize > 0) chunkSize else allRowItems.size
+			val firstChunkEnd = min(effectiveChunk, allRowItems.size)
+			val firstChunk = allRowItems.subList(0, firstChunkEnd)
+			replaceAll(firstChunk.toList())
+			itemsLoaded = firstChunk.size
+
+			Timber.d("LatestMedia: loaded first chunk ${firstChunk.size}/${allRowItems.size} (chunkSize=$chunkSize)")
 		}.fold(
 			onSuccess = { notifyRetrieveFinished() },
 			onFailure = { error -> notifyRetrieveFinished(error as? Exception) }
 		)
+	}
+}
+
+fun ItemRowAdapter.retrieveNextLatestMedia() {
+	val cached = cachedLatestItems
+	if (cached == null || cached.isEmpty() || itemsLoaded >= cached.size) {
+		notifyRetrieveFinished()
+		return
+	}
+
+	// Use Dispatchers.Main (not .immediate) to post to the handler queue,
+	// ensuring items are added after the current RecyclerView layout/scroll pass completes
+	ProcessLifecycleOwner.get().lifecycleScope.launch(Dispatchers.Main) {
+		val chunk = if (chunkSize > 0) chunkSize else 15
+		val endIndex = min(itemsLoaded + chunk, cached.size)
+		val nextChunk = cached.subList(itemsLoaded, endIndex)
+
+		nextChunk.forEach { add(it) }
+		itemsLoaded = endIndex
+
+		Timber.d("LatestMedia: loaded next chunk, now at $itemsLoaded/${cached.size}")
+		notifyRetrieveFinished()
 	}
 }
 
