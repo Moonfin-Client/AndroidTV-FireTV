@@ -1202,21 +1202,13 @@ class ItemDetailsFragment : Fragment() {
 			TrackSelectorDialog(
 				title = "Select Version",
 				options = versionNames,
-				selectedIndex = -1,
+				selectedIndex = versions.indexOfFirst { it.id == item.mediaSources?.firstOrNull()?.id },
 				onSelect = { which ->
 					val selectedSource = versions[which]
 					val sourceId = selectedSource.id
 					if (sourceId != null) {
-						lifecycleScope.launch {
-							try {
-								val newItem = withContext(Dispatchers.IO) {
-									viewModel.effectiveApi.userLibraryApi.getItem(itemId = item.id).content
-								}
-								viewModel.loadItem(newItem.id)
-							} catch (e: ApiClientException) {
-								Timber.e(e, "Failed to load version")
-							}
-						}
+						val sourceUUID = UUID.fromString(sourceId)
+						viewModel.loadItem(sourceUUID)
 					}
 					showVersionDialog = false
 				},
