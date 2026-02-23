@@ -200,6 +200,9 @@ dependencies {
 	// Licenses
 	implementation(libs.aboutlibraries)
 
+	// YouTube stream extraction (n-parameter descrambling)
+	implementation(libs.pipeextractor)
+
 	// Logging
 	implementation(libs.timber)
 	implementation(libs.slf4j.timber)

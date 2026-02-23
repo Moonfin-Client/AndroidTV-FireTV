@@ -28,7 +28,7 @@ import org.jellyfin.androidtv.preference.constant.NavbarPosition
 import org.jellyfin.androidtv.ui.InteractionTrackerViewModel
 import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowViewModel
 import org.jellyfin.androidtv.ui.home.mediabar.TrailerPreviewState
-import org.jellyfin.androidtv.ui.home.mediabar.YouTubeTrailerWebView
+import org.jellyfin.androidtv.ui.home.mediabar.ExoPlayerTrailerView
 import org.jellyfin.androidtv.ui.shared.toolbar.LeftSidebarNavigation
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
@@ -163,10 +163,10 @@ class HomeFragment : Fragment() {
 			}
 			val showTrailer = trailerState is TrailerPreviewState.Playing
 
-			if (activeInfo != null) {
+			if (activeInfo?.streamInfo != null) {
 				key(activeInfo.youtubeVideoId) {
-					YouTubeTrailerWebView(
-						videoId = activeInfo.youtubeVideoId,
+					ExoPlayerTrailerView(
+						streamInfo = activeInfo.streamInfo,
 						startSeconds = activeInfo.startSeconds,
 						segments = activeInfo.segments,
 						muted = !previewAudioEnabled,

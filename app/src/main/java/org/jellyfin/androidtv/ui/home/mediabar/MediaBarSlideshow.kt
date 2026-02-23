@@ -64,7 +64,7 @@ sealed class TrailerPreviewState {
 	/** Waiting for trailer info to be resolved from API */
 	object WaitingToPlay : TrailerPreviewState()
 
-	/** Trailer info resolved - WebView is loading/buffering in the background (invisible) */
+	/** Trailer info resolved - ExoPlayer is loading/buffering in the background (invisible) */
 	data class Buffering(val info: TrailerPreviewInfo) : TrailerPreviewState()
 
 	/** Image display delay has elapsed - trailer fades in and plays */

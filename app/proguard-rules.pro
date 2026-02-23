@@ -75,3 +75,18 @@
 -keep class * extends android.content.BroadcastReceiver { *; }
 -keep class * extends android.content.ContentProvider { *; }
 -keep class * extends android.app.Service { *; }
+
+# Pipe Extractor (YouTube n-parameter descrambling)
+-keep class org.schabi.newpipe.extractor.** { *; }
+-dontwarn org.schabi.newpipe.extractor.**
+
+# Mozilla Rhino JS engine (used by Pipe Extractor)
+-keep class org.mozilla.javascript.** { *; }
+-keep class org.mozilla.classfile.ClassFileWriter
+-dontwarn org.mozilla.javascript.**
+-dontwarn java.beans.**
+-dontwarn javax.script.**
+-dontwarn jdk.dynalink.**
+
+# jsoup (used by Pipe Extractor)
+-dontwarn com.google.re2j.**

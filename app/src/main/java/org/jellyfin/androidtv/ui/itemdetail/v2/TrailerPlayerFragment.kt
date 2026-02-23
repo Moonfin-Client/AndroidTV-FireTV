@@ -1,6 +1,5 @@
 package org.jellyfin.androidtv.ui.itemdetail.v2
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -8,28 +7,32 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.JavascriptInterface
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import androidx.annotation.OptIn
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import org.jellyfin.androidtv.ui.home.mediabar.YouTubeStreamResolver
 import org.jellyfin.androidtv.ui.home.mediabar.SponsorBlockApi
-import org.jellyfin.androidtv.ui.home.mediabar.TrailerJsBuilder
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.koin.android.ext.android.inject
 import timber.log.Timber
 
-/**
- * Fullscreen fragment that plays a YouTube trailer via an Invidious WebView
- * with sound enabled. The user exits by pressing Back.
- *
- * Arguments:
- *  - "VideoId"      — YouTube video ID
- *  - "StartSeconds" — Start position in seconds (from SponsorBlock)
- *  - "SegmentsJson" — JSON array of SponsorBlock segments
- */
+/** Fullscreen fragment that plays a YouTube trailer via ExoPlayer with sound. */
 class TrailerPlayerFragment : Fragment() {
 
 	companion object {
@@ -39,16 +42,11 @@ class TrailerPlayerFragment : Fragment() {
 	}
 
 	private val navigationRepository: NavigationRepository by inject()
-	private var webView: WebView? = null
+	private var player: ExoPlayer? = null
+	private val mainHandler = Handler(Looper.getMainLooper())
+	private var skipRunnable: Runnable? = null
 
-	private val invidiousInstances = listOf(
-		"inv.nadeko.net",
-		"invidious.fdn.fr",
-		"yewtu.be",
-		"vid.puffyan.us",
-	)
-
-	@SuppressLint("SetJavaScriptEnabled")
+	@OptIn(UnstableApi::class)
 	override fun onCreateView(
 		inflater: LayoutInflater,
 		container: ViewGroup?,
@@ -67,11 +65,6 @@ class TrailerPlayerFragment : Fragment() {
 			emptyList()
 		}
 
-		val injectionScript = TrailerJsBuilder.build(segments = segments, muted = false)
-
-		val startParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
-		val embedUrl = "https://${invidiousInstances[0]}/embed/$videoId?autoplay=1&controls=0&quality=dash$startParam"
-
 		val root = object : FrameLayout(requireContext()) {
 			override fun dispatchKeyEvent(event: KeyEvent): Boolean {
 				if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_BACK) {
@@ -86,92 +79,104 @@ class TrailerPlayerFragment : Fragment() {
 			isFocusableInTouchMode = true
 		}
 
-		var instanceIndex = 0
-
-		fun tryNextInstance(wv: WebView) {
-			instanceIndex++
-			if (instanceIndex < invidiousInstances.size) {
-				val nextStartParam = if (startSeconds > 0) "&t=${startSeconds.toInt()}" else ""
-				val nextUrl = "https://${invidiousInstances[instanceIndex]}/embed/$videoId?autoplay=1&controls=0&quality=dash$nextStartParam"
-				Timber.d("TrailerPlayer: Trying next instance: $nextUrl")
-				wv.loadUrl(nextUrl)
-			} else {
-				Handler(Looper.getMainLooper()).post { goBack() }
-			}
-		}
-
-		val wv = WebView(requireContext()).apply {
+		val playerView = PlayerView(requireContext()).apply {
 			layoutParams = FrameLayout.LayoutParams(
 				FrameLayout.LayoutParams.MATCH_PARENT,
 				FrameLayout.LayoutParams.MATCH_PARENT,
 			)
-
-			settings.apply {
-				javaScriptEnabled = true
-				mediaPlaybackRequiresUserGesture = false
-				domStorageEnabled = true
-				loadWithOverviewMode = true
-				useWideViewPort = true
-				allowContentAccess = true
-				userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-					"AppleWebKit/537.36 (KHTML, like Gecko) " +
-					"Chrome/120.0.0.0 Safari/537.36"
-			}
-
+			useController = false
+			resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
 			setBackgroundColor(android.graphics.Color.BLACK)
-			webChromeClient = WebChromeClient()
-
-			val webViewRef = this
-
-			addJavascriptInterface(object {
-				@JavascriptInterface
-				fun onVideoEnded() {
-					Timber.d("TrailerPlayer: Video ended for $videoId")
-					Handler(Looper.getMainLooper()).post { goBack() }
-				}
-
-				@JavascriptInterface
-				fun onVideoError(errorCode: String) {
-					Timber.w("TrailerPlayer: Error $errorCode for video $videoId")
-					Handler(Looper.getMainLooper()).post { goBack() }
-				}
-
-				@JavascriptInterface
-				fun onVideoPlaying() {
-					Timber.d("TrailerPlayer: Video playing for $videoId")
-				}
-
-				@JavascriptInterface
-				fun onLoadFailed() {
-					Timber.w("TrailerPlayer: Instance timed out or failed, trying next")
-					Handler(Looper.getMainLooper()).post { tryNextInstance(webViewRef) }
-				}
-			}, "Android")
-
-			webViewClient = object : WebViewClient() {
-				override fun onPageFinished(view: WebView?, url: String?) {
-					super.onPageFinished(view, url)
-					Timber.d("TrailerPlayer: Page loaded: $url")
-					view?.evaluateJavascript(injectionScript, null)
-				}
-
-				override fun onReceivedError(
-					view: WebView?,
-					errorCode: Int,
-					description: String?,
-					failingUrl: String?,
-				) {
-					super.onReceivedError(view, errorCode, description, failingUrl)
-					Timber.w("TrailerPlayer: WebView error $errorCode: $description")
-					view?.let { tryNextInstance(it) }
-				}
-			}
-
-			loadUrl(embedUrl)
+			setShutterBackgroundColor(android.graphics.Color.BLACK)
 		}
 
-		webView = wv
-		root.addView(wv)
+		root.addView(playerView)
+
+		lifecycleScope.launch {
+			val streamInfo = withContext(Dispatchers.IO) {
+				try {
+					YouTubeStreamResolver.resolveStream(videoId)
+				} catch (e: Exception) {
+					Timber.w(e, "TrailerPlayer: Failed to resolve YouTube stream for $videoId")
+					null
+				}
+			}
+
+			if (streamInfo == null) {
+				Timber.w("TrailerPlayer: No stream available for $videoId, going back")
+				goBack()
+				return@launch
+			}
+
+			if (!isAdded) return@launch
+
+			val dataSourceFactory = DefaultHttpDataSource.Factory()
+
+			val exoPlayer = ExoPlayer.Builder(requireContext())
+				.setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+				.build()
+
+			exoPlayer.volume = 1f
+			exoPlayer.repeatMode = Player.REPEAT_MODE_OFF
+			exoPlayer.playWhenReady = true
+
+			exoPlayer.addListener(object : Player.Listener {
+				override fun onPlaybackStateChanged(playbackState: Int) {
+					if (playbackState == Player.STATE_ENDED) {
+						Timber.d("TrailerPlayer: Playback ended for $videoId")
+						goBack()
+					}
+				}
+
+				override fun onPlayerError(error: PlaybackException) {
+					Timber.w(error, "TrailerPlayer: Playback error for $videoId")
+					goBack()
+				}
+			})
+
+			if (streamInfo.isVideoOnly && streamInfo.audioUrl != null) {
+				val videoSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+					.createMediaSource(MediaItem.fromUri(streamInfo.videoUrl))
+				val audioSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+					.createMediaSource(MediaItem.fromUri(streamInfo.audioUrl))
+				exoPlayer.setMediaSource(MergingMediaSource(videoSource, audioSource))
+			} else {
+				exoPlayer.setMediaItem(MediaItem.fromUri(streamInfo.videoUrl))
+			}
+
+			exoPlayer.prepare()
+
+			if (startSeconds > 0) {
+				exoPlayer.seekTo((startSeconds * 1000).toLong())
+			}
+
+			player = exoPlayer
+			playerView.player = exoPlayer
+
+			if (segments.isNotEmpty()) {
+				val runnable = object : Runnable {
+					override fun run() {
+						val p = player ?: return
+						if (!p.isPlaying) {
+							mainHandler.postDelayed(this, 500)
+							return
+						}
+						val currentSec = p.currentPosition / 1000.0
+						for (seg in segments) {
+							if (currentSec >= seg.startTime && currentSec < seg.endTime - 0.5) {
+								Timber.d("TrailerPlayer: Skipping SponsorBlock segment ${seg.category} at ${seg.startTime}s")
+								p.seekTo((seg.endTime * 1000).toLong())
+								break
+							}
+						}
+						mainHandler.postDelayed(this, 500)
+					}
+				}
+				skipRunnable = runnable
+				mainHandler.postDelayed(runnable, 500)
+			}
+		}
+
 		return root
 	}
 
@@ -183,17 +188,13 @@ class TrailerPlayerFragment : Fragment() {
 
 	override fun onDestroyView() {
 		super.onDestroyView()
-		webView?.let { wv ->
-			wv.loadUrl("about:blank")
-			wv.destroy()
-		}
-		webView = null
+		skipRunnable?.let { mainHandler.removeCallbacks(it) }
+		skipRunnable = null
+		player?.release()
+		player = null
 	}
 }
 
-/**
- * Simple DTO for deserializing SponsorBlock segments from the arguments bundle.
- */
 @kotlinx.serialization.Serializable
 private data class SegmentDto(
 	val start: Double,

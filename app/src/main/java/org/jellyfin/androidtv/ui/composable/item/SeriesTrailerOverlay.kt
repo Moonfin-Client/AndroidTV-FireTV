@@ -14,9 +14,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
+import org.jellyfin.androidtv.ui.home.mediabar.ExoPlayerTrailerView
 import org.jellyfin.androidtv.ui.home.mediabar.TrailerPreviewInfo
 import org.jellyfin.androidtv.ui.home.mediabar.TrailerResolver
-import org.jellyfin.androidtv.ui.home.mediabar.YouTubeTrailerWebView
 import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
@@ -35,13 +35,9 @@ private const val TRAILER_START_DELAY_MS = 500L
  * When [focused] becomes true:
  *  1. Waits [TRAILER_START_DELAY_MS] to avoid triggering on quick scrolls
  *  2. Resolves a YouTube trailer via [TrailerResolver]
- *  3. Plays the trailer muted via [YouTubeTrailerWebView], fading in over the poster
+ *  3. Plays the trailer muted via [ExoPlayerTrailerView], fading in over the poster
  *
- * When [focused] becomes false, the WebView is disposed.
- *
- * @param item The BaseItemDto (Series) to preview
- * @param focused Whether the card is currently focused
- * @param modifier Compose modifier
+ * When [focused] becomes false, the player is disposed.
  */
 @Composable
 fun SeriesTrailerOverlay(
@@ -100,9 +96,9 @@ fun SeriesTrailerOverlay(
 	}
 
 	val info = trailerInfo
-	if (info != null && focused) {
-		YouTubeTrailerWebView(
-			videoId = info.youtubeVideoId,
+	if (info?.streamInfo != null && focused) {
+		ExoPlayerTrailerView(
+			streamInfo = info.streamInfo,
 			startSeconds = info.startSeconds,
 			segments = info.segments,
 			muted = muted,

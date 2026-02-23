@@ -42,5 +42,8 @@ dependencyResolutionManagement {
 				includeVersionByRegex("org.jellyfin.sdk", ".*", "openapi-unstable-SNAPSHOT")
 			}
 		}
+
+		// NewPipe Extractor (YouTube stream URL resolution with n-parameter descrambling)
+		maven("https://jitpack.io")
 	}
 }

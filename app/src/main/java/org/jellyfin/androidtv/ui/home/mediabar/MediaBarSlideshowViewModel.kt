@@ -733,7 +733,7 @@ class MediaBarSlideshowViewModel(
 
 	/**
 	 * Start trailer resolution for a given slide index.
-	 * If the trailer info is already cached (pre-resolved), starts the WebView
+	 * If the trailer info is already cached (pre-resolved), starts ExoPlayer
 	 * immediately behind the backdrop image so it has the full [IMAGE_DISPLAY_DELAY_MS]
 	 * to buffer. After the delay, the image fades away to reveal the ready stream.
 	 *
@@ -811,8 +811,8 @@ class MediaBarSlideshowViewModel(
 				_trailerState.value = TrailerPreviewState.Playing(playingInfo)
 				Timber.d("MediaBar: Playing trailer for ${item.title} (YT: ${playingInfo.youtubeVideoId}, start: ${playingInfo.startSeconds}s)")
 
-				// Safety timeout: if the WebView never fires onVideoEnded
-				// (Invidious flakiness, network stall, WebView quirk, etc.),
+				// Safety timeout: if ExoPlayer never fires onVideoEnded
+				// (network stall, stream issue, etc.),
 				// force-advance to prevent the carousel from getting stuck.
 				delay(MAX_TRAILER_PLAY_DURATION_MS)
 				Timber.d("MediaBar: Safety timeout reached for ${item.title}, force-advancing")
@@ -830,7 +830,7 @@ class MediaBarSlideshowViewModel(
 	/**
 	 * Pre-resolve trailers for slides adjacent to the current one.
 	 * This runs in the background so that when navigating to the next/previous slide,
-	 * the trailer info is already cached and the WebView can start immediately.
+	 * the trailer info is already cached and ExoPlayer can start immediately.
 	 */
 	private fun preResolveAdjacentTrailers(currentIndex: Int) {
 		if (!userSettingPreferences[UserSettingPreferences.mediaBarEnabled]) return
@@ -872,7 +872,7 @@ class MediaBarSlideshowViewModel(
 	}
 
 	/**
-	 * Called by the WebView when the video has actually started playing.
+	 * Called by ExoPlayer when the video has buffered enough to play.
 	 * Signals the trailer resolution coroutine to transition to Playing state.
 	 */
 	fun onTrailerReady() {
@@ -897,7 +897,7 @@ class MediaBarSlideshowViewModel(
 	companion object {
 		/** How long to show the backdrop image before transitioning to trailer (ms) */
 		const val IMAGE_DISPLAY_DELAY_MS = 4000L
-		/** Max additional time to wait for the WebView video to be ready after the image delay (ms) */
+		/** Max additional time to wait for the ExoPlayer video to be ready after the image delay (ms) */
 		const val MAX_TRAILER_BUFFER_WAIT_MS = 8000L
 		/** Max time a trailer can play before force-advancing the carousel (ms) — 2 minutes */
 		const val MAX_TRAILER_PLAY_DURATION_MS = 120_000L
