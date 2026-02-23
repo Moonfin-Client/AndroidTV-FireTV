@@ -332,11 +332,12 @@ class LibraryBrowseViewModel(
 					// Library mode
 					parentId = folder!!.id
 					genres = null
-					recursive = folder.type == BaseItemKind.USER_VIEW ||
+
+					val isLibraryRoot = folder.type == BaseItemKind.USER_VIEW ||
 						folder.type == BaseItemKind.COLLECTION_FOLDER
 
 					includeTypes = when {
-						folder.type == BaseItemKind.USER_VIEW || folder.type == BaseItemKind.COLLECTION_FOLDER -> {
+						isLibraryRoot -> {
 							when (folder.collectionType) {
 								CollectionType.MOVIES -> setOf(BaseItemKind.MOVIE)
 								CollectionType.TVSHOWS -> setOf(BaseItemKind.SERIES)
@@ -346,6 +347,10 @@ class LibraryBrowseViewModel(
 						}
 						else -> null
 					}
+
+					// Only recurse when we have an includeItemTypes filter to
+					// avoid returning every nested item in mixed collections
+					recursive = isLibraryRoot && includeTypes != null
 
 					excludeTypes = when {
 						(folder.type == BaseItemKind.USER_VIEW || folder.type == BaseItemKind.COLLECTION_FOLDER) &&
