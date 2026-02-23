@@ -1903,8 +1903,8 @@ class ItemDetailsFragment : Fragment() {
 			BaseItemKind.SERIES -> {
 				if (uiState.nextUp.isNotEmpty()) {
 					play(uiState.nextUp.first(), 0, false)
-				} else if (uiState.seasons.isNotEmpty()) {
-					navigationRepository.navigate(Destinations.itemDetails(uiState.seasons.first().id, viewModel.serverId))
+				} else {
+					play(item, 0, false)
 				}
 			}
 			BaseItemKind.SEASON -> {
