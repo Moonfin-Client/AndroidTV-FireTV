@@ -38,6 +38,7 @@ release.keystore
 out/
 *.log
 *.orig
+openapitools.json
 
 # Secrets / service files (uncomment if you keep these locally)
 # /google-services.json

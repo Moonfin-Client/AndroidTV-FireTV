@@ -19,8 +19,12 @@ include(":app")
 
 // Modules
 include(":design")
+include(":server:core")
+include(":server:jellyfin")
+include(":server:emby")
 include(":playback:core")
 include(":playback:jellyfin")
+include(":playback:emby")
 include(":playback:media3:exoplayer")
 include(":playback:media3:session")
 include(":preference")
@@ -30,10 +34,10 @@ dependencyResolutionManagement {
 		mavenCentral()
 		google()
 
-		// Jellyfin SDK
 		mavenLocal {
 			content {
 				includeVersionByRegex("org.jellyfin.sdk", ".*", "latest-SNAPSHOT")
+				includeGroup("org.emby")
 			}
 		}
 		maven("https://s01.oss.sonatype.org/content/repositories/snapshots/") {

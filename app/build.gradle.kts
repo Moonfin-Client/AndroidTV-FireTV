@@ -171,10 +171,13 @@ val stripPipeExtractorUtils by tasks.registering {
 }
 
 dependencies {
-	// Jellyfin
 	implementation(projects.design)
+	implementation(projects.server.core)
+	implementation(projects.server.jellyfin)
+	implementation(projects.server.emby)
 	implementation(projects.playback.core)
 	implementation(projects.playback.jellyfin)
+	implementation(projects.playback.emby)
 	implementation(projects.playback.media3.exoplayer)
 	implementation(projects.playback.media3.session)
 	implementation(projects.preference)
