@@ -27,15 +27,12 @@ import org.jellyfin.sdk.discovery.RecommendedServerInfo
 import org.jellyfin.sdk.discovery.RecommendedServerInfoScore
 import org.jellyfin.sdk.model.ServerVersion
 import org.jellyfin.sdk.model.api.BrandingOptionsDto
-import org.jellyfin.sdk.model.api.ServerDiscoveryInfo
 import org.jellyfin.sdk.model.serializer.toUUID
+import org.moonfin.server.core.model.ServerType
 import timber.log.Timber
 import java.time.Instant
 import java.util.UUID
 
-/**
- * Repository to maintain servers.
- */
 interface ServerRepository {
 	val storedServers: StateFlow<List<Server>>
 	val discoveredServers: StateFlow<List<Server>>
@@ -52,12 +49,13 @@ interface ServerRepository {
 	suspend fun deleteServer(server: UUID): Boolean
 
 	companion object {
-		// Minimum supported server version for the app (relaxed to allow 10.10.x series).
-		val minimumServerVersion = ServerVersion(10, 10, 0)
+		val minimumJellyfinVersion = ServerVersion(10, 10, 0)
+		val minimumEmbyVersion = ServerVersion(4, 8, 0, 0)
 		val recommendedServerVersion = Jellyfin.apiVersion.copy(build = null)
-
-		// Servers older than this will show an "update soon" notification.
 		val upcomingMinimumServerVersion = ServerVersion(10, 11, 0)
+
+		@Deprecated("Use minimumJellyfinVersion or minimumEmbyVersion", ReplaceWith("minimumJellyfinVersion"))
+		val minimumServerVersion = minimumJellyfinVersion
 	}
 }
 
@@ -65,7 +63,6 @@ class ServerRepositoryImpl(
 	private val jellyfin: Jellyfin,
 	private val authenticationStore: AuthenticationStore,
 ) : ServerRepository {
-	// State
 	private val _storedServers = MutableStateFlow(emptyList<Server>())
 	override val storedServers = _storedServers.asStateFlow()
 
@@ -75,7 +72,6 @@ class ServerRepositoryImpl(
 	private val _currentServer = MutableStateFlow<Server?>(null)
 	override val currentServer = _currentServer.asStateFlow()
 
-	// Loading data
 	override suspend fun loadStoredServers() {
 		authenticationStore.getServers()
 			.map { (id, entry) -> entry.asServer(id) }
@@ -88,7 +84,16 @@ class ServerRepositoryImpl(
 
 		jellyfin.discovery
 			.discoverLocalServers()
-			.map(ServerDiscoveryInfo::toServer)
+			.map { discoveryInfo ->
+				val serverType = try {
+					val api = jellyfin.createApi(discoveryInfo.address)
+					val systemInfo by api.systemApi.getPublicSystemInfo()
+					ServerType.fromProductName(systemInfo.productName)
+				} catch (_: Exception) {
+					ServerType.JELLYFIN
+				}
+				discoveryInfo.toServer(serverType)
+			}
 			.collect { server ->
 				servers += server
 				_discoveredServers.emit(servers.toList())
@@ -99,7 +104,6 @@ class ServerRepositoryImpl(
 		_currentServer.value = server
 	}
 
-	// Mutating data
 	override fun addServer(address: String): Flow<ServerAdditionState> = flow {
 		Timber.i("Adding server %s", address)
 
@@ -138,30 +142,31 @@ class ServerRepositoryImpl(
 
 		val chosenRecommendation = greatRecommendation ?: goodRecommendations.firstOrNull()
 		if (chosenRecommendation != null && chosenRecommendation.systemInfo.isSuccess) {
-			// Get system info
 			val systemInfo = chosenRecommendation.systemInfo.getOrThrow()
-
-			// Get branding info
 			val api = jellyfin.createApi(chosenRecommendation.address)
 			val branding = api.getBrandingOptionsOrDefault()
 
 			val id = systemInfo.id!!.toUUID()
+			val serverType = ServerType.fromProductName(systemInfo.productName)
+			val defaultName = systemInfo.serverName ?: systemInfo.productName ?: "Server"
 
 			val server = authenticationStore.getServer(id)?.copy(
-				name = systemInfo.serverName ?: "Jellyfin Server",
+				name = defaultName,
 				address = chosenRecommendation.address,
 				version = systemInfo.version,
 				loginDisclaimer = branding.loginDisclaimer,
 				splashscreenEnabled = branding.splashscreenEnabled,
 				setupCompleted = systemInfo.startupWizardCompleted ?: true,
-				lastUsed = Instant.now().toEpochMilli()
+				lastUsed = Instant.now().toEpochMilli(),
+				serverType = serverType,
 			) ?: AuthenticationStoreServer(
-				name = systemInfo.serverName ?: "Jellyfin Server",
+				name = defaultName,
 				address = chosenRecommendation.address,
 				version = systemInfo.version,
 				loginDisclaimer = branding.loginDisclaimer,
 				splashscreenEnabled = branding.splashscreenEnabled,
 				setupCompleted = systemInfo.startupWizardCompleted ?: true,
+				serverType = serverType,
 			)
 
 			authenticationStore.putServer(id, server)
@@ -169,7 +174,6 @@ class ServerRepositoryImpl(
 
 			emit(ConnectedState(id, systemInfo))
 		} else {
-			// No great or good recommendations, only add bad recommendations
 			val addressCandidatesWithIssues = (badRecommendations + goodRecommendations)
 				.groupBy { it.address }
 				.mapValues { (_, entry) -> entry.flatMap { server -> server.issues } }
@@ -195,7 +199,6 @@ class ServerRepositoryImpl(
 	}
 
 	override suspend fun updateServer(server: Server, force: Boolean): Boolean {
-		// Only update existing servers
 		val serverInfo = authenticationStore.getServer(server.id) ?: return false
 
 		return try {
@@ -219,8 +222,6 @@ class ServerRepositoryImpl(
 
 		val newServer = withContext(Dispatchers.IO) {
 			val api = jellyfin.createApi(server.address)
-
-			// Get login disclaimer
 			val branding = api.getBrandingOptionsOrDefault()
 			val systemInfo by api.systemApi.getPublicSystemInfo()
 
@@ -230,6 +231,7 @@ class ServerRepositoryImpl(
 				loginDisclaimer = branding.loginDisclaimer ?: server.loginDisclaimer,
 				splashscreenEnabled = branding.splashscreenEnabled,
 				setupCompleted = systemInfo.startupWizardCompleted ?: server.setupCompleted,
+				serverType = ServerType.fromProductName(systemInfo.productName),
 				lastRefreshed = now
 			)
 		}
@@ -244,7 +246,6 @@ class ServerRepositoryImpl(
 		return success
 	}
 
-	// Helper functions
 	private fun AuthenticationStoreServer.asServer(id: UUID) = Server(
 		id = id,
 		name = name,
@@ -254,6 +255,7 @@ class ServerRepositoryImpl(
 		splashscreenEnabled = splashscreenEnabled,
 		setupCompleted = setupCompleted,
 		dateLastAccessed = Instant.ofEpochMilli(lastUsed),
+		serverType = serverType,
 	)
 
 	/**
