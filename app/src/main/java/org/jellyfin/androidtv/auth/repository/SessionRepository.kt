@@ -23,6 +23,8 @@ import org.jellyfin.sdk.api.client.extensions.clientLogApi
 import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.DeviceInfo
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
+import org.moonfin.server.core.model.ServerType
+import org.moonfin.server.emby.EmbyApiClient
 import timber.log.Timber
 import java.util.UUID
 
@@ -56,6 +58,7 @@ class SessionRepositoryImpl(
 	private val userRepository: UserRepository,
 	private val serverRepository: ServerRepository,
 	private val telemetryPreferences: TelemetryPreferences,
+	private val embyApiClient: EmbyApiClient,
 ) : SessionRepository {
 	private val currentSessionMutex = Mutex()
 	private val _currentSession = MutableStateFlow<Session?>(null)
@@ -134,42 +137,72 @@ class SessionRepositoryImpl(
 			if (server == null || !server.versionSupported) return false
 		}
 
-		// Update session after binding the apiclient settings
 		val deviceInfo = session?.let { defaultDeviceInfo.forUser(it.userId) } ?: defaultDeviceInfo
 		Timber.i("Updating current session. userId=${session?.userId} server=${server?.serverVersion}")
 
-		val applied = userApiClient.applySession(session, deviceInfo)
-		if (applied && session != null) {
-			try {
-				val user = withContext(Dispatchers.IO) {
-					userApiClient.userApi.getCurrentUser().content
-				}
-
-				// Sync settings BEFORE publishing user — HomeRowsFragment observes
-				// currentUser and immediately reads preferences like mediaBarEnabled.
-				// If sync hasn't applied server values yet, the home screen uses stale local values.
-				preferencesRepository.onSessionChanged()
-
-				userRepository.setCurrentUser(user)
-				serverRepository.setCurrentServer(server)
-
-				// Configure Jellyseerr proxy AFTER publishing user — configureWithMoonfin
-				// needs the active user for cookie storage isolation.
-				preferencesRepository.configureJellyseerr()
-			} catch (err: ApiClientException) {
-				Timber.e(err, "Unable to authenticate: bad response when getting user info")
-				destroyCurrentSession()
-				return false
-			}
-
-			// Update crash reporting URL
-			val crashReportUrl = userApiClient.clientLogApi.logFileUrl()
-			telemetryPreferences[TelemetryPreferences.crashReportUrl] = crashReportUrl
-			telemetryPreferences[TelemetryPreferences.crashReportToken] = session.accessToken
-		} else {
+		if (session == null) {
+			userApiClient.applySession(null, deviceInfo)
+			embyApiClient.reset()
 			userRepository.setCurrentUser(null)
 			serverRepository.setCurrentServer(null)
 			preferencesRepository.onSessionChanged()
+		} else {
+			when (server!!.serverType) {
+				ServerType.EMBY -> {
+					val storeServer = authenticationStore.getServer(session.serverId) ?: return false
+					embyApiClient.configure(
+						baseUrl = storeServer.address,
+						accessToken = session.accessToken,
+						userId = session.userId.toString(),
+					)
+					val embyUser = try {
+						withContext(Dispatchers.IO) { embyApiClient.validateCurrentUser() }
+					} catch (err: Exception) {
+						Timber.e(err, "Unable to authenticate: bad response when getting Emby user info")
+						destroyCurrentSession()
+						return false
+					}
+					preferencesRepository.onSessionChanged()
+					@Suppress("DEPRECATION")
+					val jellyfinUser = org.jellyfin.sdk.model.api.UserDto(
+						id = session.userId,
+						name = embyUser.name,
+						serverId = server.id.toString(),
+						primaryImageTag = embyUser.primaryImageTag,
+						hasPassword = embyUser.hasPassword ?: false,
+						hasConfiguredPassword = embyUser.hasConfiguredPassword ?: false,
+						hasConfiguredEasyPassword = false,
+					)
+					userRepository.setCurrentUser(jellyfinUser)
+					serverRepository.setCurrentServer(server)
+					preferencesRepository.configureJellyseerr()
+				}
+				ServerType.JELLYFIN -> {
+					val applied = userApiClient.applySession(session, deviceInfo)
+					if (!applied) {
+						userRepository.setCurrentUser(null)
+						serverRepository.setCurrentServer(null)
+						preferencesRepository.onSessionChanged()
+						return false
+					}
+					try {
+						val user = withContext(Dispatchers.IO) {
+							userApiClient.userApi.getCurrentUser().content
+						}
+						preferencesRepository.onSessionChanged()
+						userRepository.setCurrentUser(user)
+						serverRepository.setCurrentServer(server)
+						preferencesRepository.configureJellyseerr()
+					} catch (err: ApiClientException) {
+						Timber.e(err, "Unable to authenticate: bad response when getting user info")
+						destroyCurrentSession()
+						return false
+					}
+					val crashReportUrl = userApiClient.clientLogApi.logFileUrl()
+					telemetryPreferences[TelemetryPreferences.crashReportUrl] = crashReportUrl
+					telemetryPreferences[TelemetryPreferences.crashReportToken] = session.accessToken
+				}
+			}
 		}
 		_currentSession.value = session
 

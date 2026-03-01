@@ -2,10 +2,12 @@ package org.jellyfin.androidtv.ui.playback.segment
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.androidtv.util.sdk.duration
+import org.moonfin.server.core.model.ServerType
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.mediaSegmentsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -57,6 +59,7 @@ class MediaSegmentRepositoryImpl(
 	private val userPreferences: UserPreferences,
 	private val api: ApiClient,
 	private val apiClientFactory: ApiClientFactory,
+	private val serverRepository: ServerRepository,
 ) : MediaSegmentRepository {
 	private val mediaTypeActions = mutableMapOf<MediaSegmentType, MediaSegmentAction>()
 
@@ -100,14 +103,17 @@ class MediaSegmentRepositoryImpl(
 		return action
 	}
 
-	override suspend fun getSegmentsForItem(item: BaseItemDto): List<MediaSegmentDto> = runCatching {
-		val serverId = UUIDUtils.parseUUID(item.serverId)
-		val effectiveApi = if (serverId != null) apiClientFactory.getApiClientForServer(serverId) ?: api else api
-		withContext(Dispatchers.IO) {
-			effectiveApi.mediaSegmentsApi.getItemSegments(
-				itemId = item.id,
-				includeSegmentTypes = MediaSegmentRepository.SupportedTypes,
-			).content.items
-		}
-	}.getOrDefault(emptyList())
+	override suspend fun getSegmentsForItem(item: BaseItemDto): List<MediaSegmentDto> {
+		if (serverRepository.currentServer.value?.serverType == ServerType.EMBY) return emptyList()
+		return runCatching {
+			val serverId = UUIDUtils.parseUUID(item.serverId)
+			val effectiveApi = if (serverId != null) apiClientFactory.getApiClientForServer(serverId) ?: api else api
+			withContext(Dispatchers.IO) {
+				effectiveApi.mediaSegmentsApi.getItemSegments(
+					itemId = item.id,
+					includeSegmentTypes = MediaSegmentRepository.SupportedTypes,
+				).content.items
+			}
+		}.getOrDefault(emptyList())
+	}
 }

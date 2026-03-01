@@ -25,6 +25,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.request.GetLatestMediaRequest
 import org.jellyfin.sdk.model.api.request.GetNextUpRequest
 import org.jellyfin.sdk.model.api.request.GetResumeItemsRequest
+import org.moonfin.server.core.model.ServerType
 import timber.log.Timber
 import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
@@ -127,6 +128,11 @@ class MultiServerRepositoryImpl(
 
 		val loggedInServers = servers.mapNotNull { server ->
 			try {
+				if (server.serverType == ServerType.EMBY) {
+					Timber.d("MultiServerRepository: Skipping Emby server ${server.name} (not yet supported in multi-server)")
+					return@mapNotNull null
+				}
+
 				// Check if this server has any logged-in users
 				val serverStore = authenticationStore.getServer(server.id)
 				if (serverStore == null || serverStore.users.isEmpty()) {
@@ -174,8 +180,12 @@ class MultiServerRepositoryImpl(
 			if (currentSession != null) {
 				try {
 					// Get server info for the current session
-					val server = serverRepository.getServer(currentSession.serverId)
-					if (server != null) {
+			val server = serverRepository.getServer(currentSession.serverId)
+				if (server != null) {
+					if (server.serverType == ServerType.EMBY) {
+						Timber.d("MultiServerRepository: Current session is Emby server — skipping fallback")
+						return@withContext emptyList()
+					}
 						Timber.d("MultiServerRepository: Using current session for server ${server.name}")
 						val deviceInfo = defaultDeviceInfo.forUser(currentSession.userId)
 						val apiClient = jellyfin.createApi(

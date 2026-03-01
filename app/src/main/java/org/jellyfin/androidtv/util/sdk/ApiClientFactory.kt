@@ -7,6 +7,7 @@ import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.DeviceInfo
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.moonfin.server.core.model.ServerType
 import timber.log.Timber
 import java.util.UUID
 
@@ -20,6 +21,10 @@ class ApiClientFactory(
 		val server = authenticationStore.getServer(serverId)
 		if (server == null) {
 			Timber.w("ApiClientFactory: Server $serverId not found")
+			return null
+		}
+		if (server.serverType == ServerType.EMBY) {
+			Timber.w("ApiClientFactory: Server $serverId is an Emby server — Jellyfin ApiClient not applicable")
 			return null
 		}
 

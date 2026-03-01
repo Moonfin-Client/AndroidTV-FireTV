@@ -171,7 +171,7 @@ val appModule = module {
 	single<NavigationRepository> { NavigationRepositoryImpl(Destinations.home) }
 	single { ShuffleManager(get(), get(), get(), get()) }
 	single<SearchRepository> { SearchRepositoryImpl(get(), get()) }
-	single<MediaSegmentRepository> { MediaSegmentRepositoryImpl(get(), get(), get()) }
+	single<MediaSegmentRepository> { MediaSegmentRepositoryImpl(get(), get(), get(), get()) }
 	single<ExternalAppRepository> { ExternalAppRepository(get()) }
 	single { LocalWatchlistRepository(androidContext()) }
 	single<org.jellyfin.androidtv.data.repository.MultiServerRepository> { 

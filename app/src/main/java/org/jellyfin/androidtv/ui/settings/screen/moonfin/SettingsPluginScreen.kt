@@ -1,6 +1,7 @@
 package org.jellyfin.androidtv.ui.settings.screen.moonfin
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -8,6 +9,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.data.service.pluginsync.PluginSyncService
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
@@ -26,6 +28,7 @@ import org.jellyfin.androidtv.ui.settings.screen.customization.getOverlayColorLa
 import org.jellyfin.androidtv.ui.settings.screen.customization.getSeasonalLabel
 import org.jellyfin.androidtv.ui.settings.screen.customization.getShuffleContentTypeLabel
 import org.koin.compose.koinInject
+import org.moonfin.server.core.model.ServerType
 
 @Composable
 fun SettingsPluginScreen() {
@@ -34,6 +37,9 @@ fun SettingsPluginScreen() {
 	val userPreferences = koinInject<UserPreferences>()
 	val userSettingPreferences = koinInject<UserSettingPreferences>()
 	val pluginSyncService = koinInject<PluginSyncService>()
+	val serverRepository = koinInject<ServerRepository>()
+	val currentServer by serverRepository.currentServer.collectAsState()
+	val jellyseerrSupported = currentServer?.serverType != ServerType.EMBY
 
 	SettingsColumn {
 		item {
@@ -359,15 +365,17 @@ fun SettingsPluginScreen() {
 			)
 		}
 
-		item { ListSection(headingContent = { Text(stringResource(R.string.jellyseerr)) }) }
+		if (jellyseerrSupported) {
+			item { ListSection(headingContent = { Text(stringResource(R.string.jellyseerr)) }) }
 
-		item {
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_jellyseerr_jellyfish), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.jellyseerr_settings)) },
-				captionContent = { Text(stringResource(R.string.jellyseerr_settings_description)) },
-				onClick = { router.push(Routes.JELLYSEERR) }
-			)
+			item {
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_jellyseerr_jellyfish), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.jellyseerr_settings)) },
+					captionContent = { Text(stringResource(R.string.jellyseerr_settings_description)) },
+					onClick = { router.push(Routes.JELLYSEERR) }
+				)
+			}
 		}
 
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_parental_controls)) }) }

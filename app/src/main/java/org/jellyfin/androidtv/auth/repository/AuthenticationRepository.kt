@@ -42,6 +42,8 @@ import org.jellyfin.sdk.model.DeviceInfo
 import org.jellyfin.sdk.model.api.AuthenticationResult
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.UserDto
+import org.moonfin.server.core.model.ServerType
+import org.moonfin.server.emby.EmbyApiClient
 import timber.log.Timber
 import java.time.Instant
 
@@ -63,6 +65,7 @@ class AuthenticationRepositoryImpl(
 	private val defaultDeviceInfo: DeviceInfo,
 	private val jellyseerrRepository: JellyseerrRepository,
 	private val jellyseerrPreferences: JellyseerrPreferences,
+	private val embyApiClient: EmbyApiClient,
 ) : AuthenticationRepository {
 	override fun authenticate(server: Server, method: AuthenticateMethod): Flow<LoginState> {
 		return when (method) {
@@ -86,6 +89,11 @@ class AuthenticationRepositoryImpl(
 	}
 
 	private fun authenticateCredential(server: Server, username: String, password: String) = flow {
+		if (server.serverType == ServerType.EMBY) {
+			emitAll(authenticateCredentialEmby(server, username, password))
+			return@flow
+		}
+
 		val api = jellyfin.createApi(server.address, deviceInfo = defaultDeviceInfo.forUser(username))
 		val result = try {
 			// For users without passwords, pass empty string to the API
@@ -156,9 +164,14 @@ class AuthenticationRepositoryImpl(
 			if (!server.versionSupported) emit(ServerVersionNotSupported(server))
 			else emit(RequireSignInState)
 		} else try {
-			// Update user info
-			val userInfo by userApiClient.userApi.getCurrentUser()
-			authenticateFinish(server, userInfo, user.accessToken.orEmpty())
+			if (server.serverType == ServerType.EMBY) {
+				val embyUser = embyApiClient.validateCurrentUser()
+				authenticateFinishEmby(server, embyUser, user.accessToken.orEmpty(), user.id)
+			} else {
+				// Update user info
+				val userInfo by userApiClient.userApi.getCurrentUser()
+				authenticateFinish(server, userInfo, user.accessToken.orEmpty())
+			}
 			emit(AuthenticatedState)
 		} catch (err: TimeoutException) {
 			Timber.e(err, "Failed to connect to server")
@@ -167,6 +180,9 @@ class AuthenticationRepositoryImpl(
 		} catch (err: ApiClientException) {
 			Timber.e(err, "Unable to get current user data")
 			emit(ApiClientErrorLoginState(err))
+		} catch (err: Exception) {
+			Timber.e(err, "Unable to get current user data")
+			emit(RequireSignInState)
 		}
 	}.flowOn(Dispatchers.IO)
 
@@ -185,6 +201,59 @@ class AuthenticationRepositoryImpl(
 		)
 		authenticationStore.putUser(server.id, userInfo.id, updatedUser)
 	}
+
+	private suspend fun authenticateFinishEmby(
+		server: Server,
+		userInfo: org.moonfin.server.emby.EmbyUserInfo,
+		accessToken: String,
+		userId: java.util.UUID,
+	) {
+		val currentUser = authenticationStore.getUser(server.id, userId)
+		val updatedUser = currentUser?.copy(
+			name = userInfo.name!!,
+			lastUsed = Instant.now().toEpochMilli(),
+			imageTag = userInfo.primaryImageTag,
+			accessToken = accessToken,
+		) ?: AuthenticationStoreUser(
+			name = userInfo.name!!,
+			imageTag = userInfo.primaryImageTag,
+			accessToken = accessToken,
+		)
+		authenticationStore.putUser(server.id, userId, updatedUser)
+	}
+
+	private fun authenticateCredentialEmby(server: Server, username: String, password: String) = flow {
+		embyApiClient.configure(server.address, null, null)
+		val result = try {
+			embyApiClient.authenticateByName(username, password)
+		} catch (err: Exception) {
+			Timber.e(err, "Failed to authenticate as $username on Emby")
+			emit(ServerUnavailableState)
+			return@flow
+		}
+		val accessToken = result.accessToken ?: return@flow emit(RequireSignInState)
+		val userInfo = result.user ?: return@flow emit(RequireSignInState)
+		val userIdStr = userInfo.id.ifEmpty { return@flow emit(RequireSignInState) }
+		val userId = runCatching { java.util.UUID.fromString(userIdStr) }.getOrElse {
+			return@flow emit(RequireSignInState)
+		}
+		val user = PrivateUser(
+			id = userId,
+			serverId = server.id,
+			name = userInfo.name!!,
+			accessToken = accessToken,
+			imageTag = userInfo.primaryImageTag,
+			lastUsed = Instant.now().toEpochMilli(),
+		)
+		embyApiClient.configure(server.address, accessToken, userIdStr)
+		authenticateFinishEmby(server, userInfo, accessToken, userId)
+		val success = setActiveSession(user, server)
+		if (success) emit(AuthenticatedState)
+		else {
+			if (!server.versionSupported) emit(ServerVersionNotSupported(server))
+			else emit(RequireSignInState)
+		}
+	}.flowOn(Dispatchers.IO)
 
 	private suspend fun setActiveSession(user: User, server: Server): Boolean {
 		val authenticated = sessionRepository.switchCurrentSession(server.id, user.id)

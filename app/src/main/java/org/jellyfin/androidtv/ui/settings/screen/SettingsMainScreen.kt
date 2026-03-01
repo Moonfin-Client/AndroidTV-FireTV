@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.data.service.UpdateCheckerService
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.base.Icon
@@ -61,6 +63,7 @@ import org.jellyfin.androidtv.ui.settings.compat.rememberPreference
 import org.jellyfin.androidtv.ui.settings.composable.SettingsColumn
 import org.koin.compose.koinInject
 import org.koin.java.KoinJavaComponent.inject
+import org.moonfin.server.core.model.ServerType
 import timber.log.Timber
 
 @Composable
@@ -69,6 +72,10 @@ fun SettingsMainScreen() {
 	val context = LocalContext.current
 	val updateChecker by inject<UpdateCheckerService>(UpdateCheckerService::class.java)
 	val userPreferences = koinInject<UserPreferences>()
+
+	val serverRepository = koinInject<ServerRepository>()
+	val currentServer by serverRepository.currentServer.collectAsState()
+	val syncPlaySupported = currentServer?.serverType != ServerType.EMBY
 
 	var showDonateDialog by remember { mutableStateOf(false) }
 	var updateInfoForDialog by remember { mutableStateOf<UpdateCheckerService.UpdateInfo?>(null) }
@@ -124,7 +131,7 @@ fun SettingsMainScreen() {
 			)
 		}
 
-		item {
+		if (syncPlaySupported) item {
 			ListButton(
 				leadingContent = { Icon(painterResource(R.drawable.ic_syncplay), contentDescription = null) },
 				headingContent = { Text(stringResource(R.string.syncplay)) },
