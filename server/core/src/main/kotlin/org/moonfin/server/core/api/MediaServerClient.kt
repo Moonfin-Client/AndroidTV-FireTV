@@ -22,4 +22,5 @@ interface MediaServerClient {
 	val userViewsApi: ServerUserViewsApi
 	val liveTvApi: ServerLiveTvApi
 	val instantMixApi: ServerInstantMixApi
+	val displayPreferencesApi: ServerDisplayPreferencesApi
 }

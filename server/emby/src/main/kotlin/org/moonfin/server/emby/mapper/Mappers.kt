@@ -2,6 +2,9 @@ package org.moonfin.server.emby.mapper
 
 import org.emby.client.model.BaseItemDto
 import org.emby.client.model.BaseItemPerson
+import org.emby.client.model.LiveTvSeriesTimerInfoDto
+import org.emby.client.model.LiveTvTimerInfoDto
+import org.emby.client.model.SortOrder as EmbySortOrder
 import org.emby.client.model.MediaProtocol as EmbyMediaProtocol
 import org.emby.client.model.MediaSourceInfo as EmbyMediaSourceInfo
 import org.emby.client.model.MediaStream as EmbyMediaStream
@@ -22,7 +25,13 @@ import org.moonfin.server.core.model.ServerMediaStream
 import org.moonfin.server.core.model.ServerPerson
 import org.moonfin.server.core.model.ServerUser
 import org.moonfin.server.core.model.StreamType
+import org.moonfin.server.core.model.DisplayPreferences as CoreDisplayPreferences
+import org.moonfin.server.core.model.LiveTvGuideInfo as CoreLiveTvGuideInfo
+import org.moonfin.server.core.model.LiveTvSeriesTimerInfo
+import org.moonfin.server.core.model.LiveTvTimerInfo
+import org.moonfin.server.core.model.SortOrder as CoreSortOrder
 import org.moonfin.server.core.model.UserItemData
+import java.time.ZoneOffset
 
 private fun String?.toItemType(): ItemType = when (this) {
     "Movie" -> ItemType.MOVIE
@@ -218,4 +227,75 @@ fun BaseItemDto.toServerItem(): ServerItem = ServerItem(
     studios = studios?.map { it.toNameIdPair() },
     trickplay = null,
     mediaSegments = null,
+)
+
+fun LiveTvTimerInfoDto.toLiveTvTimerInfo(): LiveTvTimerInfo = LiveTvTimerInfo(
+    id = id ?: "",
+    name = name,
+    channelId = channelId,
+    channelName = channelName,
+    programId = programId,
+    seriesTimerId = seriesTimerId,
+    startDate = startDate?.toInstant(),
+    endDate = endDate?.toInstant(),
+    prePaddingSeconds = prePaddingSeconds,
+    postPaddingSeconds = postPaddingSeconds,
+    status = status?.toString(),
+)
+
+fun LiveTvSeriesTimerInfoDto.toLiveTvSeriesTimerInfo(): LiveTvSeriesTimerInfo = LiveTvSeriesTimerInfo(
+    id = id ?: "",
+    name = name,
+    channelId = channelId,
+    channelName = channelName,
+    recordAnyChannel = recordAnyChannel,
+    recordAnyTime = recordAnyTime,
+    recordNewOnly = recordNewOnly,
+    startDate = startDate?.toInstant(),
+    endDate = endDate?.toInstant(),
+)
+
+fun org.emby.client.model.LiveTvGuideInfo.toCoreGuideInfo(): CoreLiveTvGuideInfo = CoreLiveTvGuideInfo(
+    startDate = startDate?.toInstant(),
+    endDate = endDate?.toInstant(),
+)
+
+fun LiveTvTimerInfo.toEmbyTimerInfoDto(): LiveTvTimerInfoDto = LiveTvTimerInfoDto(
+    id = id.ifEmpty { null },
+    name = name,
+    channelId = channelId,
+    programId = programId,
+    seriesTimerId = seriesTimerId,
+    startDate = startDate?.atOffset(ZoneOffset.UTC),
+    endDate = endDate?.atOffset(ZoneOffset.UTC),
+    prePaddingSeconds = prePaddingSeconds,
+    postPaddingSeconds = postPaddingSeconds,
+)
+
+fun EmbySortOrder?.toCoreSortOrder(): CoreSortOrder? = when (this) {
+    EmbySortOrder.ASCENDING -> CoreSortOrder.ASCENDING
+    EmbySortOrder.DESCENDING -> CoreSortOrder.DESCENDING
+    null -> null
+}
+
+fun CoreSortOrder?.toEmbySortOrder(): EmbySortOrder? = when (this) {
+    CoreSortOrder.ASCENDING -> EmbySortOrder.ASCENDING
+    CoreSortOrder.DESCENDING -> EmbySortOrder.DESCENDING
+    null -> null
+}
+
+fun org.emby.client.model.DisplayPreferences.toCoreDisplayPreferences(): CoreDisplayPreferences = CoreDisplayPreferences(
+    id = id,
+    sortBy = sortBy,
+    sortOrder = sortOrder.toCoreSortOrder(),
+    customPrefs = customPrefs,
+    client = client,
+)
+
+fun CoreDisplayPreferences.toEmbyDisplayPreferences(): org.emby.client.model.DisplayPreferences = org.emby.client.model.DisplayPreferences(
+    id = id,
+    sortBy = sortBy,
+    sortOrder = sortOrder.toEmbySortOrder(),
+    customPrefs = customPrefs,
+    client = client,
 )

@@ -1,7 +1,16 @@
 package org.moonfin.server.emby
 
+import org.emby.client.api.DisplayPreferencesServiceApi
+import org.emby.client.api.InstantMixServiceApi
+import org.emby.client.api.ItemsServiceApi
+import org.emby.client.api.LibraryServiceApi
+import org.emby.client.api.LiveTvServiceApi
+import org.emby.client.api.PlaystateServiceApi
 import org.emby.client.api.SessionsServiceApi
+import org.emby.client.api.TvShowsServiceApi
+import org.emby.client.api.UserLibraryServiceApi
 import org.emby.client.api.UserServiceApi
+import org.emby.client.api.UserViewsServiceApi
 import org.emby.client.model.AuthenticateUserByName
 
 data class EmbyUserInfo(
@@ -34,6 +43,24 @@ class EmbyApiClient(
 
     private var userService: UserServiceApi? = null
     private var sessionsService: SessionsServiceApi? = null
+    internal var itemsService: ItemsServiceApi? = null
+        private set
+    internal var userLibraryService: UserLibraryServiceApi? = null
+        private set
+    internal var tvShowsService: TvShowsServiceApi? = null
+        private set
+    internal var libraryService: LibraryServiceApi? = null
+        private set
+    internal var playstateService: PlaystateServiceApi? = null
+        private set
+    internal var userViewsService: UserViewsServiceApi? = null
+        private set
+    internal var liveTvService: LiveTvServiceApi? = null
+        private set
+    internal var instantMixService: InstantMixServiceApi? = null
+        private set
+    internal var displayPreferencesService: DisplayPreferencesServiceApi? = null
+        private set
 
     fun configure(baseUrl: String, accessToken: String?, userId: String?) {
         this.baseUrl = baseUrl
@@ -42,14 +69,28 @@ class EmbyApiClient(
         if (baseUrl.isEmpty()) {
             userService = null
             sessionsService = null
+            itemsService = null
+            userLibraryService = null
+            tvShowsService = null
+            libraryService = null
+            playstateService = null
+            userViewsService = null
+            liveTvService = null
+            instantMixService = null
+            displayPreferencesService = null
             return
         }
-        userService = UserServiceApi(baseUrl = baseUrl).also { api ->
-            if (accessToken != null) api.setBearerToken(accessToken)
-        }
-        sessionsService = SessionsServiceApi(baseUrl = baseUrl).also { api ->
-            if (accessToken != null) api.setBearerToken(accessToken)
-        }
+        userService = UserServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
+        sessionsService = SessionsServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
+        itemsService = ItemsServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
+        userLibraryService = UserLibraryServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
+        tvShowsService = TvShowsServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
+        libraryService = LibraryServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
+        playstateService = PlaystateServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
+        userViewsService = UserViewsServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
+        liveTvService = LiveTvServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
+        instantMixService = InstantMixServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
+        displayPreferencesService = DisplayPreferencesServiceApi(baseUrl = baseUrl).also { if (accessToken != null) it.setBearerToken(accessToken) }
     }
 
     fun reset() = configure("", null, null)

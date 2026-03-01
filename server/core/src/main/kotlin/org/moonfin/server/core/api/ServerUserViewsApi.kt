@@ -1,3 +1,7 @@
 package org.moonfin.server.core.api
 
-interface ServerUserViewsApi
+import org.moonfin.server.core.model.ServerItem
+
+interface ServerUserViewsApi {
+    suspend fun getUserViews(userId: String): List<ServerItem>
+}
