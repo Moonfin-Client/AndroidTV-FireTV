@@ -16,6 +16,7 @@ import org.jellyfin.androidtv.preference.TelemetryPreferences
 import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.DISABLED
 import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.LAST_USER
 import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.SPECIFIC_USER
+import org.jellyfin.androidtv.telemetry.TelemetryService
 import org.jellyfin.androidtv.util.EmbyCompatInterceptor
 import org.jellyfin.androidtv.util.sdk.forUser
 import org.jellyfin.sdk.api.client.ApiClient
@@ -119,6 +120,7 @@ class SessionRepositoryImpl(
 	override fun destroyCurrentSession() {
 		Timber.i("Destroying current session")
 
+		embyCompatInterceptor.setOnTokenExpired(null)
 		embyWebSocketClient.forceDisconnect()
 		userRepository.setCurrentUser(null)
 		serverRepository.setCurrentServer(null)
@@ -148,15 +150,20 @@ class SessionRepositoryImpl(
 		if (session == null) {
 			embyCompatInterceptor.setServerType(ServerType.JELLYFIN)
 			embyCompatInterceptor.setUserId(null)
+			embyCompatInterceptor.setOnTokenExpired(null)
 			userApiClient.applySession(null, deviceInfo)
 			embyWebSocketClient.forceDisconnect()
 			embyApiClient.reset()
 			userRepository.setCurrentUser(null)
 			serverRepository.setCurrentServer(null)
 			preferencesRepository.onSessionChanged()
+			TelemetryService.clearServerContext()
+			telemetryPreferences[TelemetryPreferences.serverType] = ""
+			telemetryPreferences[TelemetryPreferences.serverVersion] = ""
 		} else {
 			embyCompatInterceptor.setServerType(server!!.serverType)
 			embyCompatInterceptor.setUserId(session.userId.toString())
+			embyCompatInterceptor.setOnTokenExpired { destroyCurrentSession() }
 			when (server.serverType) {
 				ServerType.EMBY -> {
 					val storeServer = authenticationStore.getServer(session.serverId) ?: return false
@@ -223,6 +230,14 @@ class SessionRepositoryImpl(
 			}
 		}
 		_currentSession.value = session
+
+		if (server != null) {
+			val type = server.serverType.name
+			val version = server.version ?: "unknown"
+			TelemetryService.updateServerContext(type, version)
+			telemetryPreferences[TelemetryPreferences.serverType] = type
+			telemetryPreferences[TelemetryPreferences.serverVersion] = version
+		}
 
 		return true
 	}

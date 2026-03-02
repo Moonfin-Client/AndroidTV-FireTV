@@ -28,9 +28,25 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object TelemetryService {
-	/**
-	 * Call in the attachBaseContext function of the application.
-	 */
+	fun updateServerContext(serverType: String?, serverVersion: String?) {
+		try {
+			val reporter = ACRA.errorReporter
+			reporter.putCustomData("server_type", serverType ?: "unknown")
+			reporter.putCustomData("server_version", serverVersion ?: "unknown")
+		} catch (_: Exception) {
+			// ACRA may not be initialized yet
+		}
+	}
+
+	fun clearServerContext() {
+		try {
+			val reporter = ACRA.errorReporter
+			reporter.putCustomData("server_type", "none")
+			reporter.putCustomData("server_version", "none")
+		} catch (_: Exception) {
+		}
+	}
+
 	fun init(context: Application) {
 		ACRA.DEV_LOGGING = BuildConfig.DEBUG
 		context.initAcra {
@@ -133,6 +149,11 @@ object TelemetryService {
 				appendItem("Device model") { appendValue(getString(ReportField.PHONE_MODEL)) }
 			}
 
+			appendSection("Server information") {
+				appendItem("Server type") { appendValue(getString(ReportField.CUSTOM_DATA)?.extractCustomField("server_type") ?: "unknown") }
+				appendItem("Server version") { appendValue(getString(ReportField.CUSTOM_DATA)?.extractCustomField("server_version") ?: "unknown") }
+			}
+
 			appendSection("Crash information") {
 				appendItem("Start time") { appendValue(getString(ReportField.USER_APP_START_DATE)) }
 				appendItem("Crash time") { appendValue(getString(ReportField.USER_CRASH_DATE)) }
@@ -156,5 +177,15 @@ object TelemetryService {
 
 			return AcraReportSender(url, token, includeLogs)
 		}
+	}
+
+	internal fun String.extractCustomField(key: String): String? {
+		for (line in lines()) {
+			val trimmed = line.trim()
+			if (trimmed.startsWith("$key=") || trimmed.startsWith("$key :")) {
+				return trimmed.substringAfter('=').substringAfter(':').trim()
+			}
+		}
+		return null
 	}
 }

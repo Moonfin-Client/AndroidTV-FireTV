@@ -142,4 +142,10 @@ class EmbyApiClientTests : FunSpec({
 		val client = createClient()
 		client.deviceId shouldBe "test-device-id"
 	}
+
+	test("validateToken returns false when not configured") {
+		val client = createClient()
+		client.isConfigured shouldBe false
+		client.validateToken() shouldBe false
+	}
 })

@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.util
 
+import org.moonfin.server.emby.EmbyApiException
 import timber.log.Timber
 import java.io.IOException
 import java.net.SocketTimeoutException
@@ -68,13 +69,13 @@ object ErrorHandler {
 	 */
 	fun getUserFriendlyMessage(error: Throwable, context: String = ""): String {
 		return when (error) {
+			is EmbyApiException -> getEmbyErrorMessage(error, context)
 			is UnknownHostException -> "Cannot connect to server. Check your network connection."
 			is SocketTimeoutException -> "Connection timed out. The server is taking too long to respond."
 			is IOException -> "Network error occurred. Please check your connection."
 			else -> {
 				val baseMessage = error.message ?: "Unknown error"
 				
-				// Check for common HTTP error codes in the message
 				when {
 					baseMessage.contains("403") || baseMessage.contains("Forbidden") -> 
 						"Permission denied. You may not have access to this resource."
@@ -90,6 +91,23 @@ object ErrorHandler {
 					else -> baseMessage
 				}
 			}
+		}
+	}
+
+	private fun getEmbyErrorMessage(error: EmbyApiException, context: String): String {
+		return when (error.statusCode) {
+			400 -> "Invalid request. ${error.message}"
+			401 -> "Authentication failed. Please sign in again."
+			403 -> "Permission denied. You may not have access to this resource."
+			404 -> "Resource not found. It may have been removed."
+			405 -> "This operation is not supported by the server."
+			409 -> "Conflict: the requested change could not be applied."
+			429 -> "Too many requests. Please wait and try again."
+			500 -> "Emby server error. Please try again later."
+			502 -> "Emby server is unreachable (bad gateway)."
+			503 -> "Emby server is temporarily unavailable."
+			else -> if (context.isNotEmpty()) "Failed to $context (HTTP ${error.statusCode})."
+			        else "Server returned error ${error.statusCode}."
 		}
 	}
 	

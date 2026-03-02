@@ -79,4 +79,17 @@ class EmbyCompatInterceptorTests : FunSpec({
 	test("uuidToNumeric rejects UUID with letters") {
 		EmbyCompatInterceptor.uuidToNumeric("0000000a-0000-0000-0000-000000000001") shouldBe null
 	}
+
+	test("setOnTokenExpired stores callback") {
+		val interceptor = EmbyCompatInterceptor()
+		var called = false
+		interceptor.setOnTokenExpired { called = true }
+		called shouldBe false
+	}
+
+	test("setOnTokenExpired with null clears callback") {
+		val interceptor = EmbyCompatInterceptor()
+		interceptor.setOnTokenExpired { }
+		interceptor.setOnTokenExpired(null)
+	}
 })

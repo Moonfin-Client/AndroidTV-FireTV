@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.auth.repository.ServerRepository
+import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.data.model.DataRefreshService
 import org.jellyfin.androidtv.data.syncplay.SyncPlayManager
 import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
@@ -43,6 +44,7 @@ import org.jellyfin.sdk.model.api.SyncPlayGroupUpdateMessage
 import org.jellyfin.sdk.model.extensions.get
 import org.jellyfin.sdk.model.extensions.getValue
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
+import org.moonfin.server.core.model.EmbyConnectionState
 import org.moonfin.server.core.model.ServerType
 import org.moonfin.server.core.model.ServerWebSocketMessage
 import org.moonfin.server.emby.socket.EmbyWebSocketClient
@@ -64,6 +66,7 @@ class SocketHandler(
 	private val lifecycle: Lifecycle,
 	private val embyWebSocketClient: EmbyWebSocketClient,
 	private val serverRepository: ServerRepository,
+	private val sessionRepository: SessionRepository,
 ) {
 	private val activeServerType: ServerType
 		get() = serverRepository.currentServer.value?.serverType ?: ServerType.JELLYFIN
@@ -198,6 +201,29 @@ class SocketHandler(
 		embyWebSocketClient.messages
 			.onEach { message -> handleEmbyMessage(message) }
 			.launchIn(coroutineScope)
+
+		embyWebSocketClient.connectionState
+			.onEach { state -> handleEmbyConnectionState(state) }
+			.launchIn(coroutineScope)
+	}
+
+	private suspend fun handleEmbyConnectionState(state: EmbyConnectionState) {
+		when (state) {
+			is EmbyConnectionState.TokenExpired -> {
+				Timber.w("Emby token expired, destroying session")
+				withContext(Dispatchers.Main) {
+					onDisplayMessage(null, "Session expired. Please sign in again.")
+				}
+				sessionRepository.destroyCurrentSession()
+			}
+			is EmbyConnectionState.ServerUnreachable -> {
+				Timber.w("Emby server unreachable after max reconnect attempts")
+				withContext(Dispatchers.Main) {
+					onDisplayMessage(null, "Server is unreachable.")
+				}
+			}
+			else -> Unit
+		}
 	}
 
 	private suspend fun handleEmbyMessage(message: ServerWebSocketMessage) {
@@ -258,7 +284,11 @@ class SocketHandler(
 			}
 
 			is ServerWebSocketMessage.SessionEnded -> {
-				Timber.i("Emby session ended: ${message.sessionId}")
+				Timber.w("Emby session ended remotely: %s", message.sessionId)
+				withContext(Dispatchers.Main) {
+					onDisplayMessage(null, "Session ended by server.")
+				}
+				sessionRepository.destroyCurrentSession()
 			}
 
 			is ServerWebSocketMessage.ScheduledTaskEnded -> {

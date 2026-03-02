@@ -122,6 +122,16 @@ class EmbyApiClient(
         )
     }
 
+    suspend fun validateToken(): Boolean {
+        if (!isConfigured) return false
+        return try {
+            validateCurrentUser()
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     suspend fun authenticateByName(username: String, password: String): EmbyAuthResult {
         val body = AuthenticateUserByName(username = username, pw = password)
         val result = UserServiceApi(baseUrl = baseUrl).postUsersAuthenticatebyname(buildAuthHeader(), body).body()

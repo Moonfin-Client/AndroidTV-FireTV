@@ -17,5 +17,8 @@ class TelemetryPreferences(context: Context) : SharedPreferenceStore(
 
 		var crashReportToken = stringPreference("server_token", "")
 		var crashReportUrl = stringPreference("server_url", "")
+
+		var serverType = stringPreference("server_type", "")
+		var serverVersion = stringPreference("server_version", "")
 	}
 }

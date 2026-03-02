@@ -8,6 +8,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -24,21 +27,30 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.moonfin.server.core.api.ServerWebSocketApi
+import org.moonfin.server.core.model.EmbyConnectionState
 import org.moonfin.server.core.model.ServerWebSocketMessage
 import org.moonfin.server.emby.EmbyApiClient
 import timber.log.Timber
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 import kotlin.math.min
+import kotlin.random.Random
 
 class EmbyWebSocketClient(
 	private val api: EmbyApiClient,
 	private val audioManager: AudioManager,
 ) : ServerWebSocketApi {
 
+	companion object {
+		private const val MAX_RECONNECT_ATTEMPTS = 12
+	}
+
 	private val json = Json { ignoreUnknownKeys = true }
 	private val _messages = MutableSharedFlow<ServerWebSocketMessage>(extraBufferCapacity = 64)
 	override val messages: Flow<ServerWebSocketMessage> = _messages
+
+	private val _connectionState = MutableStateFlow<EmbyConnectionState>(EmbyConnectionState.Disconnected)
+	val connectionState: StateFlow<EmbyConnectionState> = _connectionState.asStateFlow()
 
 	private var webSocket: WebSocket? = null
 	private var httpClient: OkHttpClient? = null
@@ -52,11 +64,14 @@ class EmbyWebSocketClient(
 		if (!api.isConfigured) return
 		val token = api.accessToken ?: return
 
+		_connectionState.value = EmbyConnectionState.Connecting
 		val wsUrl = buildWsUrl(api.baseUrl, token, api.deviceId)
 
 		withContext(Dispatchers.IO) {
 			val client = OkHttpClient.Builder()
 				.pingInterval(30, TimeUnit.SECONDS)
+				.connectTimeout(15, TimeUnit.SECONDS)
+				.readTimeout(0, TimeUnit.SECONDS)
 				.build()
 			httpClient = client
 
@@ -75,6 +90,7 @@ class EmbyWebSocketClient(
 		webSocket = null
 		httpClient?.dispatcher?.executorService?.shutdown()
 		httpClient = null
+		_connectionState.value = EmbyConnectionState.Disconnected
 	}
 
 	fun forceDisconnect() {
@@ -120,6 +136,7 @@ class EmbyWebSocketClient(
 		override fun onOpen(webSocket: WebSocket, response: Response) {
 			Timber.i("Emby WebSocket connected")
 			reconnectAttempt = 0
+			_connectionState.value = EmbyConnectionState.Connected
 			scope.launch { postCapabilities() }
 		}
 
@@ -132,8 +149,13 @@ class EmbyWebSocketClient(
 		}
 
 		override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-			Timber.w(t, "Emby WebSocket failure")
+			Timber.w(t, "Emby WebSocket failure (code=%d)", response?.code ?: -1)
 			keepAliveJob?.cancel()
+			if (response?.code == 401) {
+				_connectionState.value = EmbyConnectionState.TokenExpired
+				return
+			}
+			_connectionState.value = EmbyConnectionState.Error(t)
 			scheduleReconnect()
 		}
 
@@ -177,13 +199,28 @@ class EmbyWebSocketClient(
 
 	private fun scheduleReconnect() {
 		if (!api.isConfigured) return
+		if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+			Timber.w("Emby WebSocket max reconnect attempts (%d) reached", MAX_RECONNECT_ATTEMPTS)
+			_connectionState.value = EmbyConnectionState.ServerUnreachable
+			return
+		}
 		reconnectJob?.cancel()
 		reconnectJob = scope.launch {
-			val delayMs = min(30_000L, 1_000L * (1L shl min(reconnectAttempt, 5)))
+			val baseDelay = min(30_000L, 1_000L * (1L shl min(reconnectAttempt, 5)))
+			val jitter = Random.nextLong(0, baseDelay / 2 + 1)
+			val delayMs = baseDelay + jitter
 			reconnectAttempt++
 			Timber.i("Emby WebSocket reconnecting in %d ms (attempt %d)", delayMs, reconnectAttempt)
 			delay(delayMs)
 			connect()
 		}
+	}
+
+	fun reconnectNow() {
+		if (!api.isConfigured) return
+		reconnectJob?.cancel()
+		reconnectAttempt = 0
+		_connectionState.value = EmbyConnectionState.Connecting
+		scope.launch { connect() }
 	}
 }

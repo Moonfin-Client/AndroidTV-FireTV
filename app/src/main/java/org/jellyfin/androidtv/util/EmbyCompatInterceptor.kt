@@ -23,6 +23,7 @@ class EmbyCompatInterceptor : Interceptor {
 	private val _serverType = AtomicReference(ServerType.JELLYFIN)
 	private val _userId = AtomicReference<String?>(null)
 	private val _embyServers = ConcurrentHashMap<String, String>()
+	private val _onTokenExpired = AtomicReference<(() -> Unit)?>(null)
 
 	fun setServerType(type: ServerType) {
 		_serverType.set(type)
@@ -34,6 +35,10 @@ class EmbyCompatInterceptor : Interceptor {
 
 	fun registerEmbyServer(baseUrl: String, userId: String) {
 		_embyServers[baseUrl.trimEnd('/')] = userId
+	}
+
+	fun setOnTokenExpired(callback: (() -> Unit)?) {
+		_onTokenExpired.set(callback)
 	}
 
 	private fun resolveEmbyUserId(request: okhttp3.Request): String? {
@@ -56,6 +61,13 @@ class EmbyCompatInterceptor : Interceptor {
 		}
 
 		val response = chain.proceed(request)
+
+		if (response.code == 401) {
+			Timber.w("EmbyCompat: received 401 for %s", request.url.encodedPath)
+			_onTokenExpired.get()?.invoke()
+			return response
+		}
+
 		if (!response.isSuccessful) return response
 
 		val contentType = response.header("Content-Type") ?: return response
