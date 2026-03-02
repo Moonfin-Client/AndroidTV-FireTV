@@ -1,5 +1,5 @@
 <h1 align="center">Moonfin for Android TV</h1>
-<h3 align="center">Enhanced Jellyfin client for Android TV, Nvidia Shield, and Amazon Fire TV devices</h3>
+<h3 align="center">Enhanced Jellyfin & Emby client for Android TV, Nvidia Shield, and Amazon Fire TV devices</h3>
 
 ---
 
@@ -14,16 +14,33 @@
 
 > **[← Back to main Moonfin project](https://github.com/Moonfin-Client)**
 
-Moonfin for Android TV is an enhanced fork of the official Jellyfin Android TV client, optimized for the viewing experience on Android TV, Nvidia Shield, and Amazon Fire TV devices.
+Moonfin for Android TV is an enhanced fork of the official Jellyfin Android TV client, optimized for the viewing experience on Android TV, Nvidia Shield, and Amazon Fire TV devices. Moonfin also supports **Emby Server 4.8.0.0+**, allowing you to connect to either Jellyfin or Emby from a single app.
+
+## Supported Servers
+
+| Server | Minimum Version | Status |
+|--------|----------------|--------|
+| Jellyfin | 10.8.0+ | Full support |
+| Emby | 4.8.0.0+ | Full support |
+
+See [EMBY_SUPPORT.md](docs/EMBY_SUPPORT.md) for details on Emby-specific behavior and feature differences.
 
 ## Features & Enhancements
 
 Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted improvements for TV viewing:
 
 ### Cross-Server Content Playback
-- **Unified Library Support** - Seamless playback from multiple Jellyfin servers
+- **Unified Library Support** - Seamless playback from multiple Jellyfin and Emby servers
 - Seamless switching between servers for content playback
 - Improved server selection logic
+
+### Emby Server Support
+- **Full Emby Integration** - Connect to Emby Server 4.8.0.0+ alongside Jellyfin
+- Automatic server type detection during setup (no manual configuration needed)
+- WebSocket real-time events with reconnection and jitter-based backoff
+- In-memory caching for library views and display preferences
+- Feature gating hides Jellyfin-only features (SyncPlay, Media Segments, Lyrics) when connected to Emby
+- See [docs/EMBY_SUPPORT.md](docs/EMBY_SUPPORT.md) for the full feature matrix
 
 ### SyncPlay (Beta)
 - **Synchronized Group Playback** - Watch together with friends and family in perfect sync
