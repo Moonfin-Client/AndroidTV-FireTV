@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.util
 
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.json.JSONArray
@@ -99,17 +100,7 @@ class EmbyCompatInterceptor : Interceptor {
 		val path = url.encodedPath
 
 		if (userId != null) {
-			val newPath = when {
-				path.endsWith("/UserItems/Resume", ignoreCase = true) -> {
-					val prefix = path.substringBeforeLast("/UserItems/Resume", "")
-					"$prefix/Users/$userId/Items/Resume"
-				}
-				path.endsWith("/UserViews", ignoreCase = true) -> {
-					val prefix = path.substringBeforeLast("/UserViews", "")
-					"$prefix/Users/$userId/Views"
-				}
-				else -> null
-			}
+			val newPath = rewritePath(path, userId)
 			if (newPath != null) {
 				url = url.newBuilder().encodedPath(newPath).build()
 			}
@@ -130,10 +121,118 @@ class EmbyCompatInterceptor : Interceptor {
 				.build()
 		}
 
-		return if (url != request.url) {
-			request.newBuilder().url(url).build()
-		} else {
-			request
+		url = rewriteQueryParameters(url)
+
+		val body = rewriteRequestBody(request)
+
+		return when {
+			url != request.url && body != null -> request.newBuilder().url(url).method(request.method, body).build()
+			url != request.url -> request.newBuilder().url(url).build()
+			body != null -> request.newBuilder().method(request.method, body).build()
+			else -> request
+		}
+	}
+
+	private fun rewritePath(path: String, userId: String): String? {
+		if (path.endsWith("/UserItems/Resume", ignoreCase = true)) {
+			return path.substringBeforeLast("/UserItems/Resume", "") + "/Users/$userId/Items/Resume"
+		}
+		if (path.endsWith("/UserViews", ignoreCase = true)) {
+			return path.substringBeforeLast("/UserViews", "") + "/Users/$userId/Views"
+		}
+		if (path.endsWith("/Items/Latest", ignoreCase = true)) {
+			return path.substringBeforeLast("/Items/Latest", "") + "/Users/$userId/Items/Latest"
+		}
+
+		USER_FAVORITE_ITEMS_PATTERN.find(path)?.let { match ->
+			val prefix = match.groupValues[1]
+			val itemId = match.groupValues[2]
+			return "$prefix/Users/$userId/FavoriteItems/$itemId"
+		}
+
+		USER_PLAYED_ITEMS_PATTERN.find(path)?.let { match ->
+			val prefix = match.groupValues[1]
+			val itemId = match.groupValues[2]
+			return "$prefix/Users/$userId/PlayedItems/$itemId"
+		}
+
+		PLAYING_ITEMS_PROGRESS_PATTERN.find(path)?.let { match ->
+			val prefix = match.groupValues[1]
+			val itemId = match.groupValues[2]
+			return "$prefix/Users/$userId/PlayingItems/$itemId/Progress"
+		}
+
+		PLAYING_ITEMS_PATTERN.find(path)?.let { match ->
+			val prefix = match.groupValues[1]
+			val itemId = match.groupValues[2]
+			return "$prefix/Users/$userId/PlayingItems/$itemId"
+		}
+
+		USER_ITEMS_USERDATA_PATTERN.find(path)?.let { match ->
+			val prefix = match.groupValues[1]
+			val itemId = match.groupValues[2]
+			return "$prefix/Users/$userId/Items/$itemId/UserData"
+		}
+
+		USER_ITEMS_RATING_PATTERN.find(path)?.let { match ->
+			val prefix = match.groupValues[1]
+			val itemId = match.groupValues[2]
+			return "$prefix/Users/$userId/Items/$itemId/Rating"
+		}
+
+		return null
+	}
+
+	private fun rewriteQueryParameters(url: okhttp3.HttpUrl): okhttp3.HttpUrl {
+		val parameterNames = url.queryParameterNames
+		if (parameterNames.isEmpty()) return url
+
+		var needsConversion = false
+		for (name in parameterNames) {
+			for (value in url.queryParameterValues(name)) {
+				if (value != null && uuidToNumeric(value) != null) {
+					needsConversion = true
+					break
+				}
+			}
+			if (needsConversion) break
+		}
+		if (!needsConversion) return url
+
+		val builder = url.newBuilder()
+		for (n in parameterNames) builder.removeAllQueryParameters(n)
+		for (n in parameterNames) {
+			for (v in url.queryParameterValues(n)) {
+				val converted = if (v != null) uuidToNumeric(v) ?: v else v
+				builder.addQueryParameter(n, converted)
+			}
+		}
+		return builder.build()
+	}
+
+	private fun rewriteRequestBody(request: okhttp3.Request): okhttp3.RequestBody? {
+		val body = request.body ?: return null
+		val contentType = body.contentType()?.toString() ?: return null
+		if (!contentType.contains("json", ignoreCase = true)) return null
+		if (request.method != "POST" && request.method != "PUT") return null
+
+		val buffer = okio.Buffer()
+		body.writeTo(buffer)
+		val json = buffer.readUtf8()
+		if (json.isEmpty()) return null
+
+		val patched = replaceUuidToNumericIds(json, UUID_ID_PATTERN)
+		if (patched == json) return null
+
+		return patched.toByteArray().toRequestBody("application/json".toMediaType())
+	}
+
+	private fun replaceUuidToNumericIds(json: String, pattern: Regex): String {
+		return pattern.replace(json) { match ->
+			val key = match.groupValues[1]
+			val uuid = match.groupValues[2]
+			val numeric = uuidToNumeric(uuid)
+			if (numeric != null) "\"$key\":\"$numeric\"" else match.value
 		}
 	}
 
@@ -172,7 +271,7 @@ class EmbyCompatInterceptor : Interceptor {
 		var modified = false
 
 		obj.optJSONObject("UserData")?.let { userData ->
-			val parentId = obj.optString("Id", null)
+			val parentId: String? = if (obj.has("Id")) obj.optString("Id") else null
 			if (patchUserItemData(userData, parentId)) modified = true
 		}
 
@@ -291,6 +390,14 @@ class EmbyCompatInterceptor : Interceptor {
 		private val NUMERIC_ID_PATTERN = Regex("\"(\\w*Id)\"\\s*:\\s*\"(\\d+)\"")
 		// "SomeId":927 — bare (unquoted) numeric value
 		private val BARE_NUMERIC_ID_PATTERN = Regex("\"(\\w*Id)\"\\s*:\\s*(\\d+)(?=[,}\\]])")
+		private val UUID_ID_PATTERN = Regex("\"(\\w*Id)\"\\s*:\\s*\"([0-9]{8}-[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{12})\"")
+
+		private val USER_FAVORITE_ITEMS_PATTERN = Regex("(.*)/UserFavoriteItems/(.+)", RegexOption.IGNORE_CASE)
+		private val USER_PLAYED_ITEMS_PATTERN = Regex("(.*)/UserPlayedItems/(.+)", RegexOption.IGNORE_CASE)
+		private val PLAYING_ITEMS_PROGRESS_PATTERN = Regex("(.*)/PlayingItems/([^/]+)/Progress$", RegexOption.IGNORE_CASE)
+		private val PLAYING_ITEMS_PATTERN = Regex("(.*)/PlayingItems/([^/]+)$", RegexOption.IGNORE_CASE)
+		private val USER_ITEMS_USERDATA_PATTERN = Regex("(.*)/UserItems/([^/]+)/UserData$", RegexOption.IGNORE_CASE)
+		private val USER_ITEMS_RATING_PATTERN = Regex("(.*)/UserItems/([^/]+)/Rating$", RegexOption.IGNORE_CASE)
 
 		fun numericToUuid(id: String): String {
 			val padded = id.padStart(32, '0')

@@ -11,6 +11,7 @@ import org.jellyfin.androidtv.data.model.AppNotification
 import org.jellyfin.androidtv.preference.SystemPreferences
 import org.jellyfin.androidtv.util.isTvDevice
 import org.jellyfin.sdk.model.ServerVersion
+import org.moonfin.server.core.model.ServerType
 
 interface NotificationsRepository {
 	val notifications: StateFlow<List<AppNotification>>
@@ -81,13 +82,19 @@ class NotificationsRepositoryImpl(
 		_updateServerNotification?.let(::removeNotification)
 
 		val currentServerVersion = server?.version?.let(ServerVersion::fromString) ?: return
-		if (currentServerVersion < ServerRepository.upcomingMinimumServerVersion) {
+
+		val targetVersion = when (server.serverType) {
+			ServerType.EMBY -> null
+			ServerType.JELLYFIN -> ServerRepository.upcomingMinimumServerVersion
+		} ?: return
+
+		if (currentServerVersion < targetVersion) {
 			_updateServerNotification =
 				addNotification(
 					message = context.getString(
 						R.string.app_notification_update_soon,
 						currentServerVersion,
-						ServerRepository.upcomingMinimumServerVersion
+						targetVersion
 					),
 				)
 		}

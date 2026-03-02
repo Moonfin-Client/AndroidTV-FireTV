@@ -42,8 +42,10 @@ class EmbyApiClient(
     var userId: String? = null
         private set
 
-    private var userService: UserServiceApi? = null
-    private var sessionsService: SessionsServiceApi? = null
+    var userService: UserServiceApi? = null
+        private set
+    var sessionsService: SessionsServiceApi? = null
+        private set
     var itemsService: ItemsServiceApi? = null
         private set
     var userLibraryService: UserLibraryServiceApi? = null

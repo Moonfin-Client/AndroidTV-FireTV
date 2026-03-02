@@ -25,6 +25,7 @@ import org.moonfin.server.core.model.ServerMediaStream
 import org.moonfin.server.core.model.ServerPerson
 import org.moonfin.server.core.model.ServerUser
 import org.moonfin.server.core.model.StreamType
+import org.moonfin.server.emby.EmbyUserInfo
 import org.moonfin.server.core.model.DisplayPreferences as CoreDisplayPreferences
 import org.moonfin.server.core.model.LiveTvGuideInfo as CoreLiveTvGuideInfo
 import org.moonfin.server.core.model.LiveTvSeriesTimerInfo
@@ -189,6 +190,17 @@ fun UserDto.toServerUser(): ServerUser = ServerUser(
     hasConfiguredPassword = hasConfiguredPassword ?: false,
     lastLoginDate = lastLoginDate?.toInstant(),
     lastActivityDate = lastActivityDate?.toInstant(),
+)
+
+fun EmbyUserInfo.toServerUser(): ServerUser = ServerUser(
+    id = id,
+    name = name ?: "",
+    serverName = null,
+    primaryImageTag = primaryImageTag,
+    hasPassword = hasPassword ?: false,
+    hasConfiguredPassword = hasConfiguredPassword ?: false,
+    lastLoginDate = null,
+    lastActivityDate = null,
 )
 
 fun BaseItemDto.toServerItem(): ServerItem = ServerItem(
