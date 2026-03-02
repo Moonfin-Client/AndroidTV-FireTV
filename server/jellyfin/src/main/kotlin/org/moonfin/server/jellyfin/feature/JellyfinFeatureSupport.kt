@@ -3,7 +3,7 @@ package org.moonfin.server.jellyfin.feature
 import org.moonfin.server.core.feature.ServerFeature
 import org.moonfin.server.core.feature.ServerFeatureSupport
 
-class JellyfinFeatureSupport : ServerFeatureSupport {
+object JellyfinFeatureSupport : ServerFeatureSupport {
     override val supportedFeatures: Set<ServerFeature> = setOf(
         ServerFeature.QUICK_CONNECT,
         ServerFeature.SYNC_PLAY,
@@ -11,5 +11,6 @@ class JellyfinFeatureSupport : ServerFeatureSupport {
         ServerFeature.TRICKPLAY,
         ServerFeature.LYRICS,
         ServerFeature.CLIENT_LOG,
+        ServerFeature.JELLYSEERR,
     )
 }

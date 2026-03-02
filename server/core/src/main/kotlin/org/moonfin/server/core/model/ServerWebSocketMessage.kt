@@ -32,4 +32,10 @@ sealed class ServerWebSocketMessage {
     data object ServerShuttingDown : ServerWebSocketMessage()
 
     data class SessionEnded(val sessionId: String) : ServerWebSocketMessage()
+
+    data class ScheduledTaskEnded(
+        val taskId: String,
+        val taskName: String,
+        val status: String,
+    ) : ServerWebSocketMessage()
 }

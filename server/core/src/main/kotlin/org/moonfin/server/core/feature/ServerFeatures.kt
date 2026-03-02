@@ -6,8 +6,11 @@ enum class ServerFeature {
     WATCH_PARTY,
     MEDIA_SEGMENTS,
     TRICKPLAY,
+    BIF_TRICKPLAY,
     LYRICS,
     CLIENT_LOG,
+    EMBY_CONNECT,
+    JELLYSEERR,
 }
 
 interface ServerFeatureSupport {

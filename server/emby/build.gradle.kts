@@ -29,6 +29,8 @@ dependencies {
 	api("org.emby:emby-client:4.9.3.0")
 
 	implementation(libs.ktor.client.core)
+	implementation(libs.ktor.client.okhttp)
+	implementation(libs.kotlinx.serialization.json)
 	implementation(libs.kotlinx.coroutines)
 	implementation(libs.timber)
 	coreLibraryDesugaring(libs.android.desugar)

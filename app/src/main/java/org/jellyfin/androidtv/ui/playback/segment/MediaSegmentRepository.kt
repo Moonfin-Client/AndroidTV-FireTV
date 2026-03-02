@@ -7,7 +7,8 @@ import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.androidtv.util.sdk.duration
-import org.moonfin.server.core.model.ServerType
+import org.jellyfin.androidtv.util.supportsFeature
+import org.moonfin.server.core.feature.ServerFeature
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.mediaSegmentsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -104,7 +105,7 @@ class MediaSegmentRepositoryImpl(
 	}
 
 	override suspend fun getSegmentsForItem(item: BaseItemDto): List<MediaSegmentDto> {
-		if (serverRepository.currentServer.value?.serverType == ServerType.EMBY) return emptyList()
+		if (!serverRepository.currentServer.value.supportsFeature(ServerFeature.MEDIA_SEGMENTS)) return emptyList()
 		return runCatching {
 			val serverId = UUIDUtils.parseUUID(item.serverId)
 			val effectiveApi = if (serverId != null) apiClientFactory.getApiClientForServer(serverId) ?: api else api

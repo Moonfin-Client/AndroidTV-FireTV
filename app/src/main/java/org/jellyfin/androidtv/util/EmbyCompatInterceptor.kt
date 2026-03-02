@@ -8,17 +8,21 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.moonfin.server.core.model.ServerType
 import timber.log.Timber
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 /**
  * OkHttp interceptor that bridges Jellyfin SDK API calls to Emby servers.
  * Rewrites request URLs, converts numeric IDs to/from UUIDs, and injects
  * missing required fields in JSON responses.
+ *
+ * Supports both global (active session) and per-URL (multi-server) Emby detection.
  */
 class EmbyCompatInterceptor : Interceptor {
 
 	private val _serverType = AtomicReference(ServerType.JELLYFIN)
 	private val _userId = AtomicReference<String?>(null)
+	private val _embyServers = ConcurrentHashMap<String, String>()
 
 	fun setServerType(type: ServerType) {
 		_serverType.set(type)
@@ -28,11 +32,25 @@ class EmbyCompatInterceptor : Interceptor {
 		_userId.set(userId)
 	}
 
-	override fun intercept(chain: Interceptor.Chain): Response {
-		if (_serverType.get() != ServerType.EMBY) return chain.proceed(chain.request())
+	fun registerEmbyServer(baseUrl: String, userId: String) {
+		_embyServers[baseUrl.trimEnd('/')] = userId
+	}
 
+	private fun resolveEmbyUserId(request: okhttp3.Request): String? {
+		val requestUrl = request.url.toString()
+		for ((baseUrl, userId) in _embyServers) {
+			if (requestUrl.startsWith(baseUrl)) return userId
+		}
+		if (_serverType.get() == ServerType.EMBY) return _userId.get()
+		return null
+	}
+
+	override fun intercept(chain: Interceptor.Chain): Response {
 		val original = chain.request()
-		val request = rewriteRequest(original)
+		val embyUserId = resolveEmbyUserId(original)
+		if (embyUserId == null) return chain.proceed(original)
+
+		val request = rewriteRequest(original, embyUserId)
 		if (request.url != original.url) {
 			Timber.d("EmbyCompat: rewrote %s → %s", original.url.encodedPath, request.url)
 		}
@@ -64,10 +82,9 @@ class EmbyCompatInterceptor : Interceptor {
 			.build()
 	}
 
-	private fun rewriteRequest(request: okhttp3.Request): okhttp3.Request {
+	private fun rewriteRequest(request: okhttp3.Request, userId: String?): okhttp3.Request {
 		var url = request.url
 		val path = url.encodedPath
-		val userId = _userId.get()
 
 		if (userId != null) {
 			val newPath = when {

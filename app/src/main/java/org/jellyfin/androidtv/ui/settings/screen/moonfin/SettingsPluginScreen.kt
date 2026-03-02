@@ -28,7 +28,8 @@ import org.jellyfin.androidtv.ui.settings.screen.customization.getOverlayColorLa
 import org.jellyfin.androidtv.ui.settings.screen.customization.getSeasonalLabel
 import org.jellyfin.androidtv.ui.settings.screen.customization.getShuffleContentTypeLabel
 import org.koin.compose.koinInject
-import org.moonfin.server.core.model.ServerType
+import org.moonfin.server.core.feature.ServerFeature
+import org.jellyfin.androidtv.util.supportsFeature
 
 @Composable
 fun SettingsPluginScreen() {
@@ -39,7 +40,7 @@ fun SettingsPluginScreen() {
 	val pluginSyncService = koinInject<PluginSyncService>()
 	val serverRepository = koinInject<ServerRepository>()
 	val currentServer by serverRepository.currentServer.collectAsState()
-	val jellyseerrSupported = currentServer?.serverType != ServerType.EMBY
+	val jellyseerrSupported = currentServer.supportsFeature(ServerFeature.JELLYSEERR)
 
 	SettingsColumn {
 		item {

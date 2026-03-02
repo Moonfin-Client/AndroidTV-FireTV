@@ -8,10 +8,12 @@ import androidx.lifecycle.coroutineScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.data.model.DataRefreshService
 import org.jellyfin.androidtv.data.syncplay.SyncPlayManager
 import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
@@ -41,6 +43,9 @@ import org.jellyfin.sdk.model.api.SyncPlayGroupUpdateMessage
 import org.jellyfin.sdk.model.extensions.get
 import org.jellyfin.sdk.model.extensions.getValue
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
+import org.moonfin.server.core.model.ServerType
+import org.moonfin.server.core.model.ServerWebSocketMessage
+import org.moonfin.server.emby.socket.EmbyWebSocketClient
 import timber.log.Timber
 import java.time.Instant
 import java.util.UUID
@@ -57,16 +62,38 @@ class SocketHandler(
 	private val playbackHelper: PlaybackHelper,
 	private val syncPlayManager: SyncPlayManager,
 	private val lifecycle: Lifecycle,
+	private val embyWebSocketClient: EmbyWebSocketClient,
+	private val serverRepository: ServerRepository,
 ) {
+	private val activeServerType: ServerType
+		get() = serverRepository.currentServer.value?.serverType ?: ServerType.JELLYFIN
+
 	init {
 		lifecycle.coroutineScope.launch(Dispatchers.IO) {
 			lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-				subscribe(this)
+				var subscriptionJob: Job? = null
+				serverRepository.currentServer
+					.onEach { server ->
+						subscriptionJob?.cancel()
+						embyWebSocketClient.disconnect()
+						val type = server?.serverType ?: return@onEach
+						subscriptionJob = launch {
+							when (type) {
+								ServerType.JELLYFIN -> subscribeJellyfin(this)
+								ServerType.EMBY -> subscribeEmby(this)
+							}
+						}
+					}
+					.launchIn(this)
 			}
 		}
 	}
 
 	suspend fun updateSession() {
+		if (activeServerType == ServerType.JELLYFIN) updateJellyfinSession()
+	}
+
+	private suspend fun updateJellyfinSession() {
 		try {
 			withContext(Dispatchers.IO) {
 				api.sessionApi.postCapabilities(
@@ -80,7 +107,6 @@ class SocketHandler(
 						add(GeneralCommandType.DISPLAY_MESSAGE)
 						add(GeneralCommandType.SEND_STRING)
 
-						// Note: These are used in the PlaySessionSocketService
 						if (!audioManager.isVolumeFixed) {
 							add(GeneralCommandType.VOLUME_UP)
 							add(GeneralCommandType.VOLUME_DOWN)
@@ -98,13 +124,11 @@ class SocketHandler(
 		}
 	}
 
-	private fun subscribe(coroutineScope: CoroutineScope) = api.webSocket.apply {
-		// Library
+	private fun subscribeJellyfin(coroutineScope: CoroutineScope) = api.webSocket.apply {
 		subscribe<LibraryChangedMessage>()
 			.onEach { message -> message.data?.let(::onLibraryChanged) }
 			.launchIn(coroutineScope)
 
-		// Media playback
 		subscribe<PlayMessage>()
 			.onEach { message -> onPlayMessage(message) }
 			.launchIn(coroutineScope)
@@ -133,7 +157,6 @@ class SocketHandler(
 			}
 			.launchIn(coroutineScope)
 
-		// General commands
 		subscribeGeneralCommand(GeneralCommandType.DISPLAY_CONTENT)
 			.onEach { message ->
 				val itemId by message
@@ -160,7 +183,6 @@ class SocketHandler(
 			}
 			.launchIn(coroutineScope)
 
-		// SyncPlay messages
 		subscribe<SyncPlayCommandMessage>()
 			.onEach { message -> onSyncPlayCommand(message) }
 			.launchIn(coroutineScope)
@@ -168,6 +190,114 @@ class SocketHandler(
 		subscribe<SyncPlayGroupUpdateMessage>()
 			.onEach { message -> onSyncPlayGroupUpdate(message) }
 			.launchIn(coroutineScope)
+	}
+
+	private suspend fun subscribeEmby(coroutineScope: CoroutineScope) {
+		embyWebSocketClient.connect()
+
+		embyWebSocketClient.messages
+			.onEach { message -> handleEmbyMessage(message) }
+			.launchIn(coroutineScope)
+	}
+
+	private suspend fun handleEmbyMessage(message: ServerWebSocketMessage) {
+		when (message) {
+			is ServerWebSocketMessage.LibraryChanged -> {
+				Timber.d("Emby library changed: +${message.itemsAdded.size} ~${message.itemsUpdated.size} -${message.itemsRemoved.size}")
+				if (message.itemsAdded.isNotEmpty() || message.itemsRemoved.isNotEmpty()) {
+					dataRefreshService.lastLibraryChange = Instant.now()
+				}
+			}
+
+			is ServerWebSocketMessage.UserDataChanged -> {
+				Timber.d("Emby user data changed for ${message.itemIds.size} items")
+				dataRefreshService.lastLibraryChange = Instant.now()
+			}
+
+			is ServerWebSocketMessage.Play -> {
+				val uuids = message.itemIds.mapNotNull { it.toUUIDOrNull() }
+				if (uuids.isEmpty()) return
+				runCatching {
+					playbackHelper.retrieveAndPlay(
+						uuids,
+						false,
+						message.startPositionTicks,
+						null,
+						context,
+					)
+				}.onFailure { Timber.w(it, "Failed to start Emby remote playback") }
+			}
+
+			is ServerWebSocketMessage.Playstate -> withContext(Dispatchers.Main) {
+				if (mediaManager.hasAudioQueueItems()) return@withContext
+
+				val controller = playbackControllerContainer.playbackController
+				when (message.command) {
+					"Stop" -> controller?.endPlayback(true)
+					"Pause", "Unpause", "PlayPause" -> controller?.playPause()
+					"NextTrack" -> controller?.next()
+					"PreviousTrack" -> controller?.prev()
+					"Seek" -> controller?.seek(
+						(message.seekPositionTicks ?: 0) / 10_000
+					)
+					"Rewind" -> controller?.rewind()
+					"FastForward" -> controller?.fastForward()
+				}
+			}
+
+			is ServerWebSocketMessage.GeneralCommand -> handleEmbyGeneralCommand(message)
+
+			is ServerWebSocketMessage.ServerRestarting -> {
+				Timber.i("Emby server restarting")
+				onDisplayMessage(null, "Server is restarting...")
+			}
+
+			is ServerWebSocketMessage.ServerShuttingDown -> {
+				Timber.i("Emby server shutting down")
+				onDisplayMessage(null, "Server is shutting down...")
+			}
+
+			is ServerWebSocketMessage.SessionEnded -> {
+				Timber.i("Emby session ended: ${message.sessionId}")
+			}
+
+			is ServerWebSocketMessage.ScheduledTaskEnded -> {
+				Timber.d("Emby task ended: ${message.taskName} (${message.status})")
+			}
+		}
+	}
+
+	private suspend fun handleEmbyGeneralCommand(command: ServerWebSocketMessage.GeneralCommand) {
+		when (command.name) {
+			"DisplayContent" -> {
+				val itemId = command.arguments["ItemId"]?.toUUIDOrNull() ?: return
+				val itemType = command.arguments["ItemType"]?.let { type ->
+					BaseItemKind.entries.find { it.serialName.equals(type, true) }
+				}
+				if (itemType != null) onDisplayContent(itemId, itemType)
+			}
+
+			"DisplayMessage", "SendString" -> {
+				onDisplayMessage(
+					command.arguments["Header"],
+					command.arguments["Text"] ?: command.arguments["String"],
+				)
+			}
+
+			"SetSubtitleStreamIndex" -> {
+				val index = command.arguments["Index"]?.toIntOrNull() ?: return
+				withContext(Dispatchers.Main) {
+					playbackControllerContainer.playbackController?.setSubtitleIndex(index)
+				}
+			}
+
+			"SetAudioStreamIndex" -> {
+				val index = command.arguments["Index"]?.toIntOrNull() ?: return
+				withContext(Dispatchers.Main) {
+					playbackControllerContainer.playbackController?.switchAudioStream(index)
+				}
+			}
+		}
 	}
 
 	private fun onLibraryChanged(info: LibraryUpdateInfo) {
@@ -200,14 +330,12 @@ class SocketHandler(
 	private suspend fun onPlayStateMessage(message: PlaystateMessage) = withContext(Dispatchers.Main) {
 		Timber.i("Received PlayStateMessage with command ${message.data?.command}")
 
-		// Audio playback uses (Rewrite)MediaManager, (legacy) video playback uses playbackController
 		when {
 			mediaManager.hasAudioQueueItems() -> {
 				Timber.i("Ignoring PlayStateMessage: should be handled by PlaySessionSocketService")
 				return@withContext
 			}
 
-			// PlaybackController
 			else -> {
 				val playbackController = playbackControllerContainer.playbackController
 				when (message.data?.command) {
@@ -255,7 +383,6 @@ class SocketHandler(
 			append(text)
 		}
 
-		// Use non-blocking coroutine instead of runBlocking to avoid blocking the IO thread
 		lifecycle.coroutineScope.launch(Dispatchers.Main) {
 			Toast.makeText(context, toastMessage, Toast.LENGTH_LONG).show()
 		}

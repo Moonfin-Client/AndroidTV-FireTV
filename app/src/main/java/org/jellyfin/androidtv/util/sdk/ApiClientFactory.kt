@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.util.sdk
 
 import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
+import org.jellyfin.androidtv.util.EmbyCompatInterceptor
 import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
@@ -16,6 +17,7 @@ class ApiClientFactory(
 	private val authenticationStore: AuthenticationStore,
 	private val defaultDeviceInfo: DeviceInfo,
 	private val sessionRepository: SessionRepository,
+	private val embyCompatInterceptor: EmbyCompatInterceptor,
 ) {
 	fun getApiClient(serverId: UUID, userId: UUID? = null): ApiClient? {
 		val server = authenticationStore.getServer(serverId)
@@ -23,12 +25,8 @@ class ApiClientFactory(
 			Timber.w("ApiClientFactory: Server $serverId not found")
 			return null
 		}
-		if (server.serverType == ServerType.EMBY) {
-			Timber.w("ApiClientFactory: Server $serverId is an Emby server — Jellyfin ApiClient not applicable")
-			return null
-		}
 
-		val resolvedUserId: UUID?
+		val resolvedUserId: UUID
 		val accessToken: String?
 
 		if (userId != null) {
@@ -40,7 +38,6 @@ class ApiClientFactory(
 			}
 			accessToken = user.accessToken
 		} else {
-			// Prefer the current session's user for the current server
 			val currentSession = sessionRepository.currentSession.value
 			val preferredEntry = if (currentSession != null && currentSession.serverId == serverId) {
 				val currentUser = authenticationStore.getUser(serverId, currentSession.userId)
@@ -53,7 +50,6 @@ class ApiClientFactory(
 				resolvedUserId = preferredEntry.first
 				accessToken = preferredEntry.second
 			} else {
-				// Fallback: first user with a token (for non-current servers)
 				val users = authenticationStore.getServer(serverId)?.users
 				if (users.isNullOrEmpty()) {
 					Timber.w("ApiClientFactory: Server $serverId has no users")
@@ -74,10 +70,10 @@ class ApiClientFactory(
 			}
 		}
 
-		val deviceInfo = if (resolvedUserId != null) {
-			defaultDeviceInfo.forUser(resolvedUserId)
-		} else {
-			defaultDeviceInfo
+		val deviceInfo = defaultDeviceInfo.forUser(resolvedUserId)
+
+		if (server.serverType == ServerType.EMBY) {
+			embyCompatInterceptor.registerEmbyServer(server.address, resolvedUserId.toString())
 		}
 
 		return jellyfin.createApi(

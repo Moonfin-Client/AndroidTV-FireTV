@@ -1,5 +1,7 @@
 package org.jellyfin.androidtv.di
 
+import android.content.Context
+import android.media.AudioManager
 import org.jellyfin.androidtv.BuildConfig
 import org.jellyfin.androidtv.auth.repository.AuthenticationRepository
 import org.jellyfin.androidtv.auth.repository.AuthenticationRepositoryImpl
@@ -15,6 +17,7 @@ import org.jellyfin.sdk.model.DeviceInfo
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.moonfin.server.emby.EmbyApiClient
+import org.moonfin.server.emby.socket.EmbyWebSocketClient
 
 val authModule = module {
 	single { AuthenticationStore(get()) }
@@ -30,13 +33,22 @@ val authModule = module {
 		)
 	}
 
+	single {
+		val context = get<Context>()
+		val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+		EmbyWebSocketClient(
+			api = get<EmbyApiClient>(),
+			audioManager = audioManager,
+		)
+	}
+
 	single<AuthenticationRepository> {
 		AuthenticationRepositoryImpl(get(), get(), get(), get(), get(), get(defaultDeviceInfo), get(), get(named("global")), get())
 	}
 	single<ServerRepository> { ServerRepositoryImpl(get(), get()) }
 	single<ServerUserRepository> { ServerUserRepositoryImpl(get(), get()) }
 	single<SessionRepository> {
-		SessionRepositoryImpl(get(), get(), get(), get(), get(defaultDeviceInfo), get(), get(), get(), get(), get())
+		SessionRepositoryImpl(get(), get(), get(), get(), get(defaultDeviceInfo), get(), get(), get(), get(), get(), get())
 	}
 
 	factory {

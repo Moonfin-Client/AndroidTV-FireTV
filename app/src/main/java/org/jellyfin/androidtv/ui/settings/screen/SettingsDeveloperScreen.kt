@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.ui.settings.screen
 
 import android.text.format.Formatter
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
@@ -20,12 +21,17 @@ import org.jellyfin.androidtv.ui.base.list.ListSection
 import org.jellyfin.androidtv.ui.settings.compat.rememberPreference
 import org.jellyfin.androidtv.ui.settings.composable.SettingsColumn
 import org.jellyfin.androidtv.util.isTvDevice
+import org.jellyfin.androidtv.util.supportsFeature
+import org.jellyfin.androidtv.auth.repository.ServerRepository
+import org.moonfin.server.core.feature.ServerFeature
 import org.koin.compose.koinInject
 
 @Composable
 fun SettingsDeveloperScreen() {
 	val userPreferences = koinInject<UserPreferences>()
 	val systemPreferences = koinInject<SystemPreferences>()
+	val serverRepository = koinInject<ServerRepository>()
+	val currentServer by serverRepository.currentServer.collectAsState()
 	val context = LocalContext.current
 	val isTvDevice = remember(context) { context.isTvDevice() }
 	val isDeveloperBuild = BuildConfig.DEVELOPMENT
@@ -39,8 +45,6 @@ fun SettingsDeveloperScreen() {
 		}
 
 		item {
-			// Legacy debug flag
-			// Not in use by much components anymore
 			var debuggingEnabled by rememberPreference(userPreferences, UserPreferences.debuggingEnabled)
 			ListButton(
 				headingContent = { Text(stringResource(R.string.lbl_enable_debug)) },
@@ -50,7 +54,6 @@ fun SettingsDeveloperScreen() {
 			)
 		}
 
-		// UI Mode toggle
 		if (!isTvDevice) item {
 			var disableUiModeWarning by rememberPreference(systemPreferences, SystemPreferences.disableUiModeWarning)
 			ListButton(
@@ -60,11 +63,9 @@ fun SettingsDeveloperScreen() {
 			)
 		}
 
-		// Playback rewrite - only show in debug mode
 		if (isDeveloperBuild) item {
 			var playbackRewriteVideoEnabled by rememberPreference(userPreferences, UserPreferences.playbackRewriteVideoEnabled)
 			ListButton(
-				// String is hardcoded because it's for development only
 				headingContent = { Text("Enable new playback module for video") },
 				trailingContent = { Checkbox(checked = playbackRewriteVideoEnabled) },
 				captionContent = { Text(stringResource(R.string.enable_playback_module_description)) },
@@ -72,8 +73,7 @@ fun SettingsDeveloperScreen() {
 			)
 		}
 
-		item {
-			// Trick play
+		if (currentServer.supportsFeature(ServerFeature.TRICKPLAY)) item {
 			var trickPlayEnabled by rememberPreference(userPreferences, UserPreferences.trickPlayEnabled)
 			ListButton(
 				headingContent = { Text(stringResource(R.string.preference_enable_trickplay)) },
@@ -84,7 +84,6 @@ fun SettingsDeveloperScreen() {
 		}
 
 		item {
-			// FFmpeg audio extension
 			var preferExoPlayerFfmpeg by rememberPreference(userPreferences, UserPreferences.preferExoPlayerFfmpeg)
 			ListButton(
 				headingContent = { Text(stringResource(R.string.prefer_exoplayer_ffmpeg)) },
@@ -95,7 +94,6 @@ fun SettingsDeveloperScreen() {
 		}
 
 		item {
-			// Image cache
 			val imageLoader = koinInject<ImageLoader>()
 			var imageCacheSize by remember { mutableLongStateOf(imageLoader.diskCache?.size ?: 0L) }
 			ListButton(

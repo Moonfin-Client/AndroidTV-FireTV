@@ -76,6 +76,9 @@ import org.jellyfin.androidtv.ui.syncplay.SyncPlayViewModel
 import org.jellyfin.androidtv.data.service.pluginsync.PluginSyncService
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.primaryImage
+import org.jellyfin.androidtv.util.supportsFeature
+import org.jellyfin.androidtv.auth.repository.ServerRepository
+import org.moonfin.server.core.feature.ServerFeature
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.CollectionType
@@ -111,6 +114,8 @@ fun MainToolbar(
 	val userViewsRepository = koinInject<UserViewsRepository>()
 	val multiServerRepository = koinInject<org.jellyfin.androidtv.data.repository.MultiServerRepository>()
 	val sessionRepository = koinInject<org.jellyfin.androidtv.auth.repository.SessionRepository>()
+	val serverRepository = koinInject<ServerRepository>()
+	val currentServer by serverRepository.currentServer.collectAsState()
 	val jellyseerrPreferences = koinInject<JellyseerrPreferences>(named("global"))
 	val userPreferences = koinInject<UserPreferences>()
 	val imageLoader = koinInject<coil3.ImageLoader>()
@@ -211,7 +216,7 @@ fun MainToolbar(
 		showGenresButton = showGenresButton,
 		showFavoritesButton = showFavoritesButton,
 		showLibrariesInToolbar = showLibrariesInToolbar,
-		syncPlayEnabled = syncPlayEnabled,
+		syncPlayEnabled = syncPlayEnabled && currentServer.supportsFeature(ServerFeature.SYNC_PLAY),
 		shuffleContentType = shuffleContentType,
 		enableFolderView = enableFolderView,
 		clockBehavior = clockBehavior,

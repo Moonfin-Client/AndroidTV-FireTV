@@ -119,7 +119,7 @@ val appModule = module {
 		get<JellyfinSdk>().createApi(httpClientOptions = get<HttpClientOptions>())
 	}
 
-	single { SocketHandler(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), ProcessLifecycleOwner.get().lifecycle) }
+	single { SocketHandler(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), ProcessLifecycleOwner.get().lifecycle, get(), get()) }
 
 	// Coil (images)
 	single {
@@ -183,9 +183,9 @@ val appModule = module {
 	single<ExternalAppRepository> { ExternalAppRepository(get()) }
 	single { LocalWatchlistRepository(androidContext()) }
 	single<org.jellyfin.androidtv.data.repository.MultiServerRepository> { 
-		org.jellyfin.androidtv.data.repository.MultiServerRepositoryImpl(get(), get(), get(), get(), get(defaultDeviceInfo), get()) 
+		org.jellyfin.androidtv.data.repository.MultiServerRepositoryImpl(get(), get(), get(), get(), get(defaultDeviceInfo), get(), get()) 
 	}
-	single { org.jellyfin.androidtv.util.sdk.ApiClientFactory(get(), get(), get(defaultDeviceInfo), get()) }
+	single { org.jellyfin.androidtv.util.sdk.ApiClientFactory(get(), get(), get(defaultDeviceInfo), get(), get()) }
 	single<org.jellyfin.androidtv.data.repository.ParentalControlsRepository> {
 		org.jellyfin.androidtv.data.repository.ParentalControlsRepositoryImpl(androidContext(), get(), get())
 	}

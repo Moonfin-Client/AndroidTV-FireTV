@@ -142,6 +142,20 @@ class EmbyApiClient(
         )
     }
 
+    suspend fun postCapabilities(
+        playableMediaTypes: String,
+        supportedCommands: String,
+        supportsMediaControl: Boolean,
+    ) {
+        sessionsService?.postSessionsCapabilities(
+            id = "",
+            playableMediaTypes = playableMediaTypes,
+            supportedCommands = supportedCommands,
+            supportsMediaControl = supportsMediaControl,
+            supportsSync = false,
+        )
+    }
+
     suspend fun logout() = runCatching { sessionsService?.postSessionsLogout() }
 
     val isConfigured: Boolean get() = baseUrl.isNotEmpty() && accessToken != null

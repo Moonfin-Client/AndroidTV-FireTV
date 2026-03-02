@@ -49,6 +49,7 @@ import org.jellyfin.androidtv.util.ListAdapter
 import org.jellyfin.androidtv.util.MenuBuilder
 import org.jellyfin.androidtv.util.getSummary
 import org.jellyfin.androidtv.util.popupMenu
+import org.jellyfin.androidtv.util.setServerTypeIcon
 import org.jellyfin.androidtv.util.showIfNotEmpty
 import org.koin.androidx.viewmodel.ext.android.activityViewModel
 import org.koin.compose.koinInject
@@ -246,6 +247,8 @@ class SelectServerFragment : Fragment() {
 				if (server.version != null) append("  •  ${server.version}")
 			}
 			button.text = displayText
+
+			button.setServerTypeIcon(server.serverType)
 
 			when (serverState) {
 				is ConnectingState -> button.isEnabled = false

@@ -14,6 +14,9 @@ import org.jellyfin.androidtv.preference.UserSettingPreferences;
 import org.jellyfin.androidtv.ui.playback.CustomPlaybackOverlayFragment;
 import org.jellyfin.androidtv.ui.playback.PlaybackController;
 import org.jellyfin.androidtv.ui.playback.PlaybackControllerContainer;
+import org.jellyfin.androidtv.auth.repository.ServerRepository;
+import org.jellyfin.androidtv.util.FeatureSupportKt;
+import org.moonfin.server.core.feature.ServerFeature;
 import org.jellyfin.sdk.api.client.ApiClient;
 
 import coil3.ImageLoader;
@@ -29,6 +32,7 @@ public class LeanbackOverlayFragment extends PlaybackSupportFragment {
     private Lazy<ImageLoader> imageLoader = inject(ImageLoader.class);
     private Lazy<ApiClient> api = inject(ApiClient.class);
     private Lazy<UserPreferences> userPreferences = inject(UserPreferences.class);
+    private Lazy<ServerRepository> serverRepository = inject(ServerRepository.class);
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -103,7 +107,8 @@ public class LeanbackOverlayFragment extends PlaybackSupportFragment {
         playerGlue.setSeekEnabled(playerAdapter.canSeek());
 
         long skipForwardLength = userSettingPreferences.getValue().get(UserSettingPreferences.Companion.getSkipForwardLength()).longValue();
-        boolean enableTrickPlay = userPreferences.getValue().get(UserPreferences.Companion.getTrickPlayEnabled());
+        boolean enableTrickPlay = userPreferences.getValue().get(UserPreferences.Companion.getTrickPlayEnabled())
+                && FeatureSupportKt.supportsFeature(serverRepository.getValue().getCurrentServer().getValue(), ServerFeature.TRICKPLAY);
         playerGlue.setSeekProvider(playerAdapter.canSeek() ? new CustomSeekProvider(playerAdapter, imageLoader.getValue(), api.getValue(), requireContext(), enableTrickPlay, skipForwardLength) : null);
         recordingStateChanged();
         playerAdapter.updateDuration();

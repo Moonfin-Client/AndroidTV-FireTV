@@ -12,6 +12,7 @@ import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
 import org.jellyfin.androidtv.data.model.AggregatedItem
 import org.jellyfin.androidtv.data.model.AggregatedLibrary
+import org.jellyfin.androidtv.util.EmbyCompatInterceptor
 import org.jellyfin.androidtv.util.sdk.forUser
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
@@ -30,58 +31,26 @@ import timber.log.Timber
 import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * Data class holding server, user, and API client information for multi-server operations.
- */
 data class ServerUserSession(
 	val server: Server,
 	val userId: UUID,
 	val apiClient: ApiClient
 )
 
-/**
- * Repository for aggregating data from multiple logged-in Jellyfin servers.
- * Enables displaying libraries and content from all servers simultaneously.
- */
 interface MultiServerRepository {
 	/**
 	 * Get all servers that have logged-in users with valid authentication.
-	 * Returns ServerUserSession containing server, user, and ApiClient info.
 	 */
 	suspend fun getLoggedInServers(): List<ServerUserSession>
 
-	/**
-	 * Aggregate libraries from all logged-in servers.
-	 * Returns libraries with display names including server context.
-	 * @param includeHidden If false, excludes libraries marked as hidden in preferences
-	 */
 	suspend fun getAggregatedLibraries(includeHidden: Boolean = false): List<AggregatedLibrary>
 
-	/**
-	 * Aggregate resume items (Continue Watching) from all logged-in servers.
-	 * Sorted by most recent first across all servers.
-	 */
 	suspend fun getAggregatedResumeItems(limit: Int): List<AggregatedItem>
 
-	/**
-	 * Aggregate latest items (Recently Added) from all logged-in servers.
-	 * Results are grouped by library and server.
-	 * @param serverId Optional - if provided, only returns items from that specific server
-	 */
 	suspend fun getAggregatedLatestItems(parentId: UUID, limit: Int, serverId: UUID? = null): List<AggregatedItem>
 
-	/**
-	 * Aggregate next up items from all logged-in servers.
-	 * Sorted by air date or most recent first.
-	 */
 	suspend fun getAggregatedNextUpItems(limit: Int): List<AggregatedItem>
 
-	/**
-	 * Aggregate merged continue watching (resume) and next up items from all logged-in servers.
-	 * Uses intelligent sorting: items are sorted by last played date, with next up items
-	 * inheriting their series' last played date from resume items when available.
-	 * This provides proper chronological ordering when combining both row types.
-	 */
 	suspend fun getAggregatedMergedContinueWatchingItems(limit: Int): List<AggregatedItem>
 }
 
@@ -92,20 +61,16 @@ class MultiServerRepositoryImpl(
 	private val authenticationStore: AuthenticationStore,
 	private val defaultDeviceInfo: DeviceInfo,
 	private val userViewsRepository: UserViewsRepository,
+	private val embyCompatInterceptor: EmbyCompatInterceptor,
 ) : MultiServerRepository {
 
 	companion object {
-		// Timeout for each server query to prevent hanging
 		private val SERVER_TIMEOUT = 8.seconds
 	}
 
 	private fun BaseItemDto.withServerId(serverId: UUID): BaseItemDto =
 		copy(serverId = serverId.toString())
 
-	/**
-	 * Find the first user with a valid access token in the given user map.
-	 * Returns a Pair of (userId, accessToken) or null if none found.
-	 */
 	private fun findFirstUserWithToken(
 		users: Map<UUID, AuthenticationStoreUser>,
 		serverName: String,
@@ -128,35 +93,29 @@ class MultiServerRepositoryImpl(
 
 		val loggedInServers = servers.mapNotNull { server ->
 			try {
-				if (server.serverType == ServerType.EMBY) {
-					Timber.d("MultiServerRepository: Skipping Emby server ${server.name} (not yet supported in multi-server)")
-					return@mapNotNull null
-				}
-
-				// Check if this server has any logged-in users
 				val serverStore = authenticationStore.getServer(server.id)
 				if (serverStore == null || serverStore.users.isEmpty()) {
 					Timber.d("MultiServerRepository: Server ${server.name} has no stored users")
 					return@mapNotNull null
 				}
 
-				// Prefer the current session's user for the current server
 				val (userId, accessToken) = if (currentSession != null && currentSession.serverId == server.id) {
 					val currentUser = serverStore.users[currentSession.userId]
 					if (currentUser != null && !currentUser.accessToken.isNullOrBlank()) {
 						currentSession.userId to currentUser.accessToken
 					} else {
-						// Current session user has no stored token, fall back
 						findFirstUserWithToken(serverStore.users, server.name) ?: return@mapNotNull null
 					}
 				} else {
-					// Different server — pick first user with a valid token
 					findFirstUserWithToken(serverStore.users, server.name) ?: return@mapNotNull null
 				}
 
 				Timber.d("MultiServerRepository: Found logged-in user on server ${server.name}")
 
-				// Create ApiClient for this server and user
+				if (server.serverType == ServerType.EMBY) {
+					embyCompatInterceptor.registerEmbyServer(server.address, userId.toString())
+				}
+
 				val deviceInfo = defaultDeviceInfo.forUser(userId)
 				val apiClient = jellyfin.createApi(
 					baseUrl = server.address,
@@ -173,20 +132,17 @@ class MultiServerRepositoryImpl(
 
 		Timber.d("MultiServerRepository: Found ${loggedInServers.size} logged-in servers")
 
-		// Fallback: if no stored servers found, try using the current session
 		if (loggedInServers.isEmpty()) {
 			Timber.d("MultiServerRepository: No multi-server logins found, checking current session")
 			val currentSession = sessionRepository.currentSession.value
 			if (currentSession != null) {
 				try {
-					// Get server info for the current session
-			val server = serverRepository.getServer(currentSession.serverId)
-				if (server != null) {
-					if (server.serverType == ServerType.EMBY) {
-						Timber.d("MultiServerRepository: Current session is Emby server — skipping fallback")
-						return@withContext emptyList()
-					}
+					val server = serverRepository.getServer(currentSession.serverId)
+					if (server != null) {
 						Timber.d("MultiServerRepository: Using current session for server ${server.name}")
+						if (server.serverType == ServerType.EMBY) {
+							embyCompatInterceptor.registerEmbyServer(server.address, currentSession.userId.toString())
+						}
 						val deviceInfo = defaultDeviceInfo.forUser(currentSession.userId)
 						val apiClient = jellyfin.createApi(
 							baseUrl = server.address,

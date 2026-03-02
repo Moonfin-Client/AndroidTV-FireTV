@@ -30,8 +30,9 @@ import org.jellyfin.androidtv.auth.model.User
 import org.jellyfin.androidtv.auth.repository.AuthenticationRepository
 import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.util.sdk.forUser
+import org.jellyfin.androidtv.util.supportsFeature
 import org.jellyfin.sdk.Jellyfin
-import org.moonfin.server.core.model.ServerType
+import org.moonfin.server.core.feature.ServerFeature
 import org.jellyfin.sdk.api.client.exception.ApiClientException
 import org.jellyfin.sdk.api.client.extensions.quickConnectApi
 import org.jellyfin.sdk.model.DeviceInfo
@@ -58,7 +59,7 @@ class UserLoginViewModel(
 	private val _quickConnectState = MutableStateFlow<QuickConnectState>(UnknownQuickConnectState)
 	val quickConnectState = _quickConnectState.asStateFlow()
 	val isQuickConnectSupported = _server
-		.map { it?.serverType != ServerType.EMBY }
+		.map { it.supportsFeature(ServerFeature.QUICK_CONNECT) }
 		.stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
 	fun authenticate(server: Server, user: User): Flow<LoginState> =

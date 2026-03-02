@@ -41,7 +41,8 @@ import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.clientLogApi
 import org.jellyfin.sdk.model.ServerVersion
 import org.koin.compose.koinInject
-import org.moonfin.server.core.model.ServerType
+import org.moonfin.server.core.feature.ServerFeature
+import org.jellyfin.androidtv.util.supportsFeature
 import java.text.DecimalFormat
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -54,7 +55,7 @@ fun SettingsPlaybackAdvancedScreen() {
 	val userSettingPreferences = koinInject<UserSettingPreferences>()
 	val serverRepository = koinInject<ServerRepository>()
 	val currentServer by serverRepository.currentServer.collectAsState()
-	val clientLogSupported = currentServer?.serverType != ServerType.EMBY
+	val clientLogSupported = currentServer.supportsFeature(ServerFeature.CLIENT_LOG)
 
 	SettingsColumn {
 		item {

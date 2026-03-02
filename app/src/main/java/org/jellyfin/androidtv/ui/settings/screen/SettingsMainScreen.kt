@@ -61,9 +61,10 @@ import org.jellyfin.androidtv.ui.preference.category.GlassDialogButton
 import org.jellyfin.androidtv.ui.settings.Routes
 import org.jellyfin.androidtv.ui.settings.compat.rememberPreference
 import org.jellyfin.androidtv.ui.settings.composable.SettingsColumn
+import org.jellyfin.androidtv.util.supportsFeature
 import org.koin.compose.koinInject
 import org.koin.java.KoinJavaComponent.inject
-import org.moonfin.server.core.model.ServerType
+import org.moonfin.server.core.feature.ServerFeature
 import timber.log.Timber
 
 @Composable
@@ -75,7 +76,7 @@ fun SettingsMainScreen() {
 
 	val serverRepository = koinInject<ServerRepository>()
 	val currentServer by serverRepository.currentServer.collectAsState()
-	val syncPlaySupported = currentServer?.serverType != ServerType.EMBY
+	val syncPlaySupported = currentServer.supportsFeature(ServerFeature.SYNC_PLAY)
 
 	var showDonateDialog by remember { mutableStateOf(false) }
 	var updateInfoForDialog by remember { mutableStateOf<UpdateCheckerService.UpdateInfo?>(null) }

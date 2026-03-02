@@ -84,6 +84,9 @@ import org.jellyfin.androidtv.ui.syncplay.SyncPlayDialog
 import org.jellyfin.androidtv.ui.syncplay.SyncPlayViewModel
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.primaryImage
+import org.jellyfin.androidtv.util.supportsFeature
+import org.jellyfin.androidtv.auth.repository.ServerRepository
+import org.moonfin.server.core.feature.ServerFeature
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -112,6 +115,8 @@ fun LeftSidebarNavigation(
 	val pluginSyncService = koinInject<PluginSyncService>()
 	val syncCompletedCounter by pluginSyncService.syncCompletedCounter.collectAsState()
 	val jellyseerrPreferences = koinInject<JellyseerrPreferences>(named("global"))
+	val serverRepository = koinInject<ServerRepository>()
+	val currentServer by serverRepository.currentServer.collectAsState()
 	
 	// User image - same pattern as MainToolbar
 	val currentUser by remember { userRepository.currentUser.filterNotNull() }.collectAsState(null)
@@ -202,7 +207,7 @@ fun LeftSidebarNavigation(
 		jellyseerrEnabled = jellyseerrEnabled,
 		jellyseerrVariant = jellyseerrVariant,
 		jellyseerrDisplayName = jellyseerrDisplayName,
-		syncPlayEnabled = syncPlayEnabled,
+		syncPlayEnabled = syncPlayEnabled && currentServer.supportsFeature(ServerFeature.SYNC_PLAY),
 		enableFolderView = enableFolderView,
 		clockBehavior = clockBehavior,
 	)

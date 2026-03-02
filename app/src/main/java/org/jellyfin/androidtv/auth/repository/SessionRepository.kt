@@ -26,6 +26,7 @@ import org.jellyfin.sdk.model.DeviceInfo
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 import org.moonfin.server.core.model.ServerType
 import org.moonfin.server.emby.EmbyApiClient
+import org.moonfin.server.emby.socket.EmbyWebSocketClient
 import timber.log.Timber
 import java.util.UUID
 
@@ -61,6 +62,7 @@ class SessionRepositoryImpl(
 	private val telemetryPreferences: TelemetryPreferences,
 	private val embyApiClient: EmbyApiClient,
 	private val embyCompatInterceptor: EmbyCompatInterceptor,
+	private val embyWebSocketClient: EmbyWebSocketClient,
 ) : SessionRepository {
 	private val currentSessionMutex = Mutex()
 	private val _currentSession = MutableStateFlow<Session?>(null)
@@ -117,6 +119,7 @@ class SessionRepositoryImpl(
 	override fun destroyCurrentSession() {
 		Timber.i("Destroying current session")
 
+		embyWebSocketClient.forceDisconnect()
 		userRepository.setCurrentUser(null)
 		serverRepository.setCurrentServer(null)
 		_currentSession.value = null
@@ -146,6 +149,7 @@ class SessionRepositoryImpl(
 			embyCompatInterceptor.setServerType(ServerType.JELLYFIN)
 			embyCompatInterceptor.setUserId(null)
 			userApiClient.applySession(null, deviceInfo)
+			embyWebSocketClient.forceDisconnect()
 			embyApiClient.reset()
 			userRepository.setCurrentUser(null)
 			serverRepository.setCurrentServer(null)

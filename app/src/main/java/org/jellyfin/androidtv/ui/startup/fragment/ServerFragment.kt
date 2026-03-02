@@ -41,6 +41,7 @@ import org.jellyfin.androidtv.ui.startup.StartupViewModel
 import org.jellyfin.androidtv.util.ListAdapter
 import org.jellyfin.androidtv.util.MarkdownRenderer
 import org.jellyfin.androidtv.util.PinCodeUtil
+import org.jellyfin.androidtv.util.setServerTypeIcon
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.activityViewModel
@@ -201,6 +202,8 @@ class ServerFragment : Fragment() {
 
 		binding.serverName.text = server.name
 		binding.serverName.isVisible = server.name.isNotBlank()
+
+		binding.serverName.setServerTypeIcon(server.serverType, sizeDp = 16, paddingDp = 6)
 
 		binding.addUserButton.setOnClickListener {
 			navigateFragment<UserLoginFragment>(
