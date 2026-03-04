@@ -15,12 +15,9 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -83,7 +80,6 @@ import org.jellyfin.androidtv.data.model.DataRefreshService
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Text
-import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.ui.base.CircularProgressIndicator
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
@@ -114,11 +110,9 @@ import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.constant.NavbarPosition
 import org.jellyfin.androidtv.util.BitmapBlur
-import org.koin.compose.koinInject
 import org.jellyfin.sdk.api.client.exception.ApiClientException
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
-import org.jellyfin.sdk.api.client.extensions.tvShowsApi
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -128,6 +122,7 @@ import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowColors
 import timber.log.Timber
 import java.util.UUID
 
@@ -915,7 +910,7 @@ class ItemDetailsFragment : Fragment() {
 		Row(
 			verticalAlignment = Alignment.CenterVertically,
 			modifier = Modifier.fillMaxWidth(),
-			horizontalArrangement = Arrangement.spacedBy(10.dp),
+			horizontalArrangement = Arrangement.spacedBy(2.dp),
 		) {
 			Row(
 				verticalAlignment = Alignment.CenterVertically,
@@ -924,13 +919,8 @@ class ItemDetailsFragment : Fragment() {
 				var hasItem = false
 
 				item.productionYear?.let { year ->
-					InfoItemText(text = year.toString())
-					hasItem = true
-				}
-
-				item.officialRating?.let { rating ->
 					if (hasItem) InfoItemSeparator()
-					InfoItemText(text = rating)
+					InfoItemText(text = year.toString())
 					hasItem = true
 				}
 
@@ -951,20 +941,31 @@ class ItemDetailsFragment : Fragment() {
 						InfoItemText(text = "$seasonCount Season${if (seasonCount != 1) "s" else ""}")
 						hasItem = true
 					}
+
+					item.status?.let { status ->
+						if (hasItem) InfoItemSeparator()
+						val statusColor = when (status.lowercase()) {
+							"continuing" -> InfoRowColors.Green.first	// Green
+							"ended" -> InfoRowColors.Red.first			// Red
+							else -> InfoRowColors.Default.first
+						}
+						InfoItemBadge(
+							status,
+							statusColor,
+							Color.White
+							)
+						hasItem = true
+					}
 				}
 
-				item.communityRating?.let { rating ->
+				item.officialRating?.let { rating ->
 					if (hasItem) InfoItemSeparator()
-					Row(verticalAlignment = Alignment.CenterVertically) {
-						Icon(
-							imageVector = ImageVector.vectorResource(R.drawable.ic_star),
-							contentDescription = null,
-							modifier = Modifier.height(14.dp).width(14.dp),
-							tint = Color(0xFFFFC107),
-						)
-						Spacer(modifier = Modifier.width(3.dp))
-						InfoItemText(text = String.format("%.1f", rating))
-					}
+					InfoItemBadge(text = rating)
+					hasItem = true
+				}
+
+				if (badges.isNotEmpty() && hasItem) { // separator if there are media badges following this
+					InfoItemSeparator()
 				}
 			}
 

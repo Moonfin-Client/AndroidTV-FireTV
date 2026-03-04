@@ -64,6 +64,7 @@ import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.base.button.IconButton
 import org.jellyfin.androidtv.ui.base.button.IconButtonDefaults
 import org.jellyfin.androidtv.ui.base.focusBorderColor
+import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowColors
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.design.Tokens
@@ -166,8 +167,28 @@ fun InfoItemText(
 		text = text,
 		modifier = modifier,
 		fontSize = 15.sp,
-		fontWeight = FontWeight.W500,
+		fontWeight = FontWeight.W700,
 		color = Color.White.copy(alpha = 0.7f),
+	)
+}
+
+@Composable
+fun InfoItemBadge(
+	text: String,
+	bgColor: Color = InfoRowColors.Default.first,
+	color: Color = Color.Black
+) {
+	Text(
+		text = text,
+		modifier = Modifier
+			.background(
+				bgColor,
+				RoundedCornerShape(4.dp),
+			)
+			.padding(horizontal = 6.dp, vertical = 2.dp),
+		fontSize = 14.sp,
+		fontWeight = FontWeight.W900,
+		color = color,
 	)
 }
 

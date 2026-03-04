@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,8 +21,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +34,7 @@ import org.jellyfin.androidtv.data.repository.MdbListRepository
 import org.jellyfin.androidtv.data.repository.RatingIconProvider
 import org.jellyfin.androidtv.data.repository.TmdbRepository
 import org.jellyfin.androidtv.preference.UserSettingPreferences
+import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -70,6 +75,7 @@ private fun RatingIconImage(
 	icon: RatingIconProvider.RatingIcon,
 	contentDescription: String,
 	modifier: Modifier = Modifier,
+	tint: Color? = null
 ) {
 	when (icon) {
 		is RatingIconProvider.RatingIcon.ServerUrl -> AsyncImage(
@@ -77,11 +83,22 @@ private fun RatingIconImage(
 			contentDescription = contentDescription,
 			modifier = modifier,
 		)
-		is RatingIconProvider.RatingIcon.LocalDrawable -> Image(
-			painter = painterResource(icon.resId),
-			contentDescription = contentDescription,
-			modifier = modifier,
-		)
+		is RatingIconProvider.RatingIcon.LocalDrawable -> {
+			if (tint != null) {
+				Icon(
+					painter = painterResource(icon.resId),
+					contentDescription = contentDescription,
+					modifier = modifier,
+					tint = tint
+				)
+			} else {
+				Image(
+					painter = painterResource(icon.resId),
+					contentDescription = contentDescription,
+					modifier = modifier,
+				)
+			}
+		}
 	}
 }
 
@@ -146,6 +163,11 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 
 	val allRatings = remember(apiRatings, item.criticRating, item.communityRating, episodeRating, seriesCommunityRating) {
 		linkedMapOf<String, Float>().apply {
+			// move community rating in here to keep ratings grouped together
+			// use series rating as fallback for episodes
+			val communityRating = item.communityRating ?: seriesCommunityRating
+			communityRating?.let { put("community", it / 10f) }
+
 			episodeRating?.let { put("tmdb_episode", it / 10f) }
 
 			apiRatings?.forEach { (source, value) ->
@@ -186,7 +208,7 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 		allRatings.forEach { (source, value) ->
 			if (source == "tmdb_episode" && !(enableEpisodeRatings && isEpisode)) return@forEach
 			if (source == "tmdb" && isEpisode && enableEpisodeRatings && episodeRating != null) return@forEach
-			if (!enableAdditionalRatings && source != "tmdb_episode" && source != "tomatoes") return@forEach
+			if (!enableAdditionalRatings && source != "tmdb_episode" && source != "tomatoes" && source != "community") return@forEach
 			RatingDisplay(source, value, baseUrl, showRatingLabels)
 		}
 	}
@@ -198,6 +220,16 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
  */
 @Composable
 private fun RatingDisplay(sourceKey: String, rating: Float, baseUrl: String?, showLabel: Boolean = true) {
+	if (sourceKey == "community") {
+		RatingItemWithLogo(
+			icon = RatingIconProvider.RatingIcon.LocalDrawable(R.drawable.ic_star),
+			contentDescription = "Community Rating",
+			rating = String.format("%.1f", rating * 10f),
+			showLabel = showLabel
+		)
+		return
+	}
+
 	val scorePercent = (rating * 100f).toInt()
 
 	val icon = RatingIconProvider.getIcon(baseUrl, sourceKey, scorePercent) ?: return
@@ -244,7 +276,7 @@ fun InfoRowParentalRating(parentalRating: String) {
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun InfoRowCompactRatings(item: BaseItemDto) {
+fun InfoRowCompactRatings(item: BaseItemDto, leadingContent: @Composable () -> Unit = {}) {
 	val userSettingPreferences = koinInject<UserSettingPreferences>()
 	val mdbListRepository = koinInject<MdbListRepository>()
 	val apiClient = koinInject<ApiClient>()
@@ -269,6 +301,9 @@ fun InfoRowCompactRatings(item: BaseItemDto) {
 
 	val allRatings = remember(apiRatings, item.criticRating, item.communityRating) {
 		linkedMapOf<String, Float>().apply {
+			// move community rating in here to keep ratings grouped together
+			item.communityRating?.let { put("community", it / 10f) }
+
 			apiRatings?.forEach { (source, value) ->
 				val normalized = when (source) {
 					"tomatoes" -> item.criticRating?.let { it / 100f } ?: (value / 100f)
@@ -297,19 +332,42 @@ fun InfoRowCompactRatings(item: BaseItemDto) {
 	if (enableAdditionalRatings && isLoading) return
 	if (allRatings.isEmpty()) return
 
-	FlowRow(
-		horizontalArrangement = Arrangement.spacedBy(6.dp),
-		verticalArrangement = Arrangement.spacedBy(2.dp),
-	) {
-		allRatings.forEach { (source, value) ->
-			if (!enableAdditionalRatings && source != "tomatoes") return@forEach
-			CompactRatingChip(source, value, baseUrl)
+	Row(verticalAlignment = Alignment.CenterVertically) {
+		leadingContent() // add a separator if adding content
+		FlowRow(
+			horizontalArrangement = Arrangement.spacedBy(6.dp),
+			verticalArrangement = Arrangement.spacedBy(2.dp),
+		) {
+			allRatings.forEach { (source, value) ->
+				if (!enableAdditionalRatings && source != "tomatoes" && source != "community") return@forEach
+				CompactRatingChip(source, value, baseUrl)
+			}
 		}
 	}
 }
 
 @Composable
 private fun CompactRatingChip(sourceKey: String, rating: Float, baseUrl: String?) {
+	// move community rating in here to keep the ratings grouped together
+	if (sourceKey == "community") {
+		Row(verticalAlignment = Alignment.CenterVertically) {
+			Icon(
+				imageVector = ImageVector.vectorResource(R.drawable.ic_star),
+				contentDescription = null,
+				modifier = Modifier.size(16.dp),
+				tint = Color(0xFFFFC107),
+			)
+			Spacer(modifier = Modifier.width(3.dp))
+			Text(
+				text = String.format("%.1f", rating * 10f),
+				color = Color.White.copy(alpha = 0.7f),
+				fontSize = 15.sp,
+				fontWeight = FontWeight.W700
+			)
+		}
+		return
+	}
+
 	val scorePercent = (rating * 100f).toInt()
 	val icon = RatingIconProvider.getIcon(baseUrl, sourceKey, scorePercent) ?: return
 	val formattedRating = when (sourceKey) {
@@ -324,7 +382,7 @@ private fun CompactRatingChip(sourceKey: String, rating: Float, baseUrl: String?
 		horizontalArrangement = Arrangement.spacedBy(3.dp),
 		verticalAlignment = Alignment.CenterVertically,
 	) {
-		RatingIconImage(icon = icon, contentDescription = sourceKey, modifier = Modifier.size(14.dp))
-		Text(formattedRating, color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, fontWeight = FontWeight.W600)
+		RatingIconImage(icon = icon, contentDescription = sourceKey, modifier = Modifier.size(16.dp))
+		Text(formattedRating, color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp, fontWeight = FontWeight.W700)
 	}
 }

@@ -57,7 +57,11 @@ import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Seekbar
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.base.focusBorderColor
+import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowColors
 import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowCompactRatings
+import org.jellyfin.androidtv.ui.itemdetail.v2.InfoItemBadge
+import org.jellyfin.androidtv.ui.itemdetail.v2.InfoItemSeparator
+import org.jellyfin.androidtv.ui.itemdetail.v2.InfoItemText
 import org.jellyfin.androidtv.util.TimeUtils
 import org.jellyfin.design.Tokens
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -99,7 +103,11 @@ private fun getTypeBadgeColor(kind: BaseItemKind?): Color = when (kind) {
  */
 fun buildMetadataString(item: BaseItemDto, context: android.content.Context? = null): String {
 	val parts = mutableListOf<String>()
+	item.communityRating?.let { parts.add("★ ${String.format("%.1f", it)}") }
 	item.productionYear?.let { parts.add(it.toString()) }
+	if (item.type == BaseItemKind.SERIES) {
+		item.status?.let { parts.add(it) }
+	}
 	item.officialRating?.let { if (it.isNotBlank()) parts.add(it) }
 	if (item.type == BaseItemKind.MOVIE) {
 		item.runTimeTicks?.let { ticks ->
@@ -115,7 +123,6 @@ fun buildMetadataString(item: BaseItemDto, context: android.content.Context? = n
 			}
 		}
 	}
-	item.communityRating?.let { parts.add("★ ${String.format("%.1f", it)}") }
 	return parts.joinToString("  ")
 }
 
@@ -430,21 +437,43 @@ fun FocusedItemHud(
 			// Metadata + compact ratings on the same row
 			Row(
 				verticalAlignment = Alignment.CenterVertically,
-				horizontalArrangement = Arrangement.spacedBy(12.dp),
 			) {
-				val context = androidx.compose.ui.platform.LocalContext.current
-				val metaLine = buildMetadataString(item, context)
-				if (metaLine.isNotEmpty()) {
-					Text(
-						text = metaLine,
-						fontSize = 14.sp,
-						fontWeight = FontWeight.Normal,
-						color = Color.White.copy(alpha = 0.6f),
-						maxLines = 1,
+				var hasItem = false
+
+				item.productionYear?.let { year ->
+					InfoItemText(text = year.toString())
+					hasItem = true
+				}
+
+				if (item.type == BaseItemKind.SERIES) {
+					item.status?.let { status ->
+						if (hasItem) InfoItemSeparator()
+						InfoItemBadge(
+							text = status,
+							bgColor = when(status.lowercase()) {
+								"continuing" -> InfoRowColors.Green.first	// Green
+								"ended" -> InfoRowColors.Red.first			// Red
+								else -> InfoRowColors.Default.first
+							},
+							color = Color.White,
+						)
+						hasItem = true
+					}
+				}
+
+				item.officialRating?.let { rating ->
+					if (hasItem) InfoItemSeparator()
+					InfoItemBadge(
+						text = rating
 					)
 				}
 
-				InfoRowCompactRatings(item = item)
+				InfoRowCompactRatings(
+					item = item,
+					leadingContent = {
+						if (hasItem) InfoItemSeparator()
+					}
+				)
 			}
 		}
 	}
