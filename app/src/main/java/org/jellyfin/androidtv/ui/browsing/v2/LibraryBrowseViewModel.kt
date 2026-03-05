@@ -16,7 +16,6 @@ import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.preference.LibraryPreferences
 import org.jellyfin.androidtv.preference.PreferencesRepository
 import org.jellyfin.androidtv.preference.UserPreferences
-import org.jellyfin.androidtv.util.Utils
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.ApiClientException
@@ -34,8 +33,7 @@ import java.util.UUID
 enum class SeriesStatusFilter(val label: String) {
 	ALL("All"),
 	CONTINUING("Continuing"),
-	ENDED("Ended"),
-	UNRELEASED("Not yet released")
+	ENDED("Ended")
 }
 
 data class SortOption(
@@ -390,7 +388,6 @@ class LibraryBrowseViewModel(
 				val seriesStatus = when (state.filterSeriesStatus) {
 					SeriesStatusFilter.CONTINUING -> setOf(SeriesStatus.CONTINUING)
 					SeriesStatusFilter.ENDED -> setOf(SeriesStatus.ENDED)
-					SeriesStatusFilter.UNRELEASED -> setOf(SeriesStatus.UNRELEASED)
 					else -> null
 				}
 
