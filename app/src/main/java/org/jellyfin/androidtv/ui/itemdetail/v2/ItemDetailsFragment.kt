@@ -57,6 +57,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -937,23 +939,38 @@ class ItemDetailsFragment : Fragment() {
 					val seasonCount = item.childCount ?: 0
 					if (seasonCount > 0) {
 						if (hasItem) InfoItemSeparator()
-						InfoItemText(text = "$seasonCount Season${if (seasonCount != 1) "s" else ""}")
+						pluralStringResource(R.plurals.season_count, seasonCount, seasonCount)
+
+						InfoItemText(text = pluralStringResource(R.plurals.season_count, seasonCount, seasonCount)
+						)
 						hasItem = true
 					}
 
 					item.status?.let { status ->
-						if (hasItem) InfoItemSeparator()
-						val statusColor = when (status.lowercase()) {
-							"continuing" -> InfoRowColors.Green.first	// Green
-							"ended" -> InfoRowColors.Red.first			// Red
-							else -> InfoRowColors.Default.first
-						}
-						InfoItemBadge(
-							status,
-							statusColor,
-							Color.White
+
+						val status = item.status?.lowercase()
+						if (status != null && (status == "continuing" || status == "ended")) {
+							if (hasItem) InfoItemSeparator()
+
+							val label = if (status == "continuing") {
+								stringResource(R.string.lbl__continuing)
+							} else {
+								stringResource(R.string.lbl_ended)
+							}
+
+							val bgColor = if (status == "continuing") {
+								InfoRowColors.Green.first
+							} else {
+								InfoRowColors.Red.first
+							}
+
+							InfoItemBadge(
+								label,
+								bgColor,
+								Color.White
 							)
-						hasItem = true
+							hasItem = true
+						}
 					}
 				}
 

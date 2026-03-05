@@ -154,7 +154,9 @@
     <string name="lbl_starting_with">beginning with those whose name starts with</string>
     <string name="lbl_display_preferences">Display preferences</string>
     <string name="lbl__continuing"> CONTINUING </string>
+    <string name="lbl__continuing_title">Continuing</string>
     <string name="lbl_ended"> ENDED </string>
+    <string name="lbl_ended_title">Ended</string>
     <string name="lbl_filters">Live TV filters</string>
     <string name="msg_subtitles_loading">Subtitles loading…</string>
     <string name="msg_unable_load_subs">Unable to load subtitle</string>
@@ -534,7 +536,7 @@
     <string name="pref_libraries_description">Change how libraries are displayed</string>
     <string name="lbl_hide_from_navbar">Hide from navigation</string>
     <string name="lbl_hide_from_navbar_description">Hide this library from the home screen navigation</string>
-    
+
     <!-- Home rows image type preferences -->
     <string name="pref_home_rows_image_type">Home Rows Image Type</string>
     <string name="pref_universal_override">Universal Override</string>
@@ -748,7 +750,11 @@
         <item quantity="one">%1$s album</item>
         <item quantity="other">%1$s albums</item>
     </plurals>
-    
+    <plurals name="season_count">
+        <item quantity="one">%1$s Season</item>
+        <item quantity="other">%1$s Seasons</item>
+    </plurals>
+
     <!-- Media Bar Slideshow -->
     <string name="pref_media_bar_title">Media Bar</string>
     <string name="pref_media_bar_enable">Enable Media Bar slideshow on home screen</string>
@@ -792,7 +798,7 @@
     <string name="pref_episode_preview_summary">Play a muted video preview on focused cards, skipping past intro segments</string>
     <string name="pref_preview_audio">Preview audio</string>
     <string name="pref_preview_audio_summary">Enable audio for media bar trailers and card video previews</string>
-    
+
     <!-- Theme Music Settings -->
     <string name="pref_theme_music_title">Theme Music</string>
     <string name="pref_theme_music_enable">Enable theme music</string>
@@ -801,7 +807,7 @@
     <string name="pref_theme_music_volume_summary">Adjust the volume level for background theme music (default: 30%)</string>
     <string name="pref_theme_music_on_home_rows">Play on home rows</string>
     <string name="pref_theme_music_on_home_rows_summary">Play theme music when focusing on items in home rows</string>
-    
+
     <!-- Jellyseerr Settings -->
     <string name="jellyseerr">Jellyseerr</string>
     <string name="home">Home</string>
@@ -846,7 +852,7 @@
     <string name="moonfin_settings_description">Customize Moonfin-specific features</string>
     <string name="moonfin_general_settings">General</string>
     <string name="settings_available_after_login">Settings available after login</string>
-    
+
     <!-- Jellyseerr Authentication -->
     <string name="jellyseerr_auth_method">Authentication Method</string>
     <string name="jellyseerr_auth_method_description">Choose how to authenticate with Jellyseerr</string>
@@ -877,7 +883,7 @@
     <string name="jellyseerr_logout_success">Logged out of Jellyseerr successfully</string>
     <string name="jellyseerr_logout_confirm_title">Log Out of Jellyseerr?</string>
     <string name="jellyseerr_logout_confirm_message">This will clear all authentication data and cookies. You will need to log in again to use Jellyseerr.</string>
-    
+
     <!-- Jellyseerr Moonfin Proxy -->
     <string name="jellyseerr_moonfin_proxy">Moonfin Proxy</string>
     <string name="jellyseerr_moonfin_proxy_status">Connection managed by Moonfin server plugin</string>
@@ -906,7 +912,7 @@
     <string name="jellyseerr_profile_loading">Loading profiles…</string>
     <string name="jellyseerr_profile_error">Unable to load profiles. Check connection.</string>
     <string name="jellyseerr_profile_admin_required">Admin permissions required to configure quality profiles</string>
-    
+
     <!-- Jellyseerr Row Configuration -->
     <string name="jellyseerr_rows_title">Discover Rows</string>
     <string name="jellyseerr_rows_description">Enable, disable, and reorder rows on the Jellyseerr discover screen</string>
@@ -921,10 +927,10 @@
     <string name="jellyseerr_row_series_genres">Series Genres</string>
     <string name="jellyseerr_row_upcoming_series">Upcoming Series</string>
     <string name="jellyseerr_row_networks">Networks</string>
-    
+
     <string name="enabled">Enabled</string>
     <string name="disabled">Disabled</string>
-    
+
     <!-- Appearance Settings -->
     <string name="pref_appearance">Appearance</string>
     <string name="pref_visual_settings">Visual Settings</string>
@@ -939,7 +945,7 @@
     <string name="pref_blur_medium">Med</string>
     <string name="pref_blur_strong">High</string>
     <string name="pref_blur_extra_strong">Extra</string>
-    
+
     <!-- Additional Ratings -->
     <string name="pref_enable_additional_ratings">Enable Additional Ratings</string>
     <string name="pref_enable_additional_ratings_description">Fetch ratings from MDBList API (IMDB, TMDB, Metacritic, Trakt, Letterboxd, etc.)</string>
@@ -956,7 +962,7 @@
     <string name="pref_rating_source_rogerebert">Roger Ebert</string>
     <string name="pref_rating_source_myanimelist">MyAnimeList</string>
     <string name="pref_rating_source_anilist">AniList</string>
-    
+
     <string name="pref_show_rating_labels">Show Rating Labels</string>
     <string name="pref_show_rating_labels_description">Display source name below each rating value</string>
 
@@ -971,7 +977,7 @@
     <string name="msg_api_key_saved">API key saved</string>
     <string name="msg_api_key_cleared">API key cleared</string>
     <string name="msg_api_key_invalid">API key must be at least 16 characters</string>
-    
+
     <!-- Toolbar Customization -->
     <string name="pref_toolbar_customization">Toolbar Customization</string>
     <string name="pref_navbar_position">Navigation Bar Position</string>
@@ -998,7 +1004,7 @@
     <string name="pref_shuffle_movies">Movies only</string>
     <string name="pref_shuffle_tv">TV shows only</string>
     <string name="pref_shuffle_both">Movies and TV shows</string>
-    
+
     <!-- Update Checker -->
     <string name="pref_updates_title">App Updates</string>
     <string name="pref_updates_info">Version Information</string>
@@ -1030,7 +1036,7 @@
     <string name="notification_channel_updates_description">Notifications about app updates</string>
     <string name="notification_update_available_title">Update Available</string>
     <string name="notification_update_available_text">Version %s is available. Tap to update.</string>
-    
+
     <!-- Parental Controls -->
     <string name="pref_parental_controls">Parental Controls</string>
     <string name="pref_parental_controls_description">Hide content based on rating</string>
@@ -1041,7 +1047,7 @@
     <string name="pref_parental_controls_rating_allowed">Allowed</string>
     <string name="pref_parental_controls_category_info">Information</string>
     <string name="pref_parental_controls_info_description">Selected ratings will be hidden from home rows, libraries, search, and media bar across all servers</string>
-    
+
     <!-- Seasonal Surprise -->
     <string name="pref_seasonal_surprise">Seasonal Surprise</string>
     <string name="pref_seasonal_surprise_description">Decorative seasonal animations on home screen. Disable if experiencing lag.</string>
@@ -1051,7 +1057,7 @@
     <string name="pref_seasonal_summer">Summer ☀️</string>
     <string name="pref_seasonal_halloween">Halloween 🎃</string>
     <string name="pref_seasonal_fall">Fall 🍁</string>
-    
+
     <!-- SyncPlay Settings -->
     <string name="pref_syncplay">SyncPlay</string>
     <string name="pref_syncplay_settings">SyncPlay Settings</string>
@@ -1108,7 +1114,7 @@
     <string name="syncplay_user_joined">%s joined the SyncPlay group</string>
     <string name="syncplay_user_left">%s left the SyncPlay group</string>
     <string name="syncplay_group_default_name">%s\'s Group</string>
-    
+
     <!-- Genres Grid -->
     <string name="all_libraries">All Libraries</string>
     <string name="no_genres_found">No genres found</string>

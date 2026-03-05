@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.ui.browsing.v2
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -8,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.constant.GridDirection
 import org.jellyfin.androidtv.constant.ImageType
 import org.jellyfin.androidtv.constant.PosterSize
@@ -30,14 +32,14 @@ import org.jellyfin.sdk.model.api.SortOrder
 import timber.log.Timber
 import java.util.UUID
 
-enum class SeriesStatusFilter(val label: String) {
-	ALL("All"),
-	CONTINUING("Continuing"),
-	ENDED("Ended")
+enum class SeriesStatusFilter(@StringRes val labelRes: Int) {
+	ALL(R.string.lbl_all_items),
+	CONTINUING(R.string.lbl__continuing_title),
+	ENDED(R.string.lbl_ended_title)
 }
 
 data class SortOption(
-	val name: String,
+	@StringRes val nameRes: Int,
 	val sortBy: ItemSortBy,
 	val sortOrder: SortOrder,
 )
@@ -48,7 +50,7 @@ data class LibraryBrowseUiState(
 	val collectionType: CollectionType? = null,
 	val items: List<BaseItemDto> = emptyList(),
 	val totalItems: Int = 0,
-	val currentSortOption: SortOption = SortOption("Name", ItemSortBy.SORT_NAME, SortOrder.ASCENDING),
+	val currentSortOption: SortOption = SortOption(R.string.lbl_name, ItemSortBy.SORT_NAME, SortOrder.ASCENDING),
 	val filterFavorites: Boolean = false,
 	val filterUnwatched: Boolean = false,
 	val filterWatched: Boolean = false,
@@ -95,19 +97,19 @@ class LibraryBrowseViewModel(
 
 	val sortOptions: List<SortOption> by lazy {
 		buildList {
-			add(SortOption("Name", ItemSortBy.SORT_NAME, SortOrder.ASCENDING))
-			add(SortOption("Date Added", ItemSortBy.DATE_CREATED, SortOrder.DESCENDING))
-			add(SortOption("Premiere Date", ItemSortBy.PREMIERE_DATE, SortOrder.DESCENDING))
-			add(SortOption("Rating", ItemSortBy.OFFICIAL_RATING, SortOrder.ASCENDING))
-			add(SortOption("Community Rating", ItemSortBy.COMMUNITY_RATING, SortOrder.DESCENDING))
-			add(SortOption("Critic Rating", ItemSortBy.CRITIC_RATING, SortOrder.DESCENDING))
+			add(SortOption(R.string.lbl_name, ItemSortBy.SORT_NAME, SortOrder.ASCENDING))
+			add(SortOption(R.string.lbl_date_added, ItemSortBy.DATE_CREATED, SortOrder.DESCENDING))
+			add(SortOption(R.string.lbl_premier_date, ItemSortBy.PREMIERE_DATE, SortOrder.DESCENDING))
+			add(SortOption(R.string.lbl_rating, ItemSortBy.OFFICIAL_RATING, SortOrder.ASCENDING))
+			add(SortOption(R.string.lbl_community_rating, ItemSortBy.COMMUNITY_RATING, SortOrder.DESCENDING))
+			add(SortOption(R.string.lbl_critic_rating, ItemSortBy.CRITIC_RATING, SortOrder.DESCENDING))
 			if (folder?.collectionType == CollectionType.TVSHOWS) {
-				add(SortOption("Last Played", ItemSortBy.SERIES_DATE_PLAYED, SortOrder.DESCENDING))
+				add(SortOption(R.string.lbl_last_played, ItemSortBy.SERIES_DATE_PLAYED, SortOrder.DESCENDING))
 			} else {
-				add(SortOption("Last Played", ItemSortBy.DATE_PLAYED, SortOrder.DESCENDING))
+				add(SortOption(R.string.lbl_last_played, ItemSortBy.DATE_PLAYED, SortOrder.DESCENDING))
 			}
 			if (folder?.collectionType == CollectionType.MOVIES) {
-				add(SortOption("Runtime", ItemSortBy.RUNTIME, SortOrder.ASCENDING))
+				add(SortOption(R.string.lbl_runtime, ItemSortBy.RUNTIME, SortOrder.ASCENDING))
 			}
 		}
 	}
@@ -145,9 +147,9 @@ class LibraryBrowseViewModel(
 
 			val initialSort = if (savedSort != null && savedOrder != null) {
 				sortOptions.find { it.sortBy == savedSort }?.copy(sortOrder = savedOrder)
-					?: SortOption("Name", ItemSortBy.SORT_NAME, SortOrder.ASCENDING)
+					?: SortOption(R.string.lbl_name, ItemSortBy.SORT_NAME, SortOrder.ASCENDING)
 			} else {
-				SortOption("Name", ItemSortBy.SORT_NAME, SortOrder.ASCENDING)
+				SortOption(R.string.lbl_name, ItemSortBy.SORT_NAME, SortOrder.ASCENDING)
 			}
 
 			val savedPosterSize = libraryPreferences?.get(LibraryPreferences.posterSize) ?: PosterSize.MED
@@ -194,7 +196,7 @@ class LibraryBrowseViewModel(
 			genreName = genreName,
 			displayPreferencesId = displayPreferencesId,
 			parentItemId = parentItemId,
-			currentSortOption = SortOption("Name", ItemSortBy.SORT_NAME, SortOrder.ASCENDING),
+			currentSortOption = SortOption(R.string.lbl_name, ItemSortBy.SORT_NAME, SortOrder.ASCENDING),
 		)
 
 		if (displayPreferencesId != null) {

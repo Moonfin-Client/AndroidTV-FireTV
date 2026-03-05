@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -446,15 +447,25 @@ fun FocusedItemHud(
 				}
 
 				if (item.type == BaseItemKind.SERIES) {
-					item.status?.let { status ->
+					val status = item.status?.lowercase()
+					if (status != null && (status == "continuing" || status == "ended")) {
 						if (hasItem) InfoItemSeparator()
+
+						val label = if (status == "continuing") {
+							stringResource(R.string.lbl__continuing)
+						} else {
+							stringResource(R.string.lbl_ended)
+						}
+
+						val bgColor = if (status == "continuing") {
+							InfoRowColors.Green.first
+						} else {
+							InfoRowColors.Red.first
+						}
+
 						InfoItemBadge(
-							text = status,
-							bgColor = when(status.lowercase()) {
-								"continuing" -> InfoRowColors.Green.first	// Green
-								"ended" -> InfoRowColors.Red.first			// Red
-								else -> InfoRowColors.Default.first
-							},
+							text = label,
+							bgColor = bgColor,
 							color = Color.White,
 						)
 						hasItem = true
@@ -576,7 +587,7 @@ fun FilterSortDialog(
 					// Section: Sort
 					item {
 						Text(
-							text = "Sort By",
+							text = stringResource(R.string.lbl_sort_by),
 							fontSize = 13.sp,
 							fontWeight = FontWeight.W500,
 							color = Color.White.copy(alpha = 0.45f),
@@ -597,7 +608,7 @@ fun FilterSortDialog(
 						}
 
 						FilterRadioRow(
-							label = option.name,
+							label = stringResource(option.nameRes),
 							isSelected = isSelected,
 							onClick = { onSortSelected(option) },
 							modifier = focusModifier
@@ -619,7 +630,7 @@ fun FilterSortDialog(
 					// Section: Filters
 					item {
 						Text(
-							text = "Filters",
+							text = stringResource(R.string.filters),
 							fontSize = 13.sp,
 							fontWeight = FontWeight.W500,
 							color = Color.White.copy(alpha = 0.45f),
@@ -629,14 +640,14 @@ fun FilterSortDialog(
 
 						// Favorites toggle
 						FilterToggleRow(
-							label = "Favorites",
+							label = stringResource(R.string.lbl_favorites),
 							isActive = filterFavorites,
 							onClick = onToggleFavorites,
 						)
 
 						// Played radio
 						FilterRadioRow(
-							label = "Played",
+							label = stringResource(R.string.lbl_watched),
 							isSelected = filterWatched,
 							onClick = onToggleWatched,
 						)
@@ -644,7 +655,7 @@ fun FilterSortDialog(
 						// Unplayed radio
 						if (showUnplayedToggle) {
 							FilterRadioRow(
-								label = "Unplayed",
+								label = stringResource(R.string.lbl_unwatched),
 								isSelected = filterUnplayed,
 								onClick = onToggleUnplayed,
 							)
@@ -680,7 +691,7 @@ fun FilterSortDialog(
 						val isSelected = filter == filterSeriesStatus
 
 						FilterRadioRow(
-							label = filter.label,
+							label = stringResource(filter.labelRes),
 							isSelected = isSelected,
 							onClick = { onSeriesStatusSelected(filter) }
 						)

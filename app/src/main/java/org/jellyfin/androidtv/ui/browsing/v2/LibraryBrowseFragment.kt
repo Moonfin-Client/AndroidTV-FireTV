@@ -518,18 +518,20 @@ class LibraryBrowseFragment : Fragment() {
 		val parts = mutableListOf<String>()
 		parts.add(stringResource(R.string.lbl_showing))
 		if (!uiState.filterFavorites && !uiState.filterUnwatched && !uiState.filterWatched && uiState.filterSeriesStatus == SeriesStatusFilter.ALL) {
-			parts.add(stringResource(R.string.lbl_all_items))
+			parts.add(stringResource(R.string.lbl_all_items).lowercase())
 		} else {
 			if (uiState.filterUnwatched) parts.add(stringResource(R.string.lbl_unwatched))
-			if (uiState.filterWatched) parts.add("Played")
+			if (uiState.filterWatched) parts.add(stringResource(R.string.lbl_watched))
 			if (uiState.filterFavorites) parts.add(stringResource(R.string.lbl_favorites))
-			if (uiState.filterSeriesStatus != SeriesStatusFilter.ALL) parts.add(uiState.filterSeriesStatus.label)
+			if (uiState.filterSeriesStatus != SeriesStatusFilter.ALL) {
+				parts.add(stringResource(uiState.filterSeriesStatus.labelRes))
+			}
 		}
 		if (uiState.startLetter != null) {
 			parts.add("${stringResource(R.string.lbl_starting_with)} ${uiState.startLetter}")
 		}
 		parts.add("${stringResource(R.string.lbl_from)} '${uiState.libraryName}'")
-		parts.add("${stringResource(R.string.lbl_sorted_by)} ${uiState.currentSortOption.name}")
+		parts.add("${stringResource(R.string.lbl_sorted_by)} ${stringResource(uiState.currentSortOption.nameRes)}")
 		return parts.joinToString(" ")
 	}
 }
