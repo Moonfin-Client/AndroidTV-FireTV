@@ -26,9 +26,17 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
+import org.jellyfin.sdk.model.api.SeriesStatus
 import org.jellyfin.sdk.model.api.SortOrder
 import timber.log.Timber
 import java.util.UUID
+
+enum class SeriesStatusFilter(val label: String) {
+	ALL("All"),
+	CONTINUING("Continuing"),
+	ENDED("Ended"),
+	UNRELEASED("Not yet released")
+}
 
 data class SortOption(
 	val name: String,
@@ -45,6 +53,8 @@ data class LibraryBrowseUiState(
 	val currentSortOption: SortOption = SortOption("Name", ItemSortBy.SORT_NAME, SortOrder.ASCENDING),
 	val filterFavorites: Boolean = false,
 	val filterUnwatched: Boolean = false,
+	val filterWatched: Boolean = false,
+	val filterSeriesStatus: SeriesStatusFilter = SeriesStatusFilter.ALL,
 	val startLetter: String? = null,
 	val hasMoreItems: Boolean = false,
 	val focusedItem: BaseItemDto? = null,
@@ -236,8 +246,25 @@ class LibraryBrowseViewModel(
 	}
 
 	fun toggleUnwatched() {
-		_uiState.value = _uiState.value.copy(filterUnwatched = !_uiState.value.filterUnwatched)
+		_uiState.value = _uiState.value.copy(
+			filterUnwatched = !_uiState.value.filterUnwatched,
+			filterWatched = false
+		)
 		savePreferences()
+		loadItems(reset = true)
+	}
+
+	fun toggleWatched() {
+		_uiState.value = _uiState.value.copy(
+			filterWatched = !_uiState.value.filterWatched,
+			filterUnwatched = false
+		)
+		savePreferences()
+		loadItems(reset = true)
+	}
+
+	fun setSeriesStatusFilter(filter: SeriesStatusFilter) {
+		_uiState.value = _uiState.value.copy(filterSeriesStatus = filter)
 		loadItems(reset = true)
 	}
 
@@ -309,6 +336,7 @@ class LibraryBrowseViewModel(
 				val filters = buildSet {
 					if (state.filterFavorites) add(ItemFilter.IS_FAVORITE)
 					if (state.filterUnwatched) add(ItemFilter.IS_UNPLAYED)
+					if (state.filterWatched) add(ItemFilter.IS_PLAYED)
 				}
 
 				val includeTypes: Set<BaseItemKind>?
@@ -359,6 +387,13 @@ class LibraryBrowseViewModel(
 					}
 				}
 
+				val seriesStatus = when (state.filterSeriesStatus) {
+					SeriesStatusFilter.CONTINUING -> setOf(SeriesStatus.CONTINUING)
+					SeriesStatusFilter.ENDED -> setOf(SeriesStatus.ENDED)
+					SeriesStatusFilter.UNRELEASED -> setOf(SeriesStatus.UNRELEASED)
+					else -> null
+				}
+
 				val response = withContext(Dispatchers.IO) {
 					effectiveApi.itemsApi.getItems(
 						parentId = parentId,
@@ -371,6 +406,7 @@ class LibraryBrowseViewModel(
 						sortBy = setOf(state.currentSortOption.sortBy),
 						sortOrder = setOf(state.currentSortOption.sortOrder),
 						filters = filters,
+						seriesStatus = seriesStatus,
 						startIndex = currentPage * pageSize,
 						limit = pageSize,
 						enableTotalRecordCount = true,

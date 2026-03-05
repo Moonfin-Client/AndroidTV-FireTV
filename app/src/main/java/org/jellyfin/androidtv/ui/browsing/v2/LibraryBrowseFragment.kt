@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -169,6 +168,8 @@ class LibraryBrowseFragment : Fragment() {
 					onSortSelected = { viewModel.setSortOption(it) },
 					onToggleFavorites = { viewModel.toggleFavorites() },
 					onToggleUnwatched = { viewModel.toggleUnwatched() },
+					onToggleWatched = { viewModel.toggleWatched() },
+					onSeriesStatusSelected = { viewModel.setSeriesStatusFilter(it) },
 					onLetterSelected = { viewModel.setStartLetter(it) },
 					onSettingsClicked = { settingsVisible = true },
 					onHomeClicked = { navigationRepository.navigate(Destinations.home) },
@@ -253,6 +254,8 @@ class LibraryBrowseFragment : Fragment() {
 		onSortSelected: (SortOption) -> Unit,
 		onToggleFavorites: () -> Unit,
 		onToggleUnwatched: () -> Unit,
+		onToggleWatched: () -> Unit,
+		onSeriesStatusSelected: (SeriesStatusFilter) -> Unit,
 		onLetterSelected: (String?) -> Unit,
 		onSettingsClicked: () -> Unit,
 		onHomeClicked: () -> Unit,
@@ -310,6 +313,8 @@ class LibraryBrowseFragment : Fragment() {
 					onSortSelected = onSortSelected,
 					onToggleFavorites = onToggleFavorites,
 					onToggleUnwatched = onToggleUnwatched,
+					onToggleWatched = onToggleWatched,
+					onSeriesStatusSelected = onSeriesStatusSelected,
 					onSettingsClicked = onSettingsClicked,
 					onHomeClicked = onHomeClicked,
 				)
@@ -333,6 +338,8 @@ class LibraryBrowseFragment : Fragment() {
 		onSortSelected: (SortOption) -> Unit,
 		onToggleFavorites: () -> Unit,
 		onToggleUnwatched: () -> Unit,
+		onToggleWatched: () -> Unit,
+		onSeriesStatusSelected: (SeriesStatusFilter) -> Unit,
 		onSettingsClicked: () -> Unit,
 		onHomeClicked: () -> Unit,
 	) {
@@ -371,12 +378,16 @@ class LibraryBrowseFragment : Fragment() {
 				sortOptions = viewModel.sortOptions,
 				currentSort = uiState.currentSortOption,
 				filterFavorites = uiState.filterFavorites,
-				filterUnwatched = uiState.filterUnwatched,
-				showUnwatchedToggle = uiState.collectionType == CollectionType.MOVIES ||
+				filterUnplayed = uiState.filterUnwatched,
+				filterWatched = uiState.filterWatched,
+				filterSeriesStatus = uiState.filterSeriesStatus,
+				showUnplayedToggle = uiState.collectionType == CollectionType.MOVIES ||
 					uiState.collectionType == CollectionType.TVSHOWS,
 				onSortSelected = onSortSelected,
 				onToggleFavorites = onToggleFavorites,
-				onToggleUnwatched = onToggleUnwatched,
+				onToggleUnplayed = onToggleUnwatched,
+				onToggleWatched = onToggleWatched,
+				onSeriesStatusSelected = onSeriesStatusSelected,
 				onDismiss = { showFilterDialog = false },
 			)
 		}
@@ -506,11 +517,13 @@ class LibraryBrowseFragment : Fragment() {
 	private fun buildStatusText(uiState: LibraryBrowseUiState): String {
 		val parts = mutableListOf<String>()
 		parts.add(stringResource(R.string.lbl_showing))
-		if (!uiState.filterFavorites && !uiState.filterUnwatched) {
+		if (!uiState.filterFavorites && !uiState.filterUnwatched && !uiState.filterWatched && uiState.filterSeriesStatus == SeriesStatusFilter.ALL) {
 			parts.add(stringResource(R.string.lbl_all_items))
 		} else {
 			if (uiState.filterUnwatched) parts.add(stringResource(R.string.lbl_unwatched))
+			if (uiState.filterWatched) parts.add("Played")
 			if (uiState.filterFavorites) parts.add(stringResource(R.string.lbl_favorites))
+			if (uiState.filterSeriesStatus != SeriesStatusFilter.ALL) parts.add(uiState.filterSeriesStatus.label)
 		}
 		if (uiState.startLetter != null) {
 			parts.add("${stringResource(R.string.lbl_starting_with)} ${uiState.startLetter}")

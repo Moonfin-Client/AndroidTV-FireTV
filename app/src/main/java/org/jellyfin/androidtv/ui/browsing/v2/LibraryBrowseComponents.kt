@@ -510,7 +510,7 @@ fun LibraryStatusBar(
 
 /**
  * Glass-morphism filter/sort dialog matching TrackSelectorDialog style.
- * Shows sort options as radio-selectable rows, plus toggle rows for favorites / unwatched.
+ * Shows sort options  and played/unplayed as radio-selectable rows, plus toggle row for favorites.
  */
 @Composable
 fun FilterSortDialog(
@@ -518,11 +518,15 @@ fun FilterSortDialog(
 	sortOptions: List<SortOption>,
 	currentSort: SortOption,
 	filterFavorites: Boolean,
-	filterUnwatched: Boolean,
-	showUnwatchedToggle: Boolean,
+	filterUnplayed: Boolean,
+	filterWatched: Boolean,
+	filterSeriesStatus: SeriesStatusFilter,
+	showUnplayedToggle: Boolean,
 	onSortSelected: (SortOption) -> Unit,
 	onToggleFavorites: () -> Unit,
-	onToggleUnwatched: () -> Unit,
+	onToggleUnplayed: () -> Unit,
+	onToggleWatched: () -> Unit,
+	onSeriesStatusSelected: (SeriesStatusFilter) -> Unit,
 	onDismiss: () -> Unit,
 ) {
 	val initialFocusRequester = remember { FocusRequester() }
@@ -564,20 +568,24 @@ fun FilterSortDialog(
 
 				Spacer(modifier = Modifier.height(4.dp))
 
-				// Section: Sort
-				Text(
-					text = "Sort By",
-					fontSize = 13.sp,
-					fontWeight = FontWeight.W500,
-					color = Color.White.copy(alpha = 0.45f),
-					modifier = Modifier
-						.padding(horizontal = 24.dp, vertical = 8.dp),
-				)
+				// Scrollable content area
+				LazyColumn(
+					modifier = Modifier.weight(1f, fill = false),
+					contentPadding = PaddingValues(bottom = 8.dp)
+				) {
+					// Section: Sort
+					item {
+						Text(
+							text = "Sort By",
+							fontSize = 13.sp,
+							fontWeight = FontWeight.W500,
+							color = Color.White.copy(alpha = 0.45f),
+							modifier = Modifier
+								.padding(horizontal = 24.dp, vertical = 8.dp),
+						)
+					}
 
-				LazyColumn {
 					itemsIndexed(sortOptions) { index, option ->
-						val interactionSource = remember { MutableInteractionSource() }
-						val isFocused by interactionSource.collectIsFocusedAsState()
 						val isSelected = option.sortBy == currentSort.sortBy
 
 						val focusModifier = if (index == sortOptions.indexOfFirst { it.sortBy == currentSort.sortBy }
@@ -588,94 +596,95 @@ fun FilterSortDialog(
 							Modifier
 						}
 
-						Row(
+						FilterRadioRow(
+							label = option.name,
+							isSelected = isSelected,
+							onClick = { onSortSelected(option) },
 							modifier = focusModifier
+						)
+					}
+
+					// Divider
+					item {
+						Box(
+							modifier = Modifier
 								.fillMaxWidth()
-								.clickable(
-									interactionSource = interactionSource,
-									indication = null,
-								) { onSortSelected(option) }
-								.focusable(interactionSource = interactionSource)
-								.background(
-									if (isFocused) Color.White.copy(alpha = 0.12f) else Color.Transparent,
-								)
-								.padding(horizontal = 24.dp, vertical = 12.dp),
-							verticalAlignment = Alignment.CenterVertically,
-						) {
-							// Radio circle
-							Box(
-								modifier = Modifier
-									.size(18.dp)
-									.border(
-										width = 2.dp,
-										color = if (isSelected) JellyfinBlue else Color.White.copy(alpha = 0.3f),
-										shape = CircleShape,
-									),
-								contentAlignment = Alignment.Center,
-							) {
-								if (isSelected) {
-									Box(
-										modifier = Modifier
-											.size(10.dp)
-											.background(JellyfinBlue, CircleShape),
-									)
-								}
-							}
+								.height(1.dp)
+								.padding(horizontal = 24.dp)
+								.background(Color.White.copy(alpha = 0.06f)),
+						)
+						Spacer(modifier = Modifier.height(4.dp))
+					}
 
-							Spacer(modifier = Modifier.width(16.dp))
+					// Section: Filters
+					item {
+						Text(
+							text = "Filters",
+							fontSize = 13.sp,
+							fontWeight = FontWeight.W500,
+							color = Color.White.copy(alpha = 0.45f),
+							modifier = Modifier
+								.padding(horizontal = 24.dp, vertical = 8.dp),
+						)
 
-							Text(
-								text = option.name,
-								fontSize = 16.sp,
-								fontWeight = if (isSelected) FontWeight.W600 else FontWeight.W400,
-								color = when {
-									isSelected -> JellyfinBlue
-									isFocused -> Color.White
-									else -> Color.White.copy(alpha = 0.8f)
-								},
-								maxLines = 1,
-								overflow = TextOverflow.Ellipsis,
-								modifier = Modifier.weight(1f),
+						// Favorites toggle
+						FilterToggleRow(
+							label = "Favorites",
+							isActive = filterFavorites,
+							onClick = onToggleFavorites,
+						)
+
+						// Played radio
+						FilterRadioRow(
+							label = "Played",
+							isSelected = filterWatched,
+							onClick = onToggleWatched,
+						)
+
+						// Unplayed radio
+						if (showUnplayedToggle) {
+							FilterRadioRow(
+								label = "Unplayed",
+								isSelected = filterUnplayed,
+								onClick = onToggleUnplayed,
 							)
 						}
 					}
-				}
 
-				// Divider
-				Box(
-					modifier = Modifier
-						.fillMaxWidth()
-						.height(1.dp)
-						.padding(horizontal = 24.dp)
-						.background(Color.White.copy(alpha = 0.06f)),
-				)
+					// Divider
+					item {
+						Box(
+							modifier = Modifier
+								.fillMaxWidth()
+								.height(1.dp)
+								.padding(horizontal = 24.dp)
+								.background(Color.White.copy(alpha = 0.06f)),
+						)
+						Spacer(modifier = Modifier.height(4.dp))
+					}
 
-				Spacer(modifier = Modifier.height(4.dp))
+					// Section: Status
+					item {
+						Text(
+							text = "Status",
+							fontSize = 13.sp,
+							fontWeight = FontWeight.W500,
+							color = Color.White.copy(alpha = 0.45f),
+							modifier = Modifier
+								.padding(horizontal = 24.dp, vertical = 8.dp),
+						)
+					}
 
-				// Section: Filters
-				Text(
-					text = "Filters",
-					fontSize = 13.sp,
-					fontWeight = FontWeight.W500,
-					color = Color.White.copy(alpha = 0.45f),
-					modifier = Modifier
-						.padding(horizontal = 24.dp, vertical = 8.dp),
-				)
+					items(SeriesStatusFilter.entries.size) { index ->
+						val filter = SeriesStatusFilter.entries[index]
+						val isSelected = filter == filterSeriesStatus
 
-				// Favorites toggle
-				FilterToggleRow(
-					label = "Favorites Only",
-					isActive = filterFavorites,
-					onClick = onToggleFavorites,
-				)
-
-				// Unwatched toggle
-				if (showUnwatchedToggle) {
-					FilterToggleRow(
-						label = "Unwatched Only",
-						isActive = filterUnwatched,
-						onClick = onToggleUnwatched,
-					)
+						FilterRadioRow(
+							label = filter.label,
+							isSelected = isSelected,
+							onClick = { onSeriesStatusSelected(filter) }
+						)
+					}
 				}
 			}
 		}
@@ -683,6 +692,71 @@ fun FilterSortDialog(
 		LaunchedEffect(Unit) {
 			initialFocusRequester.requestFocus()
 		}
+	}
+}
+
+/**
+ * A radio-selectable row inside the filter dialog.
+ */
+@Composable
+private fun FilterRadioRow(
+	label: String,
+	isSelected: Boolean,
+	onClick: () -> Unit,
+	modifier: Modifier = Modifier,
+) {
+	val interactionSource = remember { MutableInteractionSource() }
+	val isFocused by interactionSource.collectIsFocusedAsState()
+
+	Row(
+		modifier = modifier
+			.fillMaxWidth()
+			.clickable(
+				interactionSource = interactionSource,
+				indication = null,
+			) { onClick() }
+			.focusable(interactionSource = interactionSource)
+			.background(
+				if (isFocused) Color.White.copy(alpha = 0.12f) else Color.Transparent,
+			)
+			.padding(horizontal = 24.dp, vertical = 12.dp),
+		verticalAlignment = Alignment.CenterVertically,
+	) {
+		// Radio circle
+		Box(
+			modifier = Modifier
+				.size(18.dp)
+				.border(
+					width = 2.dp,
+					color = if (isSelected) JellyfinBlue else Color.White.copy(alpha = 0.3f),
+					shape = CircleShape,
+				),
+			contentAlignment = Alignment.Center,
+		) {
+			if (isSelected) {
+				Box(
+					modifier = Modifier
+						.size(10.dp)
+						.background(JellyfinBlue, CircleShape),
+				)
+			}
+		}
+
+		Spacer(modifier = Modifier.width(16.dp))
+
+		Text(
+			text = label,
+			fontSize = 16.sp,
+			fontWeight = if (isSelected) FontWeight.W600 else FontWeight.W400,
+			color = when {
+				isSelected -> JellyfinBlue
+				isFocused -> Color.White
+				else -> Color.White.copy(alpha = 0.8f)
+			},
+			maxLines = 1,
+			overflow = TextOverflow.Ellipsis,
+			modifier = Modifier.weight(1f),
+		)
 	}
 }
 
@@ -745,6 +819,9 @@ private fun FilterToggleRow(
 				isFocused -> Color.White
 				else -> Color.White.copy(alpha = 0.8f)
 			},
+			maxLines = 1,
+			overflow = TextOverflow.Ellipsis,
+			modifier = Modifier.weight(1f),
 		)
 	}
 }
