@@ -325,7 +325,7 @@ class LibraryBrowseViewModel(
 		viewModelScope.launch {
 			if (reset) {
 				currentPage = 0
-				_uiState.value = _uiState.value.copy(isLoading = true, items = emptyList())
+				_uiState.value = _uiState.value.copy(isLoading = true, items = emptyList(), focusedItem = null)
 			}
 			isLoadingMore = true
 
@@ -433,6 +433,7 @@ class LibraryBrowseViewModel(
 					items = allItems,
 					totalItems = totalItems,
 					hasMoreItems = allItems.size < totalItems,
+					focusedItem = if (reset) allItems.firstOrNull() else _uiState.value.focusedItem,
 				)
 			} catch (err: ApiClientException) {
 				Timber.e(err, "Failed to load library items")
