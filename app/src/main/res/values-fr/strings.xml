@@ -119,7 +119,9 @@
     <string name="lbl_starting_with">Commençant par ceux dont le nom débute par</string>
     <string name="lbl_display_preferences">Préférences d\'affichage</string>
     <string name="lbl__continuing">EN PRODUCTION</string>
+    <string name="lbl__continuing_title">En Production</string>
     <string name="lbl_ended">TERMINÉ</string>
+    <string name="lbl_ended_title">Terminé</string>
     <string name="lbl_filters">Filtres TV Live</string>
     <string name="msg_subtitles_loading">Chargement des sous-titres…</string>
     <string name="msg_unable_load_subs">Impossible de charger les sous-titres</string>
@@ -486,6 +488,11 @@
         <item quantity="one">%1$s piste</item>
         <item quantity="many">%1$s pistes</item>
         <item quantity="other">%1$s piste(s)</item>
+    </plurals>
+    <plurals name="season_count">
+        <item quantity="one">%d Saison</item>
+        <item quantity="many">%d Saisons</item>
+        <item quantity="other">%d Saisons</item>
     </plurals>
     <string name="lbl_album_artists">Artistes d\'albums</string>
     <string name="disable_ui_mode_warning">Désactiver l\'avertissement du type d\'appareil</string>

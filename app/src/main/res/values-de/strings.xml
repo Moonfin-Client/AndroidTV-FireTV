@@ -119,7 +119,9 @@
     <string name="lbl_starting_with">beginnend mit jenen, deren Namen beginnt mit</string>
     <string name="lbl_display_preferences">Anzeigeeinstellungen</string>
     <string name="lbl__continuing">FORTGESETZT</string>
+    <string name="lbl__continuing_title">Fortgesetzt</string>
     <string name="lbl_ended">BEENDET</string>
+    <string name="lbl_ended_title">Beendet</string>
     <string name="lbl_filters">Fernseh-Filter</string>
     <string name="msg_subtitles_loading">Lade Untertitel…</string>
     <string name="msg_unable_load_subs">Untertitel konnten nicht geladen werden</string>
@@ -479,6 +481,10 @@
     <plurals name="episodes">
         <item quantity="one">%1$s Episode</item>
         <item quantity="other">%1$s Episoden</item>
+    </plurals>
+    <plurals name="season_count">
+        <item quantity="one">%1$s Staffel</item>
+        <item quantity="other">%1$s Staffeln</item>
     </plurals>
     <string name="not_set">Nicht gesetzt</string>
     <string name="lbl_album_artists">Albuminterpret</string>

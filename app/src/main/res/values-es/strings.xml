@@ -200,8 +200,10 @@
     <string name="lbl_critic_rating">Puntuación crítica (Tomates)</string>
     <string name="lbl_premier_date">Fecha de estreno</string>
     <string name="lbl_series_recordings">Grabaciones de Series</string>
-    <string name="lbl_ended">FINALIZADO</string>
     <string name="lbl__continuing">CONTINUANDO</string>
+    <string name="lbl__continuing_title">Continuando</string>
+    <string name="lbl_ended">FINALIZADO</string>
+    <string name="lbl_ended_title">Finalizado</string>
     <string name="lbl_from">desde</string>
     <string name="lbl_refresh_switching">Cambio de frecuencia de actualización</string>
     <string name="lbl_bitstream_ac3">Audio Bitstream Dolby Digital</string>
@@ -530,6 +532,11 @@
         <item quantity="one">%1$s álbum</item>
         <item quantity="many">%1$s álbumes</item>
         <item quantity="other">%1$s álbumes</item>
+    </plurals>
+    <plurals name="season_count">
+        <item quantity="one">%1$s Temporadas</item>
+        <item quantity="many">%1$s Temporadas</item>
+        <item quantity="other">%1$s Temporadas</item>
     </plurals>
     <string name="random">Aleatorio</string>
     <string name="pref_playback_advanced">Preferencias avanzadas de reproducción</string>
