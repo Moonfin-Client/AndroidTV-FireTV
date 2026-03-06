@@ -41,6 +41,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -445,7 +447,20 @@ fun FocusedItemHud(
 					InfoItemText(text = year.toString())
 					hasItem = true
 				}
-
+				if (item.type != BaseItemKind.SERIES) {
+					item.runTimeTicks?.let { ticks ->
+						if (hasItem) InfoItemSeparator()
+						Icon(
+							painter = painterResource(R.drawable.ic_time),
+							contentDescription = null,
+							tint = Color.White.copy(alpha = 0.7f),
+							modifier = Modifier.size(15.dp).padding(end = 4.dp),
+						)
+						InfoItemText(TimeUtils.formatRuntimeHoursMinutes(
+							LocalContext.current,ticks/10000))
+						hasItem = true
+					}
+				}
 				if (item.type == BaseItemKind.SERIES) {
 					val status = item.status?.lowercase()
 					if (status != null && (status == "continuing" || status == "ended")) {

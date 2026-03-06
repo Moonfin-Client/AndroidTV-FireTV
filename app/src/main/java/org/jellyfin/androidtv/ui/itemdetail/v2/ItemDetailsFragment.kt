@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -57,6 +58,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -84,6 +86,7 @@ import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.constant.NavbarPosition
 import org.jellyfin.androidtv.ui.base.CircularProgressIndicator
+import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowColors
@@ -928,9 +931,16 @@ class ItemDetailsFragment : Fragment() {
 				if (!isSeries) {
 					item.runTimeTicks?.let { ticks ->
 						if (hasItem) InfoItemSeparator()
+						Icon(
+							painter = painterResource(R.drawable.ic_time),
+							contentDescription = null,
+							tint = Color.White.copy(alpha = 0.7f),
+							modifier = Modifier.size(15.dp).padding(end = 4.dp),
+						)
 						InfoItemText(text = formatDuration(ticks))
 						hasItem = true
 						InfoItemSeparator()
+						// maybe some other icon here?  I didn't see an hourglass
 						InfoItemText(text = (stringResource(R.string.lbl_playback_control_ends,
 							getEndsAt(ticks))))
 					}
