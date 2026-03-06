@@ -41,8 +41,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +63,7 @@ import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowCompactRatin
 import org.jellyfin.androidtv.ui.itemdetail.v2.InfoItemBadge
 import org.jellyfin.androidtv.ui.itemdetail.v2.InfoItemSeparator
 import org.jellyfin.androidtv.ui.itemdetail.v2.InfoItemText
+import org.jellyfin.androidtv.ui.itemdetail.v2.RuntimeInfo
 import org.jellyfin.androidtv.util.TimeUtils
 import org.jellyfin.design.Tokens
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -441,63 +440,42 @@ fun FocusedItemHud(
 			Row(
 				verticalAlignment = Alignment.CenterVertically,
 			) {
-				var hasItem = false
+				val metadataItems = buildList<@Composable () -> Unit> {
+					item.productionYear?.let { add{ InfoItemText(text = it.toString()) } }
 
-				item.productionYear?.let { year ->
-					InfoItemText(text = year.toString())
-					hasItem = true
-				}
-				if (item.type != BaseItemKind.SERIES) {
-					item.runTimeTicks?.let { ticks ->
-						if (hasItem) InfoItemSeparator()
-						Icon(
-							painter = painterResource(R.drawable.ic_time),
-							contentDescription = null,
-							tint = Color.White.copy(alpha = 0.7f),
-							modifier = Modifier.size(15.dp).padding(end = 4.dp),
-						)
-						InfoItemText(TimeUtils.formatRuntimeHoursMinutes(
-							LocalContext.current,ticks / 10_000))
-						hasItem = true
+					if (item.type != BaseItemKind.SERIES) {
+						item.runTimeTicks?.let { add { RuntimeInfo(it) } }
 					}
-				}
-				if (item.type == BaseItemKind.SERIES) {
-					val status = item.status?.lowercase()
-					if (status != null && (status == "continuing" || status == "ended")) {
-						if (hasItem) InfoItemSeparator()
 
-						val label = if (status == "continuing") {
-							stringResource(R.string.lbl__continuing)
-						} else {
-							stringResource(R.string.lbl_ended)
+					if (item.type == BaseItemKind.SERIES) {
+						val status = item.status?.lowercase()
+						if (status == "continuing" || status == "ended") {
+							val labelRes = if (status == "continuing") R.string.lbl__continuing_title else R.string.lbl_ended_title
+							val color = if (status == "continuing") InfoRowColors.Green.first else InfoRowColors.Red.first
+							add {
+								InfoItemBadge(
+									text = stringResource(labelRes),
+									bgColor = color,
+									color = Color.White,
+								)
+							}
 						}
-
-						val bgColor = if (status == "continuing") {
-							InfoRowColors.Green.first
-						} else {
-							InfoRowColors.Red.first
-						}
-
-						InfoItemBadge(
-							text = label,
-							bgColor = bgColor,
-							color = Color.White,
-						)
-						hasItem = true
 					}
+
+					item.officialRating?.let { add { InfoItemBadge(text = it) } }
 				}
 
-				item.officialRating?.let { rating ->
-					if (hasItem) InfoItemSeparator()
-					InfoItemBadge(
-						text = rating
-					)
+				metadataItems.forEachIndexed { index, content ->
+					content()
+					if (index < metadataItems.size - 1) {
+						InfoItemSeparator()
+					}
 				}
 
 				InfoRowCompactRatings(
 					item = item,
 					leadingContent = {
-						if (hasItem) InfoItemSeparator()
+						if (metadataItems.isNotEmpty()) InfoItemSeparator()
 					}
 				)
 			}

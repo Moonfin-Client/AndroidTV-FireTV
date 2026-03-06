@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.ui.itemdetail.v2
 
+import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,6 +44,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -64,6 +67,7 @@ import org.jellyfin.androidtv.ui.base.button.IconButton
 import org.jellyfin.androidtv.ui.base.button.IconButtonDefaults
 import org.jellyfin.androidtv.ui.base.focusBorderColor
 import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowColors
+import org.jellyfin.androidtv.util.TimeUtils
 import org.jellyfin.design.Tokens
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -189,6 +193,19 @@ fun InfoItemBadge(
 		fontWeight = FontWeight.W900,
 		color = color,
 	)
+}
+@Composable
+fun RuntimeInfo(ticks: Long) {
+	val context = LocalContext.current
+	Row(verticalAlignment = Alignment.CenterVertically) {
+		Icon(
+			painter = painterResource(R.drawable.ic_time),
+			contentDescription = null,
+			tint = Color.White.copy(alpha = 0.7f),
+			modifier = Modifier.size(15.dp).padding(end = 4.dp),
+		)
+		InfoItemText(TimeUtils.formatRuntimeHoursMinutes(context, ticks / 10_000))
+	}
 }
 
 @Composable
@@ -972,17 +989,17 @@ fun TrackItemCard(
 		modifier = modifier
 			.fillMaxWidth()
 			.onKeyEvent { event ->
-				if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
+				if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
 				when {
 					// Menu key opens the track action dialog
-					event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_MENU ||
-						event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_INFO -> {
+					event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_MENU ||
+						event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_INFO -> {
 						onMenuAction?.invoke(); onMenuAction != null
 					}
 					// Long-press center/enter also opens the menu
 					event.nativeKeyEvent.isLongPress &&
-						(event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
-							event.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_ENTER) -> {
+						(event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+							event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER) -> {
 						onMenuAction?.invoke(); onMenuAction != null
 					}
 					// Reorder with left/right

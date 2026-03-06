@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -58,7 +57,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -86,7 +84,6 @@ import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.constant.NavbarPosition
 import org.jellyfin.androidtv.ui.base.CircularProgressIndicator
-import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.browsing.composable.inforow.InfoRowColors
@@ -920,84 +917,85 @@ class ItemDetailsFragment : Fragment() {
 				verticalAlignment = Alignment.CenterVertically,
 				horizontalArrangement = Arrangement.spacedBy(0.dp),
 			) {
-				var hasItem = false
+				val metadataItems = buildList<@Composable () -> Unit> {
+					// Year
+					item.productionYear?.let { add { InfoItemText(text = it.toString()) } }
 
-				item.productionYear?.let { year ->
-					InfoItemText(text = year.toString())
-					hasItem = true
+					// Runtime + Ends At (movies only)
+					if (!isSeries) {
+						item.runTimeTicks?.let {
+							add { RuntimeInfo(it) }
+							add { InfoItemText(
+									text = stringResource(
+										R.string.lbl_playback_control_ends,
+										getEndsAt(it)
+									)
+								)
+							}
+						}
+					}
+
+					// Series-specific: Season count + status badge
+					if (isSeries) {
+						// Season count
+						val seasonCount = item.childCount ?: 0
+						if (seasonCount > 0) {
+							add {
+								InfoItemText(
+									text = pluralStringResource(
+										R.plurals.season_count,
+										seasonCount,
+										seasonCount
+									)
+								)
+							}
+						}
+
+						// Status badge
+						item.status?.lowercase()?.let { status ->
+							if (status == "continuing" || status == "ended") {
+								val labelRes = if (status == "continuing")
+									R.string.lbl__continuing
+								else
+									R.string.lbl_ended
+
+								val bgColor = if (status == "continuing")
+									InfoRowColors.Green.first
+								else
+									InfoRowColors.Red.first
+
+								add {
+									InfoItemBadge(
+										text = stringResource(labelRes),
+										bgColor = bgColor,
+										color = Color.White
+									)
+								}
+							}
+						}
+					}
+
+					// Rating
+					item.officialRating?.let { rating ->
+						add { InfoItemBadge(text = rating) }
+					}
 				}
-
-				if (!isSeries) {
-					item.runTimeTicks?.let { ticks ->
-						if (hasItem) InfoItemSeparator()
-						Icon(
-							painter = painterResource(R.drawable.ic_time),
-							contentDescription = null,
-							tint = Color.White.copy(alpha = 0.7f),
-							modifier = Modifier.size(15.dp).padding(end = 4.dp),
-						)
-						InfoItemText(text = formatDuration(ticks))
-						hasItem = true
+				metadataItems.forEachIndexed { index, content ->
+					content()
+					if (index < metadataItems.size - 1) {
 						InfoItemSeparator()
-						// maybe some other icon here?  I didn't see an hourglass
-						InfoItemText(text = (stringResource(R.string.lbl_playback_control_ends,
-							getEndsAt(ticks))))
 					}
 				}
-
-				if (isSeries) {
-					val seasonCount = item.childCount ?: 0
-					if (seasonCount > 0) {
-						if (hasItem) InfoItemSeparator()
-						InfoItemText(text = pluralStringResource(R.plurals.season_count, seasonCount, seasonCount))
-						hasItem = true
-					}
-
-					item.status?.let {
-						val status = it.lowercase()
-						if (status == "continuing" || status == "ended") {
-							if (hasItem) InfoItemSeparator()
-
-							val label = if (status == "continuing") {
-								stringResource(R.string.lbl__continuing)
-							} else {
-								stringResource(R.string.lbl_ended)
-							}
-
-							val bgColor = if (status == "continuing") {
-								InfoRowColors.Green.first
-							} else {
-								InfoRowColors.Red.first
-							}
-
-							InfoItemBadge(
-								label,
-								bgColor,
-								Color.White
-							)
-							hasItem = true
+				if (badges.isNotEmpty()) {
+					if (metadataItems.isNotEmpty()) InfoItemSeparator()
+					Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+						badges.forEach { badge ->
+							MediaBadgeChip(badge = badge)
 						}
 					}
 				}
-
-				item.officialRating?.let { rating ->
-					if (hasItem) InfoItemSeparator()
-					InfoItemBadge(text = rating)
-					hasItem = true
-				}
-
-				if (badges.isNotEmpty() && hasItem) { // separator if there are media badges following this
-					InfoItemSeparator()
-				}
 			}
 
-			if (badges.isNotEmpty()) {
-				Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-					badges.forEach { badge ->
-						MediaBadgeChip(badge = badge)
-					}
-				}
-			}
 
 		}
 	}
