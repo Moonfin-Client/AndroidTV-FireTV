@@ -943,10 +943,9 @@ class ItemDetailsFragment : Fragment() {
 						hasItem = true
 					}
 
-					item.status?.let { status ->
-
-						val status = item.status?.lowercase()
-						if (status != null && (status == "continuing" || status == "ended")) {
+					item.status?.let {
+						val status = it.lowercase()
+						if (status == "continuing" || status == "ended") {
 							if (hasItem) InfoItemSeparator()
 
 							val label = if (status == "continuing") {
