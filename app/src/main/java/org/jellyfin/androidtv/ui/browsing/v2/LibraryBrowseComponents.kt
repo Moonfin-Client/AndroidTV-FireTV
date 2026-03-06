@@ -457,7 +457,7 @@ fun FocusedItemHud(
 							modifier = Modifier.size(15.dp).padding(end = 4.dp),
 						)
 						InfoItemText(TimeUtils.formatRuntimeHoursMinutes(
-							LocalContext.current,ticks/10000))
+							LocalContext.current,ticks / 10_000))
 						hasItem = true
 					}
 				}
