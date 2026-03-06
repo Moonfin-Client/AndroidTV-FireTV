@@ -939,10 +939,7 @@ class ItemDetailsFragment : Fragment() {
 					val seasonCount = item.childCount ?: 0
 					if (seasonCount > 0) {
 						if (hasItem) InfoItemSeparator()
-						pluralStringResource(R.plurals.season_count, seasonCount, seasonCount)
-
-						InfoItemText(text = pluralStringResource(R.plurals.season_count, seasonCount, seasonCount)
-						)
+						InfoItemText(text = pluralStringResource(R.plurals.season_count, seasonCount, seasonCount))
 						hasItem = true
 					}
 
