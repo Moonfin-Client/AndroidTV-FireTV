@@ -931,7 +931,8 @@ class ItemDetailsFragment : Fragment() {
 						InfoItemText(text = formatDuration(ticks))
 						hasItem = true
 						InfoItemSeparator()
-						InfoItemText(text = getEndsAt(ticks))
+						InfoItemText(text = (stringResource(R.string.lbl_playback_control_ends,
+							getEndsAt(ticks))))
 					}
 				}
 
