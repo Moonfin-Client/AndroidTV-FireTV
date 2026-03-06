@@ -923,7 +923,6 @@ class ItemDetailsFragment : Fragment() {
 				var hasItem = false
 
 				item.productionYear?.let { year ->
-					if (hasItem) InfoItemSeparator()
 					InfoItemText(text = year.toString())
 					hasItem = true
 				}
