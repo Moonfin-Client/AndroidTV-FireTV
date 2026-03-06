@@ -266,6 +266,7 @@ class LibraryBrowseViewModel(
 	fun setSeriesStatusFilter(filter: SeriesStatusFilter) {
 		_uiState.value = _uiState.value.copy(filterSeriesStatus = filter)
 		loadItems(reset = true)
+		savePreferences()
 	}
 
 	fun setStartLetter(letter: String?) {
