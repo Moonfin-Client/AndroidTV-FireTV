@@ -223,7 +223,7 @@ private fun RatingDisplay(sourceKey: String, rating: Float, baseUrl: String?, sh
 	if (sourceKey == "community") {
 		RatingItemWithLogo(
 			icon = RatingIconProvider.RatingIcon.LocalDrawable(R.drawable.ic_star),
-			contentDescription = "Community Rating",
+			contentDescription = stringResource(R.string.lbl_community_rating),
 			rating = String.format("%.1f", rating * 10f),
 			showLabel = showLabel
 		)
