@@ -64,7 +64,6 @@ import org.jellyfin.androidtv.util.Utils
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.itemImages
 import org.jellyfin.sdk.model.api.BaseItemDto
-import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ImageType as JellyfinImageType
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.koin.android.ext.android.inject
@@ -167,8 +166,7 @@ class LibraryBrowseFragment : Fragment() {
 					uiState = uiState,
 					onSortSelected = { viewModel.setSortOption(it) },
 					onToggleFavorites = { viewModel.toggleFavorites() },
-					onToggleUnwatched = { viewModel.toggleUnwatched() },
-					onToggleWatched = { viewModel.toggleWatched() },
+					onPlayedStatusSelected = { viewModel.setPlayedFilter(it) },
 					onSeriesStatusSelected = { viewModel.setSeriesStatusFilter(it) },
 					onLetterSelected = { viewModel.setStartLetter(it) },
 					onSettingsClicked = { settingsVisible = true },
@@ -253,8 +251,7 @@ class LibraryBrowseFragment : Fragment() {
 		uiState: LibraryBrowseUiState,
 		onSortSelected: (SortOption) -> Unit,
 		onToggleFavorites: () -> Unit,
-		onToggleUnwatched: () -> Unit,
-		onToggleWatched: () -> Unit,
+		onPlayedStatusSelected: (PlayedStatusFilter) -> Unit,
 		onSeriesStatusSelected: (SeriesStatusFilter) -> Unit,
 		onLetterSelected: (String?) -> Unit,
 		onSettingsClicked: () -> Unit,
@@ -312,8 +309,7 @@ class LibraryBrowseFragment : Fragment() {
 					uiState = uiState,
 					onSortSelected = onSortSelected,
 					onToggleFavorites = onToggleFavorites,
-					onToggleUnwatched = onToggleUnwatched,
-					onToggleWatched = onToggleWatched,
+					onPlayedStatusSelected = onPlayedStatusSelected,
 					onSeriesStatusSelected = onSeriesStatusSelected,
 					onSettingsClicked = onSettingsClicked,
 					onHomeClicked = onHomeClicked,
@@ -337,8 +333,7 @@ class LibraryBrowseFragment : Fragment() {
 		uiState: LibraryBrowseUiState,
 		onSortSelected: (SortOption) -> Unit,
 		onToggleFavorites: () -> Unit,
-		onToggleUnwatched: () -> Unit,
-		onToggleWatched: () -> Unit,
+		onPlayedStatusSelected: (PlayedStatusFilter) -> Unit,
 		onSeriesStatusSelected: (SeriesStatusFilter) -> Unit,
 		onSettingsClicked: () -> Unit,
 		onHomeClicked: () -> Unit,
@@ -370,7 +365,6 @@ class LibraryBrowseFragment : Fragment() {
 				onClick = onSettingsClicked,
 			)
 		}
-
 		// Glass-morphism filter/sort dialog
 		if (showFilterDialog) {
 			FilterSortDialog(
@@ -378,15 +372,11 @@ class LibraryBrowseFragment : Fragment() {
 				sortOptions = viewModel.sortOptions,
 				currentSort = uiState.currentSortOption,
 				filterFavorites = uiState.filterFavorites,
-				filterUnplayed = uiState.filterUnwatched,
-				filterWatched = uiState.filterWatched,
+				filterPlayedStatus = uiState.filterPlayed,
 				filterSeriesStatus = uiState.filterSeriesStatus,
-				showUnplayedToggle = uiState.collectionType == CollectionType.MOVIES ||
-					uiState.collectionType == CollectionType.TVSHOWS,
 				onSortSelected = onSortSelected,
 				onToggleFavorites = onToggleFavorites,
-				onToggleUnplayed = onToggleUnwatched,
-				onToggleWatched = onToggleWatched,
+				onPlayedStatusSelected = onPlayedStatusSelected,
 				onSeriesStatusSelected = onSeriesStatusSelected,
 				onDismiss = { showFilterDialog = false },
 			)
@@ -517,12 +507,13 @@ class LibraryBrowseFragment : Fragment() {
 	private fun buildStatusText(uiState: LibraryBrowseUiState): String {
 		val parts = mutableListOf<String>()
 		parts.add(stringResource(R.string.lbl_showing))
-		if (!uiState.filterFavorites && !uiState.filterUnwatched && !uiState.filterWatched && uiState.filterSeriesStatus == SeriesStatusFilter.ALL) {
+		if (!uiState.filterFavorites && uiState.filterPlayed == PlayedStatusFilter.ALL && uiState.filterSeriesStatus == SeriesStatusFilter.ALL) {
 			parts.add(stringResource(R.string.lbl_all_items).lowercase())
 		} else {
-			if (uiState.filterUnwatched) parts.add(stringResource(R.string.lbl_unwatched))
-			if (uiState.filterWatched) parts.add(stringResource(R.string.lbl_watched))
 			if (uiState.filterFavorites) parts.add(stringResource(R.string.lbl_favorites))
+			if (uiState.filterPlayed != PlayedStatusFilter.ALL) {
+				parts.add(stringResource(uiState.filterPlayed.labelRes))
+			}
 			if (uiState.filterSeriesStatus != SeriesStatusFilter.ALL) {
 				parts.add(stringResource(uiState.filterSeriesStatus.labelRes))
 			}

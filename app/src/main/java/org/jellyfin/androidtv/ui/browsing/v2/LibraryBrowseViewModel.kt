@@ -37,6 +37,11 @@ enum class SeriesStatusFilter(@StringRes val labelRes: Int) {
 	CONTINUING(R.string.lbl__continuing_title),
 	ENDED(R.string.lbl_ended_title)
 }
+enum class PlayedStatusFilter(@StringRes val labelRes: Int) {
+	ALL(R.string.lbl_all_items),
+	WATCHED(R.string.lbl_watched),
+	UNWATCHED(R.string.lbl_unwatched)
+}
 
 data class SortOption(
 	@StringRes val nameRes: Int,
@@ -52,8 +57,7 @@ data class LibraryBrowseUiState(
 	val totalItems: Int = 0,
 	val currentSortOption: SortOption = SortOption(R.string.lbl_name, ItemSortBy.SORT_NAME, SortOrder.ASCENDING),
 	val filterFavorites: Boolean = false,
-	val filterUnwatched: Boolean = false,
-	val filterWatched: Boolean = false,
+	val filterPlayed: PlayedStatusFilter = PlayedStatusFilter.ALL,
 	val filterSeriesStatus: SeriesStatusFilter = SeriesStatusFilter.ALL,
 	val startLetter: String? = null,
 	val hasMoreItems: Boolean = false,
@@ -143,7 +147,6 @@ class LibraryBrowseViewModel(
 			val savedSort = libraryPreferences?.get(LibraryPreferences.sortBy)
 			val savedOrder = libraryPreferences?.get(LibraryPreferences.sortOrder)
 			val savedFavorites = libraryPreferences?.get(LibraryPreferences.filterFavoritesOnly) ?: false
-			val savedUnwatched = libraryPreferences?.get(LibraryPreferences.filterUnwatchedOnly) ?: false
 
 			val initialSort = if (savedSort != null && savedOrder != null) {
 				sortOptions.find { it.sortBy == savedSort }?.copy(sortOrder = savedOrder)
@@ -159,7 +162,6 @@ class LibraryBrowseViewModel(
 			_uiState.value = _uiState.value.copy(
 				currentSortOption = initialSort,
 				filterFavorites = savedFavorites,
-				filterUnwatched = savedUnwatched,
 				posterSize = savedPosterSize,
 				imageType = savedImageType,
 				gridDirection = savedGridDirection,
@@ -245,20 +247,8 @@ class LibraryBrowseViewModel(
 		loadItems(reset = true)
 	}
 
-	fun toggleUnwatched() {
-		_uiState.value = _uiState.value.copy(
-			filterUnwatched = !_uiState.value.filterUnwatched,
-			filterWatched = false
-		)
-		savePreferences()
-		loadItems(reset = true)
-	}
-
-	fun toggleWatched() {
-		_uiState.value = _uiState.value.copy(
-			filterWatched = !_uiState.value.filterWatched,
-			filterUnwatched = false
-		)
+	fun setPlayedFilter(filter: PlayedStatusFilter) {
+		_uiState.value = _uiState.value.copy(filterPlayed = filter)
 		savePreferences()
 		loadItems(reset = true)
 	}
@@ -310,7 +300,6 @@ class LibraryBrowseViewModel(
 		val prefs = libraryPreferences ?: return
 		viewModelScope.launch {
 			prefs.set(LibraryPreferences.filterFavoritesOnly, _uiState.value.filterFavorites)
-			prefs.set(LibraryPreferences.filterUnwatchedOnly, _uiState.value.filterUnwatched)
 			prefs.set(LibraryPreferences.sortBy, _uiState.value.currentSortOption.sortBy)
 			prefs.set(LibraryPreferences.sortOrder, _uiState.value.currentSortOption.sortOrder)
 			prefs.commit()
@@ -336,8 +325,11 @@ class LibraryBrowseViewModel(
 				// Build filters
 				val filters = buildSet {
 					if (state.filterFavorites) add(ItemFilter.IS_FAVORITE)
-					if (state.filterUnwatched) add(ItemFilter.IS_UNPLAYED)
-					if (state.filterWatched) add(ItemFilter.IS_PLAYED)
+					when (state.filterPlayed) {
+						PlayedStatusFilter.WATCHED -> add(ItemFilter.IS_PLAYED)
+						PlayedStatusFilter.UNWATCHED -> add(ItemFilter.IS_UNPLAYED)
+						PlayedStatusFilter.ALL -> {} // no filter
+					}
 				}
 
 				val includeTypes: Set<BaseItemKind>?

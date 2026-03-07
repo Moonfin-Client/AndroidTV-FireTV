@@ -522,14 +522,11 @@ fun FilterSortDialog(
 	sortOptions: List<SortOption>,
 	currentSort: SortOption,
 	filterFavorites: Boolean,
-	filterUnplayed: Boolean,
-	filterWatched: Boolean,
+	filterPlayedStatus: PlayedStatusFilter,
 	filterSeriesStatus: SeriesStatusFilter,
-	showUnplayedToggle: Boolean,
 	onSortSelected: (SortOption) -> Unit,
 	onToggleFavorites: () -> Unit,
-	onToggleUnplayed: () -> Unit,
-	onToggleWatched: () -> Unit,
+	onPlayedStatusSelected: (PlayedStatusFilter) -> Unit,
 	onSeriesStatusSelected: (SeriesStatusFilter) -> Unit,
 	onDismiss: () -> Unit,
 ) {
@@ -638,22 +635,21 @@ fun FilterSortDialog(
 							onClick = onToggleFavorites,
 						)
 
-						// Played radio
-						FilterRadioRow(
-							label = stringResource(R.string.lbl_watched),
-							isSelected = filterWatched,
-							onClick = onToggleWatched,
-						)
-
-						// Unplayed radio
-						if (showUnplayedToggle) {
-							FilterRadioRow(
-								label = stringResource(R.string.lbl_unwatched),
-								isSelected = filterUnplayed,
-								onClick = onToggleUnplayed,
-							)
-						}
+						Spacer(modifier = Modifier.height(8.dp))
 					}
+
+					// Played radio group
+					items(PlayedStatusFilter.entries.size) { index ->
+						val filter = PlayedStatusFilter.entries[index]
+						val isSelected = filter == filterPlayedStatus
+
+						FilterRadioRow(
+							label = stringResource(filter.labelRes),
+							isSelected = isSelected,
+							onClick = { onPlayedStatusSelected(filter) }
+						)
+					}
+
 
 					// Divider
 					item {
