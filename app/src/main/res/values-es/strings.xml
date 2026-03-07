@@ -534,7 +534,7 @@
         <item quantity="other">%1$s álbumes</item>
     </plurals>
     <plurals name="season_count">
-        <item quantity="one">%1$s Temporadas</item>
+        <item quantity="one">%1$s Temporada</item>
         <item quantity="many">%1$s Temporadas</item>
         <item quantity="other">%1$s Temporadas</item>
     </plurals>
