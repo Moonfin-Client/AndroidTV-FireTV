@@ -524,6 +524,8 @@ fun FilterSortDialog(
 	filterFavorites: Boolean,
 	filterPlayedStatus: PlayedStatusFilter,
 	filterSeriesStatus: SeriesStatusFilter,
+	showPlayedStatus: Boolean,
+	showSeriesStatus: Boolean,
 	onSortSelected: (SortOption) -> Unit,
 	onToggleFavorites: () -> Unit,
 	onPlayedStatusSelected: (PlayedStatusFilter) -> Unit,
@@ -569,12 +571,11 @@ fun FilterSortDialog(
 
 				Spacer(modifier = Modifier.height(4.dp))
 
-				// Scrollable content area
 				LazyColumn(
 					modifier = Modifier.weight(1f, fill = false),
 					contentPadding = PaddingValues(bottom = 8.dp)
 				) {
-					// Section: Sort
+					// Sort section
 					item {
 						Text(
 							text = stringResource(R.string.lbl_sort_by),
@@ -589,13 +590,11 @@ fun FilterSortDialog(
 					itemsIndexed(sortOptions) { index, option ->
 						val isSelected = option.sortBy == currentSort.sortBy
 
-						val focusModifier = if (index == sortOptions.indexOfFirst { it.sortBy == currentSort.sortBy }
-								.coerceIn(0, sortOptions.lastIndex)
-						) {
-							Modifier.focusRequester(initialFocusRequester)
-						} else {
-							Modifier
-						}
+						val focusModifier =
+							if (index == sortOptions.indexOfFirst { it.sortBy == currentSort.sortBy }
+									.coerceIn(0, sortOptions.lastIndex)
+							) Modifier.focusRequester(initialFocusRequester)
+							else Modifier
 
 						FilterRadioRow(
 							label = stringResource(option.nameRes),
@@ -605,7 +604,7 @@ fun FilterSortDialog(
 						)
 					}
 
-					// Divider
+					// Divider after sort
 					item {
 						Box(
 							modifier = Modifier
@@ -617,7 +616,7 @@ fun FilterSortDialog(
 						Spacer(modifier = Modifier.height(4.dp))
 					}
 
-					// Section: Filters
+					// Filters header + favorites toggle
 					item {
 						Text(
 							text = stringResource(R.string.filters),
@@ -628,7 +627,6 @@ fun FilterSortDialog(
 								.padding(horizontal = 24.dp, vertical = 8.dp),
 						)
 
-						// Favorites toggle
 						FilterToggleRow(
 							label = stringResource(R.string.lbl_favorites),
 							isActive = filterFavorites,
@@ -638,52 +636,55 @@ fun FilterSortDialog(
 						Spacer(modifier = Modifier.height(8.dp))
 					}
 
-					// Played radio group
-					items(PlayedStatusFilter.entries.size) { index ->
-						val filter = PlayedStatusFilter.entries[index]
-						val isSelected = filter == filterPlayedStatus
+					// Played status section
+					if (showPlayedStatus) {
+						items(PlayedStatusFilter.entries.size) { index ->
+							val filter = PlayedStatusFilter.entries[index]
+							val isSelected = filter == filterPlayedStatus
 
-						FilterRadioRow(
-							label = stringResource(filter.labelRes),
-							isSelected = isSelected,
-							onClick = { onPlayedStatusSelected(filter) }
-						)
+							FilterRadioRow(
+								label = stringResource(filter.labelRes),
+								isSelected = isSelected,
+								onClick = { onPlayedStatusSelected(filter) }
+							)
+						}
+
+						// Divider only if this section is shown
+						item {
+							Box(
+								modifier = Modifier
+									.fillMaxWidth()
+									.height(1.dp)
+									.padding(horizontal = 24.dp)
+									.background(Color.White.copy(alpha = 0.06f)),
+							)
+							Spacer(modifier = Modifier.height(4.dp))
+						}
 					}
 
+					// Series status section
+					if (showSeriesStatus) {
+						item {
+							Text(
+								text = stringResource(R.string.lbl_status_title),
+								fontSize = 13.sp,
+								fontWeight = FontWeight.W500,
+								color = Color.White.copy(alpha = 0.45f),
+								modifier = Modifier
+									.padding(horizontal = 24.dp, vertical = 8.dp),
+							)
+						}
 
-					// Divider
-					item {
-						Box(
-							modifier = Modifier
-								.fillMaxWidth()
-								.height(1.dp)
-								.padding(horizontal = 24.dp)
-								.background(Color.White.copy(alpha = 0.06f)),
-						)
-						Spacer(modifier = Modifier.height(4.dp))
-					}
+						items(SeriesStatusFilter.entries.size) { index ->
+							val filter = SeriesStatusFilter.entries[index]
+							val isSelected = filter == filterSeriesStatus
 
-					// Section: Status
-					item {
-						Text(
-							text = stringResource(R.string.lbl_status_title),
-							fontSize = 13.sp,
-							fontWeight = FontWeight.W500,
-							color = Color.White.copy(alpha = 0.45f),
-							modifier = Modifier
-								.padding(horizontal = 24.dp, vertical = 8.dp),
-						)
-					}
-
-					items(SeriesStatusFilter.entries.size) { index ->
-						val filter = SeriesStatusFilter.entries[index]
-						val isSelected = filter == filterSeriesStatus
-
-						FilterRadioRow(
-							label = stringResource(filter.labelRes),
-							isSelected = isSelected,
-							onClick = { onSeriesStatusSelected(filter) }
-						)
+							FilterRadioRow(
+								label = stringResource(filter.labelRes),
+								isSelected = isSelected,
+								onClick = { onSeriesStatusSelected(filter) }
+							)
+						}
 					}
 				}
 			}

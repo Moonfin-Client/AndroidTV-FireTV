@@ -64,6 +64,7 @@ import org.jellyfin.androidtv.util.Utils
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.itemImages
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ImageType as JellyfinImageType
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.koin.android.ext.android.inject
@@ -374,6 +375,9 @@ class LibraryBrowseFragment : Fragment() {
 				filterFavorites = uiState.filterFavorites,
 				filterPlayedStatus = uiState.filterPlayed,
 				filterSeriesStatus = uiState.filterSeriesStatus,
+				showPlayedStatus = uiState.collectionType == CollectionType.MOVIES ||
+					uiState.collectionType == CollectionType.TVSHOWS,
+				showSeriesStatus = uiState.collectionType == CollectionType.TVSHOWS,
 				onSortSelected = onSortSelected,
 				onToggleFavorites = onToggleFavorites,
 				onPlayedStatusSelected = onPlayedStatusSelected,
