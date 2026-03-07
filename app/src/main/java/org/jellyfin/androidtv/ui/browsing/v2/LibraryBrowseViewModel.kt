@@ -147,6 +147,8 @@ class LibraryBrowseViewModel(
 			val savedSort = libraryPreferences?.get(LibraryPreferences.sortBy)
 			val savedOrder = libraryPreferences?.get(LibraryPreferences.sortOrder)
 			val savedFavorites = libraryPreferences?.get(LibraryPreferences.filterFavoritesOnly) ?: false
+			val savedPlayed = libraryPreferences?.get(LibraryPreferences.filterPlayedStatus) ?: PlayedStatusFilter.ALL
+			val savedSeries = libraryPreferences?.get(LibraryPreferences.filterSeriesStatus) ?: SeriesStatusFilter.ALL
 
 			val initialSort = if (savedSort != null && savedOrder != null) {
 				sortOptions.find { it.sortBy == savedSort }?.copy(sortOrder = savedOrder)
@@ -162,6 +164,8 @@ class LibraryBrowseViewModel(
 			_uiState.value = _uiState.value.copy(
 				currentSortOption = initialSort,
 				filterFavorites = savedFavorites,
+				filterPlayed = savedPlayed,
+				filterSeriesStatus = savedSeries,
 				posterSize = savedPosterSize,
 				imageType = savedImageType,
 				gridDirection = savedGridDirection,
@@ -300,6 +304,8 @@ class LibraryBrowseViewModel(
 		val prefs = libraryPreferences ?: return
 		viewModelScope.launch {
 			prefs.set(LibraryPreferences.filterFavoritesOnly, _uiState.value.filterFavorites)
+			prefs.set(LibraryPreferences.filterPlayedStatus, _uiState.value.filterPlayed)
+			prefs.set(LibraryPreferences.filterSeriesStatus, _uiState.value.filterSeriesStatus)
 			prefs.set(LibraryPreferences.sortBy, _uiState.value.currentSortOption.sortBy)
 			prefs.set(LibraryPreferences.sortOrder, _uiState.value.currentSortOption.sortOrder)
 			prefs.commit()
