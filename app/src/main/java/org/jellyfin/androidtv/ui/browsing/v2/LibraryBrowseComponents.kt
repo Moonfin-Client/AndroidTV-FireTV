@@ -666,7 +666,7 @@ fun FilterSortDialog(
 					// Section: Status
 					item {
 						Text(
-							text = "Status",
+							text = stringResource(R.string.lbl_status_title),
 							fontSize = 13.sp,
 							fontWeight = FontWeight.W500,
 							color = Color.White.copy(alpha = 0.45f),

@@ -368,7 +368,7 @@ class LibraryBrowseFragment : Fragment() {
 		// Glass-morphism filter/sort dialog
 		if (showFilterDialog) {
 			FilterSortDialog(
-				title = "Sort & Filter",
+				title = stringResource(R.string.lbl_sort_and_filter),
 				sortOptions = viewModel.sortOptions,
 				currentSort = uiState.currentSortOption,
 				filterFavorites = uiState.filterFavorites,

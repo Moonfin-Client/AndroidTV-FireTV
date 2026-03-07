@@ -633,4 +633,6 @@
     <string name="pref_playback_prerolls">Intros</string>
     <string name="playback_video_player_external_empty">No tiene instalada ninguna aplicación de reproducción de vídeo en su dispositivo que pueda abrir vídeos de Jellyfin.</string>
     <string name="filters">Filtros</string>
+    <string name="lbl_sort_and_filter">Ordenar y filtrar</string>
+    <string name="lbl_status_title">Estado</string>
 </resources>

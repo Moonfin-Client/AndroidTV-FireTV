@@ -622,4 +622,6 @@
     <string name="video_player_internal">Eingebauter Videoplayer</string>
     <string name="video_player_external">Externe App</string>
     <string name="filters">Filter</string>
+    <string name="lbl_sort_and_filter">Sortieren und filtern</string>
+    <string name="lbl_status_title">Status</string>
 </resources>
