@@ -20,6 +20,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -239,6 +242,22 @@ fun EpisodePreviewOverlay(
 				exoPlayer = null
 				isPlaying = false
 			}
+		}
+
+		val lifecycleOwner = LocalLifecycleOwner.current
+		DisposableEffect(lifecycleOwner, exoPlayer) {
+			val observer = LifecycleEventObserver { _, event ->
+				when (event) {
+					Lifecycle.Event.ON_PAUSE -> exoPlayer?.pause()
+					Lifecycle.Event.ON_RESUME -> exoPlayer?.play()
+					else -> {}
+				}
+			}
+			lifecycleOwner.lifecycle.addObserver(observer)
+			if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+				exoPlayer?.pause()
+			}
+			onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
 		}
 
 		Box(

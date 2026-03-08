@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -153,6 +154,10 @@ class TrailerPlayerFragment : Fragment() {
 			player = exoPlayer
 			playerView.player = exoPlayer
 
+			if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+				exoPlayer.pause()
+			}
+
 			if (segments.isNotEmpty()) {
 				val runnable = object : Runnable {
 					override fun run() {
@@ -184,6 +189,16 @@ class TrailerPlayerFragment : Fragment() {
 		if (navigationRepository.canGoBack) {
 			navigationRepository.goBack()
 		}
+	}
+
+	override fun onPause() {
+		super.onPause()
+		player?.pause()
+	}
+
+	override fun onResume() {
+		super.onResume()
+		player?.play()
 	}
 
 	override fun onDestroyView() {

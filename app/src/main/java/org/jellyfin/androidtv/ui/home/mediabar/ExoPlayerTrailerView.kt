@@ -20,6 +20,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -101,6 +104,22 @@ fun ExoPlayerTrailerView(
 			exoPlayer.release()
 			player = null
 		}
+	}
+
+	val lifecycleOwner = LocalLifecycleOwner.current
+	DisposableEffect(lifecycleOwner, player) {
+		val observer = LifecycleEventObserver { _, event ->
+			when (event) {
+				Lifecycle.Event.ON_PAUSE -> player?.pause()
+				Lifecycle.Event.ON_RESUME -> player?.play()
+				else -> {}
+			}
+		}
+		lifecycleOwner.lifecycle.addObserver(observer)
+		if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+			player?.pause()
+		}
+		onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
 	}
 
 	Box(
