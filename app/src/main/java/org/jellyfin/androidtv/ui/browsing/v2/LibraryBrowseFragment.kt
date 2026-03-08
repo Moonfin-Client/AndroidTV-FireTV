@@ -65,7 +65,9 @@ import org.jellyfin.androidtv.ui.settings.composable.SettingsRouterContent
 import org.jellyfin.androidtv.ui.settings.routes
 import org.jellyfin.androidtv.util.Utils
 import org.jellyfin.androidtv.util.apiclient.getUrl
+import org.jellyfin.androidtv.util.apiclient.itemBackdropImages
 import org.jellyfin.androidtv.util.apiclient.itemImages
+import org.jellyfin.androidtv.util.apiclient.parentImages
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CollectionType
@@ -514,7 +516,12 @@ class LibraryBrowseFragment : Fragment() {
 			ImageType.BANNER -> JellyfinImageType.BANNER
 			ImageType.SQUARE -> JellyfinImageType.PRIMARY
 		}
-		val image = item.itemImages[jellyfinType] ?: item.itemImages[JellyfinImageType.PRIMARY]
+		val image = item.itemImages[jellyfinType]
+			?: item.itemImages[JellyfinImageType.PRIMARY]
+			?: item.itemImages[JellyfinImageType.THUMB]
+			?: item.itemBackdropImages.firstOrNull()
+			?: item.parentImages[JellyfinImageType.PRIMARY]
+			?: item.parentImages[JellyfinImageType.THUMB]
 		return image?.getUrl(viewModel.effectiveApi, maxHeight = 400)
 	}
 
