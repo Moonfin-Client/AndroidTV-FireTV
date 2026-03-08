@@ -483,6 +483,7 @@ class ItemDetailsFragment : Fragment() {
 		val isSeries = item.type == BaseItemKind.SERIES
 		val isBoxSet = item.type == BaseItemKind.BOX_SET
 		val isMusicAlbum = item.type == BaseItemKind.MUSIC_ALBUM
+		val isMusicArtist = item.type == BaseItemKind.MUSIC_ARTIST
 		val isPlaylist = item.type == BaseItemKind.PLAYLIST
 
 		val backdropUrl = getBackdropUrl(item)
@@ -734,7 +735,7 @@ class ItemDetailsFragment : Fragment() {
 							PosterImage(
 								imageUrl = posterUrl,
 								isLandscape = isEpisode,
-								isSquare = isMusicAlbum || isPlaylist,
+								isSquare = isMusicAlbum || isMusicArtist || isPlaylist,
 								item = item,
 							)
 						}
@@ -848,6 +849,7 @@ class ItemDetailsFragment : Fragment() {
 						SectionWithCards(
 							title = "Albums",
 							items = uiState.albums,
+							isSquare = true,
 						)
 					}
 				}
@@ -910,6 +912,7 @@ class ItemDetailsFragment : Fragment() {
 						SectionWithCards(
 							title = "More Like This",
 							items = uiState.similar,
+							isSquare = isMusicArtist || isMusicAlbum,
 							onItemFocused = if (isPlaylist) {
 								{ focusItem -> focusedBackdropUrl = getBackdropUrl(focusItem) }
 							} else {
@@ -1410,6 +1413,7 @@ class ItemDetailsFragment : Fragment() {
 		title: String,
 		items: List<BaseItemDto>,
 		isLandscape: Boolean = false,
+		isSquare: Boolean = false,
 		firstItemFocusRequester: FocusRequester? = null,
 		onItemFocused: ((BaseItemDto) -> Unit)? = null,
 	) {
@@ -1442,6 +1446,7 @@ class ItemDetailsFragment : Fragment() {
 							title = item.name ?: "",
 							imageUrl = getPosterUrl(item),
 							year = item.productionYear,
+							isSquare = isSquare,
 							onClick = {
 								navigationRepository.navigate(Destinations.itemDetails(item.id, viewModel.serverId))
 							},

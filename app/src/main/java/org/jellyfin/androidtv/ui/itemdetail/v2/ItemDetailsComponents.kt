@@ -820,6 +820,7 @@ fun SimilarItemCard(
 	year: Int?,
 	onClick: () -> Unit,
 	modifier: Modifier = Modifier,
+	isSquare: Boolean = false,
 	onFocused: (() -> Unit)? = null,
 	item: BaseItemDto? = null,
 ) {
@@ -832,7 +833,7 @@ fun SimilarItemCard(
 
 	Column(
 		modifier = modifier
-			.width(140.dp)
+			.width(if (isSquare) 150.dp else 140.dp)
 			.clickable(
 				interactionSource = interactionSource,
 				indication = null,
@@ -842,7 +843,7 @@ fun SimilarItemCard(
 		Box(
 			modifier = Modifier
 				.fillMaxWidth()
-				.height(200.dp)
+				.height(if (isSquare) 150.dp else 200.dp)
 				.clip(RoundedCornerShape(6.dp))
 				.then(
 					if (isFocused) Modifier.border(2.dp, focusBorderColor(), RoundedCornerShape(6.dp))
