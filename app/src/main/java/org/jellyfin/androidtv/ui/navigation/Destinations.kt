@@ -2,7 +2,7 @@ package org.jellyfin.androidtv.ui.navigation
 
 import kotlinx.serialization.json.Json
 import org.jellyfin.androidtv.constant.Extras
-import org.jellyfin.androidtv.ui.browsing.AllFavoritesFragment
+import org.jellyfin.androidtv.ui.browsing.v2.FavoritesBrowseFragment
 import org.jellyfin.androidtv.ui.browsing.BrowseGridFragment
 import org.jellyfin.androidtv.ui.browsing.ByLetterFragment
 import org.jellyfin.androidtv.ui.browsing.CollectionFragment
@@ -99,7 +99,7 @@ object Destinations {
 	val allGenres = fragmentDestination<GenresGridV2Fragment>()
 
 	// All favorites across all libraries
-	val allFavorites = fragmentDestination<AllFavoritesFragment>()
+	val allFavorites = fragmentDestination<FavoritesBrowseFragment>()
 
 	// Folder view - browse by folder structure
 	val folderView = fragmentDestination<FolderViewFragment>()
