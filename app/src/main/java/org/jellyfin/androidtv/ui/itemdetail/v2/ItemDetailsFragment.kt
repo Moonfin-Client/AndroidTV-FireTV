@@ -17,7 +17,6 @@ import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +41,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -50,12 +50,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.pluralStringResource
@@ -151,6 +154,7 @@ class ItemDetailsFragment : Fragment() {
 	private var toolbarId: Int = View.NO_ID
 	private var lastFocusedBeforeSidebar: View? = null
 	private var toolbarOverlayView: View? = null
+	private val scrollToTop = mutableStateOf(false)
 
 	override fun onCreateView(
 		inflater: LayoutInflater,
@@ -173,12 +177,14 @@ class ItemDetailsFragment : Fragment() {
 							val restoreTarget = lastFocusedBeforeSidebar
 							if (restoreTarget != null && restoreTarget.isAttachedToWindow && restoreTarget.isFocusable) {
 								restoreTarget.requestFocus()
+								scrollToTop.value = true
 								return true
 							}
 							// Fallback to content ComposeView
 							val content = findViewById<View>(contentId)
 							if (content != null) {
 								content.requestFocus()
+								scrollToTop.value = true
 								return true
 							}
 						}
@@ -192,11 +198,13 @@ class ItemDetailsFragment : Fragment() {
 							val restoreTarget = lastFocusedBeforeSidebar
 							if (restoreTarget != null && restoreTarget.isAttachedToWindow && restoreTarget.isFocusable) {
 								restoreTarget.requestFocus()
+								scrollToTop.value = true
 								return true
 							}
 							val content = findViewById<View>(contentId)
 							if (content != null) {
 								content.requestFocus()
+								scrollToTop.value = true
 								return true
 							}
 						}
@@ -435,7 +443,6 @@ class ItemDetailsFragment : Fragment() {
 	@Composable
 	private fun ItemDetailsContent() {
 		val uiState by viewModel.uiState.collectAsState()
-		val contentFocusRequester = remember { FocusRequester() }
 
 		if (uiState.isLoading) {
 			Box(
@@ -448,21 +455,29 @@ class ItemDetailsFragment : Fragment() {
 			val item = uiState.item ?: return
 
 			when (item.type) {
-				BaseItemKind.PERSON -> PersonDetailsContent(uiState, contentFocusRequester, showBackdrop = true)
-				BaseItemKind.SEASON -> SeasonDetailsContent(uiState, contentFocusRequester, showBackdrop = false)
-				BaseItemKind.PLAYLIST -> MainDetailsContent(uiState, contentFocusRequester, showBackdrop = true)
-				else -> MainDetailsContent(uiState, contentFocusRequester, showBackdrop = false)
+				BaseItemKind.PERSON -> PersonDetailsContent(uiState, showBackdrop = true)
+				BaseItemKind.SEASON -> SeasonDetailsContent(uiState, showBackdrop = false)
+				BaseItemKind.PLAYLIST -> MainDetailsContent(uiState, showBackdrop = true)
+				else -> MainDetailsContent(uiState, showBackdrop = false)
 			}
 		}
 	}
 
 	@Composable
-	private fun MainDetailsContent(uiState: ItemDetailsUiState, contentFocusRequester: FocusRequester, showBackdrop: Boolean = true) {
+	private fun MainDetailsContent(uiState: ItemDetailsUiState, showBackdrop: Boolean = true) {
 		val item = uiState.item ?: return
 		val listState = rememberLazyListState()
 		val playButtonFocusRequester = remember { FocusRequester() }
 		val collectionFirstItemFocusRequester = remember { FocusRequester() }
-		val titleFocusRequester = contentFocusRequester
+		val scrollLockScope = rememberCoroutineScope()
+
+		val shouldScrollToTop by scrollToTop
+		LaunchedEffect(shouldScrollToTop) {
+			if (shouldScrollToTop) {
+				listState.scrollToItem(0)
+				scrollToTop.value = false
+			}
+		}
 
 		val isEpisode = item.type == BaseItemKind.EPISODE
 		val isSeries = item.type == BaseItemKind.SERIES
@@ -628,34 +643,11 @@ class ItemDetailsFragment : Fragment() {
 				contentPadding = PaddingValues(top = 100.dp, start = 48.dp, end = 48.dp, bottom = 48.dp),
 				modifier = Modifier.fillMaxSize(),
 			) {
-				// ---- Header + Action buttons in same item so they stay together ----
 				item {
-					// Focusable title area - receives initial focus so page stays at top
-					Box(
-						modifier = Modifier
-							.fillMaxWidth()
-							.focusRequester(titleFocusRequester)
-							.focusable()
-							.onKeyEvent { keyEvent ->
-								if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
-									when (keyEvent.key) {
-										Key.DirectionDown -> {
-											val focused = if (isBoxSet) {
-												try { collectionFirstItemFocusRequester.requestFocus(); true } catch (_: Exception) { false }
-											} else {
-												try { playButtonFocusRequester.requestFocus(); true } catch (_: Exception) { false }
-											}
-											focused
-										}
-										else -> false
-									}
-								} else false
-							},
+					Row(
+						modifier = Modifier.fillMaxWidth(),
+						horizontalArrangement = Arrangement.SpaceBetween,
 					) {
-						Row(
-							modifier = Modifier.fillMaxWidth(),
-							horizontalArrangement = Arrangement.SpaceBetween,
-						) {
 							Column(
 								modifier = Modifier.weight(1f).padding(end = if (posterUrl != null) 24.dp else 0.dp),
 						) {
@@ -747,15 +739,35 @@ class ItemDetailsFragment : Fragment() {
 							)
 						}
 					}
-					} // close focusable title Box
 
-					// Action buttons (same item as header so they don't cause scroll)
 					if (!isBoxSet) {
 						Spacer(modifier = Modifier.height(24.dp))
 						Row(
 							modifier = Modifier
 								.fillMaxWidth()
-								.focusRestorer(playButtonFocusRequester),
+								.focusRestorer(playButtonFocusRequester)
+								.onFocusChanged { focusState ->
+									if (focusState.hasFocus) {
+										scrollLockScope.launch(Dispatchers.Main.immediate) {
+											listState.scrollToItem(0)
+											listState.scroll(MutatePriority.UserInput) {
+												delay(100)
+											}
+										}
+									}
+								}
+								.onPreviewKeyEvent { event ->
+									if (event.type == KeyEventType.KeyDown &&
+										(event.key == Key.DirectionLeft || event.key == Key.DirectionRight)
+									) {
+										scrollLockScope.launch(Dispatchers.Main.immediate) {
+											listState.scroll(MutatePriority.UserInput) {
+												delay(50)
+											}
+										}
+									}
+									false
+								},
 							horizontalArrangement = Arrangement.Center,
 						) {
 							ActionButtonsRow(item, uiState, playButtonFocusRequester)
@@ -917,7 +929,6 @@ class ItemDetailsFragment : Fragment() {
 			}
 		}
 
-		// Focus play button but keep page scrolled to the top
 		LaunchedEffect(item.id) {
 			for (attempt in 1..5) {
 				delay(if (attempt == 1) 300L else 200L)
@@ -925,7 +936,7 @@ class ItemDetailsFragment : Fragment() {
 					if (!isBoxSet) {
 						playButtonFocusRequester.requestFocus()
 					} else {
-						titleFocusRequester.requestFocus()
+						collectionFirstItemFocusRequester.requestFocus()
 					}
 					delay(16)
 					listState.scroll(MutatePriority.UserInput) { scrollBy(0f) }
@@ -1476,13 +1487,21 @@ class ItemDetailsFragment : Fragment() {
 	}
 
 	@Composable
-	private fun SeasonDetailsContent(uiState: ItemDetailsUiState, contentFocusRequester: FocusRequester, showBackdrop: Boolean = true) {
+	private fun SeasonDetailsContent(uiState: ItemDetailsUiState, showBackdrop: Boolean = true) {
 		val item = uiState.item ?: return
 		val listState = rememberLazyListState()
 		val playButtonFocusRequester = remember { FocusRequester() }
-		val titleFocusRequester = contentFocusRequester
+		val scrollLockScope = rememberCoroutineScope()
 		val backdropUrl = getBackdropUrl(item)
 		val posterUrl = getPosterUrl(item)
+
+		val shouldScrollToTop by scrollToTop
+		LaunchedEffect(shouldScrollToTop) {
+			if (shouldScrollToTop) {
+				listState.scrollToItem(0)
+				scrollToTop.value = false
+			}
+		}
 
 		Box(modifier = Modifier.fillMaxSize()) {
 			if (showBackdrop) {
@@ -1494,30 +1513,11 @@ class ItemDetailsFragment : Fragment() {
 				modifier = Modifier.fillMaxSize(),
 				contentPadding = PaddingValues(top = 180.dp, start = 100.dp, end = 100.dp, bottom = 80.dp),
 			) {
-				// Season header + action buttons in same item
 				item {
-					// Focusable title area
-					Box(
-						modifier = Modifier
-							.fillMaxWidth()
-							.focusRequester(titleFocusRequester)
-							.focusable()
-							.onKeyEvent { keyEvent ->
-								if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
-									when (keyEvent.key) {
-										Key.DirectionDown -> {
-											try { playButtonFocusRequester.requestFocus() } catch (_: Exception) {}
-											true
-										}
-										else -> false
-									}
-								} else false
-							},
+					Row(
+						verticalAlignment = Alignment.Bottom,
+						modifier = Modifier.padding(bottom = 48.dp),
 					) {
-						Row(
-							verticalAlignment = Alignment.Bottom,
-							modifier = Modifier.padding(bottom = 48.dp),
-						) {
 							if (posterUrl != null) {
 								Box(modifier = Modifier.width(220.dp)) {
 									AsyncImage(
@@ -1563,12 +1563,33 @@ class ItemDetailsFragment : Fragment() {
 								)
 							}
 						}
-					} // close focusable title Box
 
 					if (uiState.episodes.isNotEmpty()) {
 						Row(
 							modifier = Modifier
-								.fillMaxWidth(),
+								.fillMaxWidth()
+								.onFocusChanged { focusState ->
+									if (focusState.hasFocus) {
+										scrollLockScope.launch(Dispatchers.Main.immediate) {
+											listState.scrollToItem(0)
+											listState.scroll(MutatePriority.UserInput) {
+												delay(100)
+											}
+										}
+									}
+								}
+								.onPreviewKeyEvent { event ->
+									if (event.type == KeyEventType.KeyDown &&
+										(event.key == Key.DirectionLeft || event.key == Key.DirectionRight)
+									) {
+										scrollLockScope.launch(Dispatchers.Main.immediate) {
+											listState.scroll(MutatePriority.UserInput) {
+												delay(50)
+											}
+										}
+									}
+									false
+								},
 							horizontalArrangement = Arrangement.Center,
 						) {
 							Row(
@@ -1637,7 +1658,6 @@ class ItemDetailsFragment : Fragment() {
 			}
 		}
 
-		// Focus play button but keep page scrolled to the top
 		LaunchedEffect(item.id) {
 			for (attempt in 1..5) {
 				delay(if (attempt == 1) 300L else 200L)
@@ -1655,11 +1675,18 @@ class ItemDetailsFragment : Fragment() {
 	}
 
 	@Composable
-	private fun PersonDetailsContent(uiState: ItemDetailsUiState, contentFocusRequester: FocusRequester, showBackdrop: Boolean = true) {
+	private fun PersonDetailsContent(uiState: ItemDetailsUiState, showBackdrop: Boolean = true) {
 		val item = uiState.item ?: return
 		val listState = rememberLazyListState()
-		val titleFocusRequester = contentFocusRequester
 		val filmographyFocusRequester = remember { FocusRequester() }
+
+		val shouldScrollToTop by scrollToTop
+		LaunchedEffect(shouldScrollToTop) {
+			if (shouldScrollToTop) {
+				listState.scrollToItem(0)
+				scrollToTop.value = false
+			}
+		}
 
 		val personMovies = uiState.similar.filter { it.type == BaseItemKind.MOVIE }
 		val personSeries = uiState.similar.filter { it.type == BaseItemKind.SERIES }
@@ -1738,25 +1765,7 @@ class ItemDetailsFragment : Fragment() {
 				contentPadding = PaddingValues(top = 100.dp, start = 48.dp, end = 48.dp, bottom = 80.dp),
 			) {
 				item {
-					// Focusable title area - receives initial focus
-					Box(
-						modifier = Modifier
-							.fillMaxWidth()
-							.focusRequester(titleFocusRequester)
-							.focusable()
-							.onKeyEvent { keyEvent ->
-								if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
-									when (keyEvent.key) {
-										Key.DirectionDown -> {
-											try { filmographyFocusRequester.requestFocus() } catch (_: Exception) {}
-											true
-										}
-										else -> false
-									}
-								} else false
-							},
-					) {
-						Row(modifier = Modifier.padding(bottom = 24.dp)) {
+					Row(modifier = Modifier.padding(bottom = 24.dp)) {
 							Box(modifier = Modifier.width(160.dp)) {
 								val personPhotoUrl = getPosterUrl(item)
 								if (personPhotoUrl != null) {
@@ -1841,7 +1850,6 @@ class ItemDetailsFragment : Fragment() {
 							}
 						}
 					}
-				}
 
 				if (personMovies.isNotEmpty()) {
 					item {
@@ -1875,12 +1883,11 @@ class ItemDetailsFragment : Fragment() {
 			}
 		}
 
-		// Request initial focus on title
 		LaunchedEffect(Unit) {
 			for (attempt in 1..5) {
 				delay(if (attempt == 1) 300L else 200L)
 				try {
-					titleFocusRequester.requestFocus()
+					filmographyFocusRequester.requestFocus()
 					break
 				} catch (_: Exception) {
 					// Composable not yet laid out, retry
