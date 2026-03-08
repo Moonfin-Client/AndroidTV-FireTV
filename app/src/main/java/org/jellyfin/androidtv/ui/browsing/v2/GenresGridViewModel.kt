@@ -68,6 +68,20 @@ class GenresGridViewModel(
 
 	val sortOptions = GenreSortOption.entries.toList()
 
+	private fun relevantCollectionTypes(): List<CollectionType> = when (includeType) {
+		BaseItemKind.MUSIC_ALBUM.serialName -> listOf(CollectionType.MUSIC)
+		BaseItemKind.MOVIE.serialName -> listOf(CollectionType.MOVIES)
+		BaseItemKind.SERIES.serialName -> listOf(CollectionType.TVSHOWS)
+		else -> listOf(CollectionType.MOVIES, CollectionType.TVSHOWS)
+	}
+
+	private fun relevantItemTypes(): Set<BaseItemKind> = when (includeType) {
+		BaseItemKind.MUSIC_ALBUM.serialName -> setOf(BaseItemKind.MUSIC_ALBUM)
+		BaseItemKind.MOVIE.serialName -> setOf(BaseItemKind.MOVIE)
+		BaseItemKind.SERIES.serialName -> setOf(BaseItemKind.SERIES)
+		else -> setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES)
+	}
+
 	fun initialize(folder: BaseItemDto?, includeType: String?) {
 		this.folder = folder
 		this.includeType = includeType
@@ -133,7 +147,7 @@ class GenresGridViewModel(
 						session.apiClient.userViewsApi.getUserViews().content
 					}
 					views.items
-						.filter { it.collectionType in listOf(CollectionType.MOVIES, CollectionType.TVSHOWS) }
+						.filter { it.collectionType in relevantCollectionTypes() }
 						.forEach {
 							libraries.add(it)
 							serverNames[it.id] = session.server.name
@@ -191,7 +205,7 @@ class GenresGridViewModel(
 				api.userViewsApi.getUserViews().content
 			}
 			val libraries = response.items
-				.filter { it.collectionType in listOf(CollectionType.MOVIES, CollectionType.TVSHOWS) }
+				.filter { it.collectionType in relevantCollectionTypes() }
 			_uiState.value = _uiState.value.copy(libraries = libraries)
 		} catch (e: Exception) {
 			Timber.e(e, "Failed to load user libraries")
@@ -238,7 +252,7 @@ class GenresGridViewModel(
 			val itemsResponse = client.itemsApi.getItems(
 				parentId = selectedLibraryId,
 				genres = setOf(genre.name.orEmpty()),
-				includeItemTypes = setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+				includeItemTypes = relevantItemTypes(),
 				recursive = true,
 				sortBy = setOf(ItemSortBy.RANDOM),
 				limit = 1,
