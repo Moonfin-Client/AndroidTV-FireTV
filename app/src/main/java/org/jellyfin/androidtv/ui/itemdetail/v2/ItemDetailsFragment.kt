@@ -119,7 +119,6 @@ import org.jellyfin.androidtv.util.sdk.TrailerUtils.getExternalTrailerIntent
 import org.jellyfin.androidtv.util.sdk.TrailerUtils.hasPlayableTrailers
 import org.jellyfin.androidtv.util.sdk.compat.canResume
 import org.jellyfin.sdk.api.client.exception.ApiClientException
-import org.jellyfin.sdk.model.serializer.toUUID
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.tvShowsApi
@@ -1058,9 +1057,9 @@ class ItemDetailsFragment : Fragment() {
 	) {
 		val hasPlaybackPosition = item.canResume
 		val mediaSources = item.mediaSources
-		val firstSource = mediaSources?.firstOrNull()
-		val audioStreams = firstSource?.mediaStreams?.filter { it.type == MediaStreamType.AUDIO } ?: emptyList()
-		val subtitleStreams = firstSource?.mediaStreams?.filter { it.type == MediaStreamType.SUBTITLE } ?: emptyList()
+		val selectedSource = mediaSources?.getOrNull(uiState.selectedMediaSourceIndex) ?: mediaSources?.firstOrNull()
+		val audioStreams = selectedSource?.mediaStreams?.filter { it.type == MediaStreamType.AUDIO } ?: emptyList()
+		val subtitleStreams = selectedSource?.mediaStreams?.filter { it.type == MediaStreamType.SUBTITLE } ?: emptyList()
 		val hasMultipleVersions = (mediaSources?.size ?: 0) > 1
 		val canPlay = item.type in listOf(
 			BaseItemKind.MOVIE, BaseItemKind.EPISODE, BaseItemKind.VIDEO,
@@ -1281,13 +1280,9 @@ class ItemDetailsFragment : Fragment() {
 			TrackSelectorDialog(
 				title = "Select Version",
 				options = versionNames,
-				selectedIndex = versions.indexOfFirst { it.id == item.mediaSources?.firstOrNull()?.id },
+				selectedIndex = uiState.selectedMediaSourceIndex,
 				onSelect = { which ->
-					val selectedSource = versions[which]
-					val sourceId = selectedSource.id
-					if (sourceId != null) {
-						viewModel.loadItem(sourceId.toUUID())
-					}
+					viewModel.setSelectedMediaSource(which)
 					showVersionDialog = false
 				},
 				onDismiss = { showVersionDialog = false },

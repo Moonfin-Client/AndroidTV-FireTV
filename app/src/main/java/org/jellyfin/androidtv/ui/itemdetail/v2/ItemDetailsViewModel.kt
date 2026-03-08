@@ -50,6 +50,7 @@ data class ItemDetailsUiState(
 	val directors: List<BaseItemPerson> = emptyList(),
 	val writers: List<BaseItemPerson> = emptyList(),
 	val badges: List<MediaBadge> = emptyList(),
+	val selectedMediaSourceIndex: Int = 0,
 )
 
 class ItemDetailsViewModel(
@@ -462,10 +463,20 @@ class ItemDetailsViewModel(
 		}
 	}
 
+	fun setSelectedMediaSource(index: Int) {
+		val item = _uiState.value.item ?: return
+		val sources = item.mediaSources ?: return
+		val clampedIndex = index.coerceIn(0, sources.lastIndex)
+		_uiState.value = _uiState.value.copy(
+			selectedMediaSourceIndex = clampedIndex,
+			badges = getMediaBadges(item, clampedIndex),
+		)
+	}
+
 	companion object {
-		fun getMediaBadges(item: BaseItemDto): List<MediaBadge> {
+		fun getMediaBadges(item: BaseItemDto, sourceIndex: Int = 0): List<MediaBadge> {
 			val badges = mutableListOf<MediaBadge>()
-			val mediaSource = item.mediaSources?.firstOrNull() ?: return badges
+			val mediaSource = item.mediaSources?.getOrNull(sourceIndex) ?: return badges
 			val streams = mediaSource.mediaStreams ?: return badges
 			val video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
 			val audio = streams.firstOrNull { it.type == MediaStreamType.AUDIO }
