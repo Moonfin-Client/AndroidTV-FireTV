@@ -840,7 +840,7 @@ class ItemDetailsFragment : Fragment() {
 							verticalAlignment = Alignment.CenterVertically,
 						) {
 							Text(
-								text = "To reorder items, press left and right on the D-pad",
+								text = stringResource(R.string.select_reorder_items),
 								fontSize = 14.sp,
 								color = Color.White.copy(alpha = 0.6f),
 							)
@@ -855,7 +855,7 @@ class ItemDetailsFragment : Fragment() {
 				if (uiState.nextUp.isNotEmpty()) {
 					item {
 						SectionWithCards(
-							title = "Next Up",
+							title = stringResource(R.string.lbl_next_up),
 							items = uiState.nextUp,
 							isLandscape = true,
 						)
@@ -873,7 +873,7 @@ class ItemDetailsFragment : Fragment() {
 				if (isEpisode && uiState.episodes.isNotEmpty()) {
 					item {
 						EpisodesHorizontalSection(
-							title = item.parentIndexNumber?.let { "Season $it Episodes" } ?: "Episodes",
+							title = item.parentIndexNumber?.let { stringResource(R.string.lbl_season_episodes,it) } ?: stringResource(R.string.lbl_episodes),
 							episodes = uiState.episodes,
 							currentEpisodeId = item.id,
 						)
@@ -894,7 +894,7 @@ class ItemDetailsFragment : Fragment() {
 				if (uiState.albums.isNotEmpty()) {
 					item {
 						SectionWithCards(
-							title = "Albums",
+							title = stringResource(R.string.lbl_albums),
 							items = uiState.albums,
 							isSquare = true,
 						)
@@ -907,7 +907,7 @@ class ItemDetailsFragment : Fragment() {
 
 					item {
 						Text(
-							text = "Tracks",
+							text = stringResource(R.string.lbl_track),
 							fontSize = 22.sp,
 							fontWeight = FontWeight.W600,
 							color = Color.White,
@@ -977,7 +977,7 @@ class ItemDetailsFragment : Fragment() {
 				if (uiState.similar.isNotEmpty()) {
 					item {
 						SectionWithCards(
-							title = "More Like This",
+							title = stringResource(R.string.lbl_more_like_this),
 							items = uiState.similar,
 							isSquare = isMusicArtist || isMusicAlbum,
 							onItemFocused = if (isPlaylist) {
@@ -1154,7 +1154,7 @@ class ItemDetailsFragment : Fragment() {
 				if (hasPlaybackPosition && canPlay) {
 					val resumeTime = item.userData?.playbackPositionTicks?.let { formatDuration(it) } ?: ""
 					DetailActionButton(
-						label = "Resume",
+						label = stringResource(R.string.lbl_resume_from),
 						icon = ImageVector.vectorResource(R.drawable.ic_play),
 						onClick = { handleResume(item) },
 						detail = resumeTime,
@@ -1164,7 +1164,9 @@ class ItemDetailsFragment : Fragment() {
 
 				if (canPlay) {
 					DetailActionButton(
-						label = if (hasPlaybackPosition) "Restart" else "Play",
+						label = if (hasPlaybackPosition) {
+							stringResource(R.string.lbl_restart)
+						} else stringResource(R.string.lbl_play),
 						icon = if (hasPlaybackPosition)
 							ImageVector.vectorResource(R.drawable.ic_loop)
 						else
@@ -1176,7 +1178,7 @@ class ItemDetailsFragment : Fragment() {
 
 				if ((item.isFolder == true || item.type == BaseItemKind.MUSIC_ARTIST) && item.type != BaseItemKind.BOX_SET) {
 					DetailActionButton(
-						label = "Shuffle",
+						label = stringResource(R.string.lbl_shuffle),
 						icon = ImageVector.vectorResource(R.drawable.ic_shuffle),
 						onClick = { handleShuffle(item) },
 					)
@@ -1184,7 +1186,7 @@ class ItemDetailsFragment : Fragment() {
 
 				if (item.type == BaseItemKind.MUSIC_ARTIST) {
 					DetailActionButton(
-						label = "Instant Mix",
+						label = stringResource(R.string.lbl_instant_mix),
 						icon = ImageVector.vectorResource(R.drawable.ic_mix),
 						onClick = { playbackHelper.playInstantMix(requireContext(), item) },
 					)
@@ -1192,7 +1194,7 @@ class ItemDetailsFragment : Fragment() {
 
 				if (hasMultipleVersions) {
 					DetailActionButton(
-						label = "Version",
+						label = stringResource(R.string.select_version),
 						icon = ImageVector.vectorResource(R.drawable.ic_guide),
 						onClick = { showVersionDialog = true },
 					)
@@ -1200,7 +1202,7 @@ class ItemDetailsFragment : Fragment() {
 
 				if (audioStreams.size > 1) {
 					DetailActionButton(
-						label = "Audio",
+						label = stringResource(R.string.pref_audio),
 						icon = ImageVector.vectorResource(R.drawable.ic_select_audio),
 						onClick = { showAudioDialog = true },
 					)
@@ -1208,7 +1210,7 @@ class ItemDetailsFragment : Fragment() {
 
 				if (subtitleStreams.isNotEmpty()) {
 					DetailActionButton(
-						label = "Subtitles",
+						label = stringResource(R.string.pref_subtitles),
 						icon = ImageVector.vectorResource(R.drawable.ic_select_subtitle),
 						onClick = { showSubtitleDialog = true },
 					)
@@ -1216,7 +1218,7 @@ class ItemDetailsFragment : Fragment() {
 
 				if (hasPlayableTrailers(requireContext(), item)) {
 					DetailActionButton(
-						label = "Trailer",
+						label = stringResource(R.string.lbl_trailer),
 						icon = ImageVector.vectorResource(R.drawable.ic_trailer),
 						onClick = { playTrailers(item) },
 					)
@@ -1224,7 +1226,9 @@ class ItemDetailsFragment : Fragment() {
 
 				if (item.userData != null && item.type != BaseItemKind.PERSON && item.type != BaseItemKind.MUSIC_ARTIST) {
 						DetailActionButton(
-						label = if (item.userData?.played == true) "Watched" else "Unwatched",
+						label = if (item.userData?.played == true) {
+							stringResource(R.string.lbl_watched)
+						} else stringResource(R.string.lbl_unwatched),
 						icon = ImageVector.vectorResource(R.drawable.ic_check),
 						onClick = { viewModel.toggleWatched() },
 						isActive = item.userData?.played == true,
@@ -1234,7 +1238,8 @@ class ItemDetailsFragment : Fragment() {
 
 				if (item.userData != null) {
 					DetailActionButton(
-						label = if (item.userData?.isFavorite == true) "Favorited" else "Favorite",
+						// just use 'favorite' label and let the icon color indicate state
+						label = stringResource(R.string.lbl_favorite),
 						icon = ImageVector.vectorResource(R.drawable.ic_heart),
 						onClick = { viewModel.toggleFavorite() },
 						isActive = item.userData?.isFavorite == true,
@@ -1244,7 +1249,7 @@ class ItemDetailsFragment : Fragment() {
 
 				if (item.userData != null && item.type != BaseItemKind.PERSON) {
 					DetailActionButton(
-						label = "Playlist",
+						label = stringResource(R.string.lbl_playlist),
 						icon = ImageVector.vectorResource(R.drawable.ic_add),
 						onClick = { showAddToPlaylistDialog(requireContext(), item.id) },
 					)
@@ -1252,7 +1257,7 @@ class ItemDetailsFragment : Fragment() {
 
 				if (item.type == BaseItemKind.EPISODE && item.seriesId != null) {
 					DetailActionButton(
-						label = "Go to Series",
+						label = stringResource(R.string.lbl_goto_series),
 						icon = ImageVector.vectorResource(R.drawable.ic_tv),
 						onClick = {
 							item.seriesId?.let { seriesId ->
@@ -1264,7 +1269,7 @@ class ItemDetailsFragment : Fragment() {
 
 				if (item.canDelete == true) {
 					DetailActionButton(
-						label = "Delete",
+						label = stringResource(R.string.lbl_delete),
 						icon = ImageVector.vectorResource(R.drawable.ic_delete),
 						onClick = { confirmDeleteItem(item) },
 					)
@@ -1276,8 +1281,9 @@ class ItemDetailsFragment : Fragment() {
 		if (showAudioDialog) {
 			val audioTracks = trackSelector.getAudioTracks(item)
 			if (audioTracks.isEmpty()) {
+				val missingTrackText = stringResource(R.string.lbl_audio_track_missing)
 				LaunchedEffect(Unit) {
-					Toast.makeText(requireContext(), "No audio tracks available", Toast.LENGTH_SHORT).show()
+					Toast.makeText(requireContext(), missingTrackText, Toast.LENGTH_SHORT).show()
 					showAudioDialog = false
 				}
 			} else {
@@ -1286,18 +1292,20 @@ class ItemDetailsFragment : Fragment() {
 				val checkedIndex = audioTracks.indexOfFirst { it.index == selectedAudioIndex }
 					.let { if (it == -1) trackNames.size - 1 else it }
 
+				val prefAudioText = stringResource(R.string.pref_audio)
+				val defaultText = stringResource(R.string.lbl_default)
 				TrackSelectorDialog(
-					title = "Audio Track",
+					title = stringResource(R.string.lbl_audio_track2),
 					options = trackNames,
 					selectedIndex = checkedIndex,
 					onSelect = { which ->
 						if (which < audioTracks.size) {
 							val track = audioTracks[which]
 							trackSelector.setSelectedAudioTrack(item.id.toString(), track.index)
-							Toast.makeText(requireContext(), "Audio: ${trackSelector.getAudioTrackDisplayName(track)}", Toast.LENGTH_SHORT).show()
+							Toast.makeText(requireContext(), "$prefAudioText: ${trackSelector.getAudioTrackDisplayName(track)}", Toast.LENGTH_SHORT).show()
 						} else {
 							trackSelector.setSelectedAudioTrack(item.id.toString(), null)
-							Toast.makeText(requireContext(), "Audio: Default", Toast.LENGTH_SHORT).show()
+							Toast.makeText(requireContext(), "$prefAudioText: $defaultText", Toast.LENGTH_SHORT).show()
 						}
 						showAudioDialog = false
 					},
@@ -1317,24 +1325,27 @@ class ItemDetailsFragment : Fragment() {
 				else -> subtitleTracks.indexOfFirst { it.index == selectedSubIndex }.let { if (it == -1) trackNames.size - 1 else it + 1 }
 			}
 
+			val defaultText = stringResource(R.string.lbl_default)
+			val subtitleText = stringResource(R.string.pref_subtitles)
+			val noneText = stringResource(R.string.home_section_none)
 			TrackSelectorDialog(
-				title = "Subtitle Track",
+				title = stringResource(R.string.lbl_subtitle_track2),
 				options = trackNames,
 				selectedIndex = checkedIndex,
 				onSelect = { which ->
 					when (which) {
 						0 -> {
 							trackSelector.setSelectedSubtitleTrack(item.id.toString(), -1)
-							Toast.makeText(requireContext(), "Subtitles: None", Toast.LENGTH_SHORT).show()
+							Toast.makeText(requireContext(), "$subtitleText: $noneText", Toast.LENGTH_SHORT).show()
 						}
 						trackNames.size - 1 -> {
 							trackSelector.setSelectedSubtitleTrack(item.id.toString(), null)
-							Toast.makeText(requireContext(), "Subtitles: Default", Toast.LENGTH_SHORT).show()
+							Toast.makeText(requireContext(), "$subtitleText: $defaultText", Toast.LENGTH_SHORT).show()
 						}
 						else -> {
 							val track = subtitleTracks[which - 1]
 							trackSelector.setSelectedSubtitleTrack(item.id.toString(), track.index)
-							Toast.makeText(requireContext(), "Subtitles: ${trackSelector.getSubtitleTrackDisplayName(track)}", Toast.LENGTH_SHORT).show()
+							Toast.makeText(requireContext(), "$subtitleText: ${trackSelector.getSubtitleTrackDisplayName(track)}", Toast.LENGTH_SHORT).show()
 						}
 					}
 					showSubtitleDialog = false
@@ -1346,10 +1357,10 @@ class ItemDetailsFragment : Fragment() {
 		// Version selector dialog
 		if (showVersionDialog) {
 			val versions = item.mediaSources ?: emptyList()
-			val versionNames = versions.mapIndexed { i, source -> source.name ?: "Version ${i + 1}" }
+			val versionNames = versions.mapIndexed { i, source -> source.name ?: (stringResource(R.string.select_version) + " ${i + 1}") }
 
 			TrackSelectorDialog(
-				title = "Select Version",
+				title = stringResource(R.string.select_version2),
 				options = versionNames,
 				selectedIndex = uiState.selectedMediaSourceIndex,
 				onSelect = { which ->
@@ -1370,19 +1381,19 @@ class ItemDetailsFragment : Fragment() {
 
 		val genres = item.genres ?: emptyList()
 		if (genres.isNotEmpty()) {
-			metaItems.add("Genres" to genres.take(3).joinToString(", "))
+			metaItems.add(stringResource(R.string.lbl_genres) to genres.take(3).joinToString(", "))
 		}
 		if (uiState.directors.isNotEmpty()) {
-			metaItems.add("Director" to uiState.directors.joinToString(", ") { it.name ?: "" })
+			metaItems.add(stringResource(R.string.lbl_directors) to uiState.directors.joinToString(", ") { it.name ?: "" })
 		}
 		if (uiState.writers.isNotEmpty()) {
-			metaItems.add("Writers" to uiState.writers.joinToString(", ") { it.name ?: "" })
+			metaItems.add(stringResource(R.string.lbl_writers) to uiState.writers.joinToString(", ") { it.name ?: "" })
 		}
 		val studios = item.studios ?: emptyList()
 		if (studios.isNotEmpty()) {
 			val studioText = studios.take(5).joinToString(", ") { it.name ?: "" } +
 				if (studios.size > 5) " +${studios.size - 5} more" else ""
-			metaItems.add("Studio" to studioText)
+			metaItems.add(stringResource(R.string.lbl_studios) to studioText)
 		}
 
 		if (metaItems.isNotEmpty()) {
@@ -1394,14 +1405,14 @@ class ItemDetailsFragment : Fragment() {
 	@Composable
 	private fun SeasonsSection(seasons: List<BaseItemDto>) {
 		Column {
-			SectionHeader(title = "Seasons")
+			SectionHeader(title = stringResource(R.string.lbl_seasons))
 			LazyRow(
 				horizontalArrangement = Arrangement.spacedBy(16.dp),
 				contentPadding = PaddingValues(horizontal = 0.dp),
 			) {
 				items(seasons, key = { it.id }) { season ->
 					SeasonCard(
-						name = season.name ?: "Season",
+						name = season.name ?: pluralStringResource(R.plurals.season_count,1),
 						imageUrl = getPosterUrl(season),
 						isWatched = season.userData?.played == true,
 						unplayedCount = season.userData?.unplayedItemCount,
@@ -1448,7 +1459,7 @@ class ItemDetailsFragment : Fragment() {
 	@Composable
 	private fun CastSection(cast: List<org.jellyfin.sdk.model.api.BaseItemPerson>) {
 		Column {
-			SectionHeader(title = "Cast & Crew")
+			SectionHeader(title = stringResource(R.string.lbl_cast_crew))
 			LazyRow(
 				horizontalArrangement = Arrangement.spacedBy(24.dp),
 				contentPadding = PaddingValues(horizontal = 0.dp),
@@ -1533,7 +1544,7 @@ class ItemDetailsFragment : Fragment() {
 		firstItemFocusRequester: FocusRequester? = null,
 	) {
 		Column {
-			SectionHeader(title = "Items in Collection")
+			SectionHeader(title = stringResource(R.string.lbl_items_in_collection))
 			FlowRow(
 				modifier = Modifier.focusGroup(),
 				horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -1673,7 +1684,7 @@ class ItemDetailsFragment : Fragment() {
 								modifier = Modifier.focusGroup(),
 							) {
 								DetailActionButton(
-									label = "Play",
+									label = stringResource(R.string.lbl_play),
 									icon = ImageVector.vectorResource(R.drawable.ic_play),
 									onClick = {
 										val unwatched = uiState.episodes.firstOrNull { !(it.userData?.played ?: false) }
@@ -1684,7 +1695,9 @@ class ItemDetailsFragment : Fragment() {
 								)
 
 								DetailActionButton(
-									label = if (item.userData?.played == true) "Watched" else "Unwatched",
+									label = if (item.userData?.played == true) {
+										stringResource(R.string.lbl_watched)
+									} else stringResource(R.string.lbl_unwatched),
 									icon = ImageVector.vectorResource(R.drawable.ic_check),
 									onClick = { viewModel.toggleWatched() },
 									isActive = item.userData?.played == true,
@@ -1692,7 +1705,8 @@ class ItemDetailsFragment : Fragment() {
 								)
 
 								DetailActionButton(
-									label = if (item.userData?.isFavorite == true) "Favorited" else "Favorite",
+									// use 'favorite' label and let the icon color indicate state
+									label = stringResource(R.string.lbl_favorite),
 									icon = ImageVector.vectorResource(R.drawable.ic_heart),
 									onClick = { viewModel.toggleFavorite() },
 									isActive = item.userData?.isFavorite == true,
@@ -1897,9 +1911,9 @@ class ItemDetailsFragment : Fragment() {
 										birthDate,
 										item.endDate ?: java.time.LocalDateTime.now(),
 									)
-									val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM d, yyyy")
+									val formatter = java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG)
 									Text(
-										text = "Born ${birthDate.toLocalDate().format(formatter)} (age $age)",
+										text = stringResource(R.string.person_birthday_and_age,birthDate.toLocalDate().format(formatter), age),
 										fontSize = 18.sp,
 										color = Color.White.copy(alpha = 0.7f),
 									)
@@ -1932,7 +1946,7 @@ class ItemDetailsFragment : Fragment() {
 				if (personMovies.isNotEmpty()) {
 					item {
 						SectionWithCards(
-							title = "Movies (${personMovies.size})",
+							title = stringResource(R.string.lbl_movies) + " (${personMovies.size})",
 							items = personMovies,
 							firstItemFocusRequester = filmographyFocusRequester,
 							onItemFocused = { focusItem -> focusedBackdropUrl = getBackdropUrl(focusItem) },
@@ -1943,7 +1957,7 @@ class ItemDetailsFragment : Fragment() {
 					item {
 						Spacer(modifier = Modifier.height(24.dp))
 						SectionWithCards(
-							title = "Series (${personSeries.size})",
+							title = stringResource(R.string.lbl_series) + " (${personSeries.size})",
 							items = personSeries,
 							onItemFocused = { focusItem -> focusedBackdropUrl = getBackdropUrl(focusItem) },
 							firstItemFocusRequester = if (personMovies.isEmpty()) filmographyFocusRequester else null,
@@ -2016,18 +2030,15 @@ class ItemDetailsFragment : Fragment() {
 		val totalMinutes = (ticks / 10_000_000 / 60).toInt()
 		val hours = totalMinutes / 60
 		val minutes = totalMinutes % 60
-		return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+		return if (hours > 0)
+				getString(R.string.duration_format_hours_minutes,hours,minutes)
+			else getString(R.string.duration_format_minutes,minutes)
 	}
 
 	private fun getEndsAt(ticks: Long): String {
 		val endTime = java.util.Date(System.currentTimeMillis() + ticks / 10_000)
-		val cal = java.util.Calendar.getInstance().apply { time = endTime }
-		val hours = cal.get(java.util.Calendar.HOUR)
-		val minutes = cal.get(java.util.Calendar.MINUTE)
-		val ampm = if (cal.get(java.util.Calendar.AM_PM) == java.util.Calendar.AM) "AM" else "PM"
-		val h = if (hours == 0) 12 else hours
-		val m = if (minutes < 10) "0$minutes" else "$minutes"
-		return "$h:$m $ampm"
+		val timeFormat = android.text.format.DateFormat.getTimeFormat(requireContext())
+		return timeFormat.format(endTime)
 	}
 
 	/**

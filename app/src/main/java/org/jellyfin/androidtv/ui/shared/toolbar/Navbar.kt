@@ -183,7 +183,7 @@ fun Navbar(
 			userViews = views.toList()
 		}
 	}
-	
+
 	// Load aggregated libraries from all servers
 	val aggregationScope = rememberCoroutineScope()
 	var aggregatedLibraries by remember { mutableStateOf<List<org.jellyfin.androidtv.data.model.AggregatedLibrary>>(emptyList()) }
@@ -197,7 +197,7 @@ fun Navbar(
 			}
 		}
 	}
-	
+
 	// Track current session for server switching
 	val currentSession by sessionRepository.currentSession.collectAsState()
 
@@ -397,7 +397,7 @@ private fun Navbar(
 				if (showShuffleButton) {
 					ExpandableIconButton(
 						icon = ImageVector.vectorResource(R.drawable.ic_shuffle),
-						label = if (isShuffling) "..." else "Shuffle",
+						label = if (isShuffling) "..." else stringResource(R.string.lbl_shuffle),
 						onClick = {
 							if (!isShuffling) {
 								kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
@@ -456,7 +456,7 @@ private fun Navbar(
 						colors = toolbarButtonColors,
 					)
 				}
-				
+
 				if (syncPlayEnabled) {
 					ExpandableIconButton(
 						icon = ImageVector.vectorResource(R.drawable.ic_syncplay),
@@ -484,7 +484,7 @@ private fun Navbar(
 
 				ExpandableIconButton(
 					icon = ImageVector.vectorResource(R.drawable.ic_settings),
-					label = "Settings",
+					label = stringResource(R.string.settings),
 					onClick = {
 						settingsViewModel.show()
 					},

@@ -24,6 +24,7 @@
     <string name="lbl_favorite_channels">Favorisierte Kanäle</string>
     <string name="lbl_other_channels">Andere Kanäle</string>
     <string name="lbl_collections">Sammlungen</string>
+    <string name="lbl_items_in_collection">Einträge in der Sammlung</string>
     <string name="lbl_movies">Filme</string>
     <string name="lbl_tv_series">Fernsehserien</string>
     <string name="lbl_other">Sonstiges</string>
@@ -113,6 +114,7 @@
     <string name="lbl_from">von</string>
     <string name="lbl_name">Name</string>
     <string name="lbl_date_added">Hinzugefügt am</string>
+    <string name="lbl_date_episode_added">Datum hinzugefügt (Episode)</string>
     <string name="lbl_premier_date">Premiere</string>
     <string name="lbl_critic_rating">Kritikerbewertung</string>
     <string name="lbl_rating">Bewertung</string>
@@ -139,6 +141,7 @@
     <string name="lbl_songs">Lieder</string>
     <string name="lbl_album">Album</string>
     <string name="lbl_episodes">Episoden</string>
+    <string name="lbl_season_episodes">Staffel %1$d Episoden</string>
     <string name="lbl_enable_cinema_mode">Kino-Modus</string>
     <string name="sum_enable_cinema_mode">Spiele verfügbare Intros und Vorschauen vor dem Film ab</string>
     <string name="lbl_playlists">Wiedergabelisten</string>
@@ -259,7 +262,10 @@
     <string name="lbl_tv_filter_status">für die nächsten %1$d Stunden</string>
     <string name="lbl_tv_channel_status">%1$d von %2$d Kanälen</string>
     <string name="lbl_subtitle_track">Untertitelspur auswählen</string>
+    <string name="lbl_default">Standard</string>
+    <string name="lbl_track">Titel</string>
     <string name="lbl_audio_track">Audiospur auswählen</string>
+    <string name="lbl_shuffle">Zufallswiedergabe</string>
     <string name="lbl_pause">Pause</string>
     <string name="lbl_playback_control_ends">Endet um %1$s</string>
     <string name="lbl_sign_in">Bitte anmelden</string>
@@ -399,6 +405,7 @@
     <string name="server_issue_missing_version">Serverversion konnte nicht bestimmt werden</string>
     <string name="server_issue_invalid_product">Serversoftware ist nicht kompatibel</string>
     <string name="server_issue_unable_to_connect">Keine Verbindung möglich</string>
+    <string name="lbl_audio_track_missing">Keine Audiospuren verfügbar</string>
     <string name="lbl_playback_speed">Wiedergabegeschwindigkeit</string>
     <string name="pref_direct_stream_live_on">Transkodierung ist deaktiviert</string>
     <string name="server_connection_failed_candidates">Verbindung zum Server nicht möglich, folgende Adressen ausprobiert: %1$s</string>
@@ -418,6 +425,7 @@
     <string name="action_use_password">Passwort verwenden</string>
     <string name="action_login">Anmelden</string>
     <string name="state_disabled">Deaktiviert</string>
+    <string name="lbl_subtitle_track2">Untertitelspur</string>
     <string name="lbl_subtitle_delay">Untertitelverzögerung</string>
     <string name="live_tv_preferences">Fernseh-Optionen</string>
     <string name="pref_telemetry_category">Absturzbericht</string>
@@ -583,6 +591,7 @@
     <string name="speech_error_no_permission">Keine Berechtigung zur Verwendung des Mikrofons. Bitte aktivieren Sie dies in den Systemeinstellungen.</string>
     <string name="pref_subtitles_bold">fetter Text</string>
     <string name="preference_enable_pgs">PGS Untertitel direkt abspielen</string>
+    <string name="lbl_restart">Neustart</string>
     <string name="lbl_exit">Verlassen</string>
     <string name="pref_still_watching_behavior_title">Popup für Inaktivitäts-Timeout anzeigen</string>
     <string name="lbl_still_watching_default">3 Folgen oder 90 Minuten</string>
@@ -624,4 +633,10 @@
     <string name="filters">Filter</string>
     <string name="lbl_sort_and_filter">Sortieren und filtern</string>
     <string name="lbl_status_title">Status</string>
+    <string name="lbl_directors">Regisseure</string>
+    <string name="lbl_writers">Drehbuchautoren</string>
+    <string name="lbl_date_series_added">Datum hinzugefügt (Serie)</string>
+    <string name="lbl_audio_track2">Audiospur</string>
+    <string name="select_version2">Version auswählen</string>
+    <string name="select_reorder_items">Um Elemente neu anzuordnen, drücken Sie links und rechts auf dem Steuerkreuz</string>
 </resources>
