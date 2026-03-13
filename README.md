@@ -4,17 +4,19 @@
 ---
 
 <p align="center">
-   <img width="4305" height="2659" alt="splash-background" src="https://github.com/user-attachments/assets/8618363e-d982-4828-8274-a2c3c7623ddb" />
+   <img width="4305" height="2659" alt="splash-background" src="https://github.com/user-attachments/assets/c05882da-81ce-47e9-a4b2-c995c337b9b9" />
 </p>
 
 [![License](https://img.shields.io/github/license/Moonfin-Client/AndroidTV-FireTV.svg)](https://github.com/Moonfin-Client/AndroidTV-FireTV)
 [![Release](https://img.shields.io/github/release/Moonfin-Client/AndroidTV-FireTV.svg)](https://github.com/Moonfin-Client/AndroidTV-FireTV/releases)
+[![github](https://img.shields.io/github/downloads/Moonfin-Client/AndroidTV-FireTV/total?logo=github&label=Downloads)](https://github.com/Moonfin-Client/AndroidTV-FireTV/releases)
+[![Google Play](https://img.shields.io/badge/Android%20TV-Google%20Play-green?logo=googleplay)](link)
 
 <a href="https://www.buymeacoffee.com/moonfin" target="_blank"><img src="https://github.com/user-attachments/assets/fe26eaec-147f-496f-8e95-4ebe19f57131" alt="Buy Me A Coffee" ></a>
 
 > **[← Back to main Moonfin project](https://github.com/Moonfin-Client)**
 
-Moonfin for Android TV is an enhanced fork of the official Jellyfin Android TV client, optimized for the viewing experience on Android TV, Nvidia Shield, and Amazon Fire TV devices. Moonfin also supports **Emby Server 4.8.0.0+**, allowing you to connect to either Jellyfin or Emby from a single app.
+Moonfin for Android TV is an enhanced Jellyfin client derived from the official Jellyfin Android TV project, optimized for a different viewing experience on Android TV, Nvidia Shield, and Amazon Fire TV devices. Moonfin also supports **Emby Server 4.8.0.0+**, allowing you to connect to either Jellyfin or Emby from a single app.
 
 ## Supported Servers
 
@@ -42,7 +44,15 @@ Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted 
 - Feature gating hides Jellyfin-only features (SyncPlay, Media Segments, Lyrics) when connected to Emby
 - See [docs/EMBY_SUPPORT.md](docs/EMBY_SUPPORT.md) for the full feature matrix
 
-### SyncPlay (Beta)
+### Emby Server Support
+- **Full Emby Integration** - Connect to Emby Server 4.8.0.0+ alongside Jellyfin
+- Automatic server type detection during setup (no manual configuration needed)
+- WebSocket real-time events with reconnection and jitter-based backoff
+- In-memory caching for library views and display preferences
+- Feature gating hides Jellyfin-only features (SyncPlay, Media Segments, Lyrics) when connected to Emby
+- See [docs/EMBY_SUPPORT.md](docs/EMBY_SUPPORT.md) for the full feature matrix
+
+### SyncPlay
 - **Synchronized Group Playback** - Watch together with friends and family in perfect sync
 - Dynamic playback speed adjustments based on drift calculations
 - Buffering and ready state reporting for better synchronization
