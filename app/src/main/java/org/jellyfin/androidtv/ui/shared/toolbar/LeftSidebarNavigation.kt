@@ -95,6 +95,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinActivityViewModel
 import org.koin.core.qualifier.named
 import java.util.UUID
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun LeftSidebarNavigation(
@@ -117,11 +118,11 @@ fun LeftSidebarNavigation(
 	val jellyseerrPreferences = koinInject<JellyseerrPreferences>(named("global"))
 	val serverRepository = koinInject<ServerRepository>()
 	val currentServer by serverRepository.currentServer.collectAsState()
-	
+
 	// User image - same pattern as Navbar
 	val currentUser by remember { userRepository.currentUser.filterNotNull() }.collectAsState(null)
 	val userImageUrl = remember(currentUser) { currentUser?.primaryImage?.getUrl(api) }
-	
+
 	// User preferences
 	var showShuffleButton by remember { mutableStateOf(true) }
 	var showGenresButton by remember { mutableStateOf(true) }
@@ -135,7 +136,7 @@ fun LeftSidebarNavigation(
 	var jellyseerrDisplayName by remember { mutableStateOf("Jellyseerr") }
 	var enableFolderView by remember { mutableStateOf(false) }
 	var clockBehavior by remember { mutableStateOf(ClockBehavior.ALWAYS) }
-	
+
 	LaunchedEffect(settingsClosedCounter, syncCompletedCounter) {
 		showShuffleButton = userPreferences[UserPreferences.showShuffleButton]
 		showGenresButton = userPreferences[UserPreferences.showGenresButton]
@@ -147,7 +148,7 @@ fun LeftSidebarNavigation(
 		enableFolderView = userPreferences[UserPreferences.enableFolderView]
 		clockBehavior = userPreferences[UserPreferences.clockBehavior]
 	}
-	
+
 	// Check Jellyseerr settings
 	LaunchedEffect(currentUser) {
 		if (currentUser != null) {
@@ -160,21 +161,21 @@ fun LeftSidebarNavigation(
 			jellyseerrEnabled = false
 		}
 	}
-	
+
 	// Load user views/libraries
 	val userViewsRepository = koinInject<UserViewsRepository>()
 	var userViews by remember { mutableStateOf<List<BaseItemDto>>(emptyList()) }
-	
+
 	LaunchedEffect(Unit) {
 		userViewsRepository.views.collect { views ->
 			userViews = views.toList()
 		}
 	}
-	
+
 	// Load aggregated libraries
 	val multiServerRepository = koinInject<MultiServerRepository>()
 	var aggregatedLibraries by remember { mutableStateOf<List<AggregatedLibrary>>(emptyList()) }
-	
+
 	LaunchedEffect(Unit) {
 		if (enableMultiServer) {
 			withContext(Dispatchers.IO) {
@@ -182,10 +183,10 @@ fun LeftSidebarNavigation(
 			}
 		}
 	}
-	
+
 	// Track if sidebar is expanded (has focus)
 	var isExpanded by remember { mutableStateOf(false) }
-	
+
 	CollapsibleSidebarContent(
 		isExpanded = isExpanded,
 		onExpandedChange = { isExpanded = it },
@@ -249,11 +250,11 @@ private fun CollapsibleSidebarContent(
 	val apiClientFactory = koinInject<ApiClientFactory>()
 	val shuffleManager = koinInject<ShuffleManager>()
 	val themeMusicPlayer = koinInject<ThemeMusicPlayer>()
-	
+
 	var showShuffleDialog by remember { mutableStateOf(false) }
 	val isShuffling by shuffleManager.isShuffling.collectAsState()
 	val showShuffle = shuffleContentType != "disabled" && showShuffleButton
-	
+
 	val homeIcon = ImageVector.vectorResource(R.drawable.ic_house)
 	val searchIcon = ImageVector.vectorResource(R.drawable.ic_search)
 	val shuffleIcon = ImageVector.vectorResource(R.drawable.ic_shuffle)
@@ -265,12 +266,12 @@ private fun CollapsibleSidebarContent(
 	val syncplayIcon = ImageVector.vectorResource(R.drawable.ic_syncplay)
 	val librariesIcon = ImageVector.vectorResource(R.drawable.ic_clapperboard)
 	val settingsIcon = ImageVector.vectorResource(R.drawable.ic_settings)
-	
+
 	val sidebarWidth by animateDpAsState(
 		targetValue = if (isExpanded) 280.dp else 56.dp,
 		label = "sidebarWidth"
 	)
-	
+
 	val expandedBackground = Brush.horizontalGradient(
 		colors = listOf(
 			Color.Black.copy(alpha = 0.9f),
@@ -278,13 +279,13 @@ private fun CollapsibleSidebarContent(
 			Color.Transparent
 		)
 	)
-	
+
 	val scrollState = rememberScrollState()
-	
+
 	val homeFocusRequester = remember { FocusRequester() }
-	
+
 	var librariesHasFocus by remember { mutableStateOf(false) }
-	
+
 	LaunchedEffect(isExpanded) {
 		if (isExpanded) {
 			themeMusicPlayer.stop()
@@ -341,7 +342,7 @@ private fun CollapsibleSidebarContent(
 									// For SearchFragment, find any VerticalGridView (search results) or focusable view
 									val contentView = rootView.findViewById<android.view.ViewGroup?>(android.R.id.content)
 									var focusTarget: android.view.View? = null
-									
+
 									// Try to find a VerticalGridView (search results)
 									contentView?.let { parent ->
 										fun findVerticalGridView(view: android.view.View): android.view.View? {
@@ -356,12 +357,12 @@ private fun CollapsibleSidebarContent(
 										}
 										focusTarget = findVerticalGridView(parent)
 									}
-									
+
 									// If no VerticalGridView found, try any focusable view to the right
 									if (focusTarget == null) {
 										focusTarget = contentView?.focusSearch(android.view.View.FOCUS_RIGHT)
 									}
-									
+
 									if (focusTarget != null) {
 										focusTarget.requestFocus()
 										true
@@ -433,7 +434,7 @@ private fun CollapsibleSidebarContent(
 			) {
 				SidebarIconItem(
 					icon = homeIcon,
-					label = context.getString(R.string.lbl_home),
+					label = stringResource(R.string.lbl_home),
 					showLabel = isExpanded,
 					isExpanded = isExpanded,
 					focusRequester = homeFocusRequester,
@@ -446,7 +447,7 @@ private fun CollapsibleSidebarContent(
 
 				SidebarIconItem(
 					icon = searchIcon,
-					label = context.getString(R.string.lbl_search),
+					label = stringResource(R.string.lbl_search),
 					showLabel = isExpanded,
 					isExpanded = isExpanded,
 					onClick = {
@@ -459,7 +460,7 @@ private fun CollapsibleSidebarContent(
 				if (showShuffle) {
 					SidebarIconItem(
 						icon = shuffleIcon,
-						label = if (isShuffling) "..." else "Shuffle",
+						label = if (isShuffling) "..." else stringResource(R.string.lbl_shuffle),
 						showLabel = isExpanded,
 						isExpanded = isExpanded,
 						onClick = {
@@ -477,7 +478,7 @@ private fun CollapsibleSidebarContent(
 				if (showGenresButton) {
 					SidebarIconItem(
 						icon = genresIcon,
-						label = context.getString(R.string.lbl_genres),
+						label = stringResource(R.string.lbl_genres),
 						showLabel = isExpanded,
 						isExpanded = isExpanded,
 						onClick = {
@@ -490,7 +491,7 @@ private fun CollapsibleSidebarContent(
 				if (showFavoritesButton) {
 					SidebarIconItem(
 						icon = favoritesIcon,
-						label = context.getString(R.string.lbl_favorites),
+						label = stringResource(R.string.lbl_favorites),
 						showLabel = isExpanded,
 						isExpanded = isExpanded,
 						onClick = {
@@ -516,7 +517,7 @@ private fun CollapsibleSidebarContent(
 				if (enableFolderView) {
 					SidebarIconItem(
 						icon = ImageVector.vectorResource(R.drawable.ic_folder),
-						label = context.getString(R.string.lbl_folders),
+						label = stringResource(R.string.lbl_folders),
 						showLabel = isExpanded,
 						isExpanded = isExpanded,
 						onClick = {
@@ -529,7 +530,7 @@ private fun CollapsibleSidebarContent(
 				if (syncPlayEnabled) {
 					SidebarIconItem(
 						icon = syncplayIcon,
-						label = context.getString(R.string.syncplay),
+						label = stringResource(R.string.syncplay),
 						showLabel = isExpanded,
 						isExpanded = isExpanded,
 						onClick = {
@@ -542,7 +543,7 @@ private fun CollapsibleSidebarContent(
 				if (showLibrariesInToolbar) {
 					SidebarIconItem(
 						icon = librariesIcon,
-						label = "Libraries",
+						label = stringResource(R.string.pref_libraries),
 						showLabel = isExpanded,
 						isExpanded = isExpanded,
 						onFocusChanged = { hasFocus ->
@@ -570,7 +571,7 @@ private fun CollapsibleSidebarContent(
 							}
 						}
 					)
-					
+
 					if (isExpanded && librariesHasFocus) {
 						if (enableMultiServer && aggregatedLibraries.isNotEmpty()) {
 							aggregatedLibraries.forEach { aggLib ->
@@ -616,7 +617,7 @@ private fun CollapsibleSidebarContent(
 			Column {
 				SidebarIconItem(
 					icon = settingsIcon,
-					label = "Settings",
+					label = stringResource(R.string.settings),
 					showLabel = isExpanded,
 					isExpanded = isExpanded,
 					onClick = {
@@ -628,7 +629,7 @@ private fun CollapsibleSidebarContent(
 			}
 		}
 	}
-		
+
 		// Clock display in top right corner of screen
 		if (showClock) {
 			Box(
@@ -646,7 +647,7 @@ private fun CollapsibleSidebarContent(
 			}
 		}
 	} // End of parent Box
-	
+
 	if (showShuffleDialog) {
 		ShuffleOptionsDialog(
 			userViews = userViews,
@@ -698,11 +699,11 @@ private fun SidebarIconItem(
 	val scope = rememberCoroutineScope()
 	var longPressJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 	var longPressTriggered by remember { mutableStateOf(false) }
-	
+
 	LaunchedEffect(isFocused) {
 		onFocusChanged?.invoke(isFocused)
 	}
-	
+
 	val focusedColor = focusBorderColor()
 	val iconAlpha by animateFloatAsState(
 		targetValue = if (isExpanded || imageUrl != null) 1f else 0.5f,
@@ -796,7 +797,7 @@ private fun SidebarIconItem(
 				)
 			}
 		}
-		
+
 		if (delayedShowLabel) {
 			Row {
 				Spacer(modifier = Modifier.width(12.dp))
@@ -819,11 +820,11 @@ private fun SidebarTextItem(
 ) {
 	val interactionSource = remember { MutableInteractionSource() }
 	val isFocused by interactionSource.collectIsFocusedAsState()
-	
+
 	LaunchedEffect(isFocused) {
 		onFocusChanged?.invoke(isFocused)
 	}
-	
+
 	val focusedColor = focusBorderColor()
 	val textColor = Color.White
 
