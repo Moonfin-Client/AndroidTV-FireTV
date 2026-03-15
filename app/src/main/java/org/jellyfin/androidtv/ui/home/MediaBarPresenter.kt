@@ -4,6 +4,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.ui.platform.ComposeView
 import androidx.leanback.widget.RowPresenter
+import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowView
 import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowViewModel
 import org.jellyfin.androidtv.ui.navigation.Destinations
@@ -14,20 +15,29 @@ class MediaBarPresenter(
 	private val navigationRepository: NavigationRepository
 ) : RowPresenter() {
 	
+	companion object {
+		private const val MEDIA_BAR_HEIGHT_DP = 235f
+	}
+	
 	override fun createRowViewHolder(parent: ViewGroup): RowPresenter.ViewHolder {
+		val density = parent.context.resources.displayMetrics.density
+		val mediaBarHeightPx = (MEDIA_BAR_HEIGHT_DP * density).toInt()
+		val rowSpacingPx = parent.context.resources.getDimensionPixelSize(R.dimen.home_row_spacing)
+		
 		val container = FrameLayout(parent.context).apply {
 			layoutParams = ViewGroup.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
-				ViewGroup.LayoutParams.WRAP_CONTENT
+				rowSpacingPx + mediaBarHeightPx + rowSpacingPx
 			)
+			setPadding(0, rowSpacingPx, 0, 0)
 		}
 		
 		val composeView = ComposeView(parent.context).apply {
 			layoutParams = FrameLayout.LayoutParams(
 				ViewGroup.LayoutParams.MATCH_PARENT,
-				ViewGroup.LayoutParams.WRAP_CONTENT
+				mediaBarHeightPx
 			).apply {
-				bottomMargin = 40
+				bottomMargin = rowSpacingPx
 			}
 			
 			setContent {

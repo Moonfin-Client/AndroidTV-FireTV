@@ -233,10 +233,14 @@ class HomeFragment : Fragment() {
 			}
 			
 			titleView?.isVisible = false
+			infoRowView?.isVisible = false
+			summaryView?.isVisible = false
 		} else {
 			backgroundImage?.isVisible = false
 			logoView?.isVisible = false
 			titleView?.isVisible = true
+			infoRowView?.isVisible = true
+			summaryView?.isVisible = true
 		}
 	}
 
