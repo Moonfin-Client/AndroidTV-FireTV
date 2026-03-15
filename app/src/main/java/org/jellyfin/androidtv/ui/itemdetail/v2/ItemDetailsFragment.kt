@@ -905,6 +905,26 @@ class ItemDetailsFragment : Fragment() {
 					}
 				}
 
+				// ---- Additional Parts ----
+				if (uiState.additionalParts.isNotEmpty()) {
+					item {
+						SectionWithCards(
+							title = stringResource(R.string.lbl_additional_parts),
+							items = uiState.additionalParts,
+						)
+					}
+				}
+
+				// ---- Specials ----
+				if (uiState.specials.isNotEmpty()) {
+					item {
+						SectionWithCards(
+							title = stringResource(R.string.lbl_specials),
+							items = uiState.specials,
+						)
+					}
+				}
+
 				// ---- More Like This ----
 				if (uiState.similar.isNotEmpty()) {
 					item {

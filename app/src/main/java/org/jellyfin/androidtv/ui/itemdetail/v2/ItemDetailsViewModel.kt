@@ -20,6 +20,7 @@ import org.jellyfin.sdk.api.client.extensions.playStateApi
 import org.jellyfin.sdk.api.client.extensions.playlistsApi
 import org.jellyfin.sdk.api.client.extensions.tvShowsApi
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
+import org.jellyfin.sdk.api.client.extensions.videosApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.BaseItemPerson
@@ -46,6 +47,8 @@ data class ItemDetailsUiState(
 	val similar: List<BaseItemDto> = emptyList(),
 	val cast: List<BaseItemPerson> = emptyList(),
 	val nextUp: List<BaseItemDto> = emptyList(),
+	val specials: List<BaseItemDto> = emptyList(),
+	val additionalParts: List<BaseItemDto> = emptyList(),
 	val collectionItems: List<BaseItemDto> = emptyList(),
 	val directors: List<BaseItemPerson> = emptyList(),
 	val writers: List<BaseItemPerson> = emptyList(),
@@ -155,6 +158,7 @@ class ItemDetailsViewModel(
 				BaseItemKind.SERIES -> {
 					loadSeasons(item.id)
 					loadNextUp(item.id)
+					loadSpecials(item)
 					loadSimilar(item.id)
 				}
 
@@ -189,6 +193,12 @@ class ItemDetailsViewModel(
 
 				BaseItemKind.PLAYLIST -> {
 					loadPlaylistItems(item.id)
+				}
+
+				BaseItemKind.MOVIE -> {
+					loadAdditionalParts(item)
+					loadSpecials(item)
+					loadSimilar(item.id)
 				}
 
 				else -> {
@@ -258,6 +268,36 @@ class ItemDetailsViewModel(
 		} catch (err: Exception) {
 			coroutineContext.ensureActive()
 			Timber.w(err, "Failed to load similar items")
+		}
+	}
+
+	private suspend fun loadSpecials(item: BaseItemDto) {
+		val count = item.specialFeatureCount ?: 0
+		if (count <= 0) return
+
+		try {
+			val specials = withContext(Dispatchers.IO) {
+				effectiveApi.userLibraryApi.getSpecialFeatures(itemId = item.id).content
+			}
+			_uiState.value = _uiState.value.copy(specials = specials)
+		} catch (err: Exception) {
+			coroutineContext.ensureActive()
+			Timber.w(err, "Failed to load specials")
+		}
+	}
+
+	private suspend fun loadAdditionalParts(item: BaseItemDto) {
+		val count = item.partCount ?: 0
+		if (count <= 0) return
+
+		try {
+			val parts = withContext(Dispatchers.IO) {
+				effectiveApi.videosApi.getAdditionalPart(itemId = item.id).content
+			}
+			_uiState.value = _uiState.value.copy(additionalParts = parts.items)
+		} catch (err: Exception) {
+			coroutineContext.ensureActive()
+			Timber.w(err, "Failed to load additional parts")
 		}
 	}
 
