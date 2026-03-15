@@ -160,6 +160,17 @@ class EmbyCompatInterceptor : Interceptor {
 	}
 
 	private fun rewritePath(path: String, userId: String): String? {
+		USERS_ME_PATTERN.find(path)?.let { match ->
+			val prefix = match.groupValues[1]
+			val suffix = match.groupValues[2]
+			return "$prefix/Users/$userId$suffix"
+		}
+
+		USERS_CONFIGURATION_PATTERN.find(path)?.let { match ->
+			val prefix = match.groupValues[1]
+			return "$prefix/Users/$userId/Configuration"
+		}
+
 		if (path.endsWith("/UserItems/Resume", ignoreCase = true)) {
 			return path.substringBeforeLast("/UserItems/Resume", "") + "/Users/$userId/Items/Resume"
 		}
@@ -271,7 +282,8 @@ class EmbyCompatInterceptor : Interceptor {
 		val json = buffer.readUtf8()
 		if (json.isEmpty()) return null
 
-		val patched = replaceUuidToNumericIds(json, UUID_ID_PATTERN)
+		var patched = replaceUuidToNumericIds(json, UUID_ID_PATTERN)
+		patched = replaceArrayUuidToNumericIds(patched)
 		if (patched == json) return null
 
 		return patched.toByteArray().toRequestBody("application/json".toMediaType())
@@ -283,6 +295,14 @@ class EmbyCompatInterceptor : Interceptor {
 			val uuid = match.groupValues[2]
 			val numeric = uuidToNumeric(uuid)
 			if (numeric != null) "\"$key\":\"$numeric\"" else match.value
+		}
+	}
+
+	private fun replaceArrayUuidToNumericIds(json: String): String {
+		return UUID_ARRAY_ELEMENT_PATTERN.replace(json) { match ->
+			val uuid = match.groupValues[1]
+			val numeric = uuidToNumeric(uuid)
+			if (numeric != null) "\"$numeric\"" else match.value
 		}
 	}
 
@@ -337,6 +357,18 @@ class EmbyCompatInterceptor : Interceptor {
 			if (patchUserItemData(userData, parentId)) modified = true
 		}
 
+		obj.optJSONObject("Configuration")?.let { config ->
+			if (patchUserConfiguration(config)) modified = true
+		}
+
+		obj.optJSONObject("Policy")?.let { policy ->
+			if (patchUserPolicy(policy)) modified = true
+		}
+
+		if (obj.has("Policy") && !obj.has("HasConfiguredEasyPassword")) {
+			obj.put("HasConfiguredEasyPassword", false); modified = true
+		}
+
 		modified = patchJsonArray(obj, "MediaSources", ::patchMediaSourceInfo) || modified
 		modified = patchMediaStreams(obj) || modified
 		modified = patchJsonArray(obj, "Chapters", ::patchChapterInfo) || modified
@@ -381,6 +413,84 @@ class EmbyCompatInterceptor : Interceptor {
 			obj.put("ItemId", parentId ?: "00000000-0000-0000-0000-000000000000")
 			modified = true
 		}
+		return modified
+	}
+
+	private fun patchUserConfiguration(obj: JSONObject): Boolean {
+		var modified = false
+
+		if (!obj.has("DisplayCollectionsView")) {
+			obj.put("DisplayCollectionsView", false); modified = true
+		}
+		if (!obj.has("PlayDefaultAudioTrack")) {
+			obj.put("PlayDefaultAudioTrack", true); modified = true
+		}
+		if (!obj.has("DisplayMissingEpisodes")) {
+			obj.put("DisplayMissingEpisodes", false); modified = true
+		}
+		if (!obj.has("EnableLocalPassword")) {
+			obj.put("EnableLocalPassword", false); modified = true
+		}
+		if (!obj.has("SubtitleMode")) {
+			obj.put("SubtitleMode", "Default"); modified = true
+		}
+		if (!obj.has("HidePlayedInLatest")) {
+			obj.put("HidePlayedInLatest", true); modified = true
+		}
+		if (!obj.has("RememberAudioSelections")) {
+			obj.put("RememberAudioSelections", true); modified = true
+		}
+		if (!obj.has("RememberSubtitleSelections")) {
+			obj.put("RememberSubtitleSelections", true); modified = true
+		}
+		if (!obj.has("EnableNextEpisodeAutoPlay")) {
+			obj.put("EnableNextEpisodeAutoPlay", true); modified = true
+		}
+
+		val uuidArrayFields = arrayOf("GroupedFolders", "OrderedViews", "LatestItemsExcludes", "MyMediaExcludes")
+		for (field in uuidArrayFields) {
+			if (!obj.has(field)) {
+				obj.put(field, JSONArray()); modified = true
+			} else {
+				if (convertNumericIdsInArray(obj, field)) modified = true
+			}
+		}
+
+		return modified
+	}
+
+	private fun convertNumericIdsInArray(obj: JSONObject, key: String): Boolean {
+		val arr = obj.optJSONArray(key) ?: return false
+		var modified = false
+		for (i in 0 until arr.length()) {
+			val value = arr.optString(i) ?: continue
+			if (value.isNotEmpty() && !value.contains("-")) {
+				arr.put(i, numericToUuid(value))
+				modified = true
+			}
+		}
+		return modified
+	}
+
+	private fun patchUserPolicy(obj: JSONObject): Boolean {
+		var modified = false
+
+		if (!obj.has("ForceRemoteSourceTranscoding")) {
+			obj.put("ForceRemoteSourceTranscoding", false); modified = true
+		}
+		if (!obj.has("LoginAttemptsBeforeLockout")) {
+			obj.put("LoginAttemptsBeforeLockout", -1); modified = true
+		}
+		if (!obj.has("MaxActiveSessions")) {
+			obj.put("MaxActiveSessions", 0); modified = true
+		}
+		if (!obj.has("PasswordResetProviderId")) {
+			obj.put("PasswordResetProviderId", ""); modified = true
+		}
+		if (!obj.has("SyncPlayAccess")) {
+			obj.put("SyncPlayAccess", "CreateAndJoinGroups"); modified = true
+		}
+
 		return modified
 	}
 
@@ -498,6 +608,8 @@ class EmbyCompatInterceptor : Interceptor {
 		// "SomeId":927 — bare (unquoted) numeric value
 		private val BARE_NUMERIC_ID_PATTERN = Regex("\"(\\w*Id)\"\\s*:\\s*(\\d+)(?=[,}\\]])")
 		private val UUID_ID_PATTERN = Regex("\"(\\w*Id)\"\\s*:\\s*\"([0-9]{8}-[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{12})\"")
+		// UUID inside a JSON array element: ["uuid", ...] or [..., "uuid"]
+		private val UUID_ARRAY_ELEMENT_PATTERN = Regex("(?<=[\\[,])\\s*\"([0-9]{8}-[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{12})\"(?=\\s*[,\\]])")
 
 		private val USER_FAVORITE_ITEMS_PATTERN = Regex("(.*)/UserFavoriteItems/(.+)", RegexOption.IGNORE_CASE)
 		private val USER_PLAYED_ITEMS_PATTERN = Regex("(.*)/UserPlayedItems/(.+)", RegexOption.IGNORE_CASE)
@@ -506,6 +618,8 @@ class EmbyCompatInterceptor : Interceptor {
 		private val USER_ITEMS_USERDATA_PATTERN = Regex("(.*)/UserItems/([^/]+)/UserData$", RegexOption.IGNORE_CASE)
 		private val USER_ITEMS_RATING_PATTERN = Regex("(.*)/UserItems/([^/]+)/Rating$", RegexOption.IGNORE_CASE)
 		private val SINGLE_ITEM_PATTERN = Regex("(.*)/Items/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$", RegexOption.IGNORE_CASE)
+		private val USERS_ME_PATTERN = Regex("(.*)/Users/Me(/.*)?$", RegexOption.IGNORE_CASE)
+		private val USERS_CONFIGURATION_PATTERN = Regex("(.*)/Users/Configuration$", RegexOption.IGNORE_CASE)
 
 		fun numericToUuid(id: String): String {
 			val padded = id.padStart(32, '0')

@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.shareIn
 import org.jellyfin.androidtv.auth.repository.SessionRepository
+import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.userViewsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -29,6 +31,7 @@ interface UserViewsRepository {
 class UserViewsRepositoryImpl(
 	private val api: ApiClient,
 	private val sessionRepository: SessionRepository,
+	private val userRepository: UserRepository,
 ) : UserViewsRepository {
 	private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -42,15 +45,19 @@ class UserViewsRepositoryImpl(
 			flow {
 				try {
 					val views by api.userViewsApi.getUserViews(includeHidden = false)
-					val filteredViews = views.items
-						.filter { isSupported(it.collectionType) }
-					emit(filteredViews)
+					emit(views.items.filter { isSupported(it.collectionType) })
 				} catch (err: Exception) {
 					Timber.e(err, "Failed to get user views")
 					emit(emptyList())
 				}
-			}
-		}.flowOn(Dispatchers.IO).shareIn(scope, SharingStarted.Lazily, replay = 1)
+			}.flowOn(Dispatchers.IO)
+		}
+		.combine(userRepository.currentUser) { views, user ->
+			val excludes = user?.configuration?.myMediaExcludes.orEmpty().toSet()
+			if (excludes.isEmpty()) views
+			else views.filter { it.id !in excludes }
+		}
+		.shareIn(scope, SharingStarted.Lazily, replay = 1)
 
 	override val allViews: Flow<Collection<BaseItemDto>> = sessionChange
 		.flatMapLatest {
