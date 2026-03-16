@@ -27,6 +27,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -36,10 +37,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import timber.log.Timber
 
-/**
- * Composable that renders a YouTube trailer preview using ExoPlayer
- * with stream URLs resolved via NewPipe Extractor.
- */
+
 @OptIn(UnstableApi::class)
 @Composable
 fun ExoPlayerTrailerView(
@@ -50,6 +48,7 @@ fun ExoPlayerTrailerView(
 	isVisible: Boolean,
 	onVideoEnded: () -> Unit = {},
 	onVideoReady: () -> Unit = {},
+	dataSourceFactory: DataSource.Factory? = null,
 	modifier: Modifier = Modifier,
 ) {
 	val context = LocalContext.current
@@ -71,6 +70,7 @@ fun ExoPlayerTrailerView(
 			muted = muted,
 			onVideoReady = onVideoReady,
 			onVideoEnded = onVideoEnded,
+			dataSourceFactory = dataSourceFactory,
 		)
 
 		player = exoPlayer
@@ -86,7 +86,7 @@ fun ExoPlayerTrailerView(
 					val currentSec = p.currentPosition / 1000.0
 					for (seg in segments) {
 						if (currentSec >= seg.startTime && currentSec < seg.endTime - 0.5) {
-							Timber.d("ExoTrailer: Skipping SponsorBlock segment ${seg.category} at ${seg.startTime}s")
+
 							p.seekTo((seg.endTime * 1000).toLong())
 							break
 						}
@@ -161,11 +161,12 @@ private fun buildTrailerPlayer(
 	muted: Boolean,
 	onVideoReady: () -> Unit,
 	onVideoEnded: () -> Unit,
+	dataSourceFactory: DataSource.Factory? = null,
 ): ExoPlayer {
-	val dataSourceFactory = DefaultHttpDataSource.Factory()
+	val effectiveDataSourceFactory = dataSourceFactory ?: DefaultHttpDataSource.Factory()
 
 	val player = ExoPlayer.Builder(context)
-		.setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+		.setMediaSourceFactory(DefaultMediaSourceFactory(effectiveDataSourceFactory))
 		.build()
 
 	player.volume = if (muted) 0f else 1f
@@ -184,14 +185,10 @@ private fun buildTrailerPlayer(
 				Player.STATE_READY -> {
 					if (!readySignaled) {
 						readySignaled = true
-						Timber.d("ExoTrailer: Player ready — signaling onVideoReady")
 						onVideoReady()
 					}
 				}
-				Player.STATE_ENDED -> {
-					Timber.d("ExoTrailer: Playback ended")
-					onVideoEnded()
-				}
+				Player.STATE_ENDED -> onVideoEnded()
 			}
 		}
 
@@ -202,9 +199,9 @@ private fun buildTrailerPlayer(
 	})
 
 	if (streamInfo.isVideoOnly && streamInfo.audioUrl != null) {
-		val videoSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+		val videoSource = ProgressiveMediaSource.Factory(effectiveDataSourceFactory)
 			.createMediaSource(MediaItem.fromUri(streamInfo.videoUrl))
-		val audioSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+		val audioSource = ProgressiveMediaSource.Factory(effectiveDataSourceFactory)
 			.createMediaSource(MediaItem.fromUri(streamInfo.audioUrl))
 		val merged = MergingMediaSource(videoSource, audioSource)
 		player.setMediaSource(merged)

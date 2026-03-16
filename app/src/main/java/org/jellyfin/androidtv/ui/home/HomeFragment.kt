@@ -33,6 +33,8 @@ import org.jellyfin.androidtv.ui.shared.toolbar.LeftSidebarNavigation
 import org.jellyfin.androidtv.ui.shared.toolbar.Navbar
 import org.jellyfin.androidtv.ui.shared.toolbar.NavbarActiveButton
 import org.koin.android.ext.android.inject
+import org.koin.compose.koinInject
+import androidx.media3.datasource.HttpDataSource
 
 class HomeFragment : Fragment() {
 	private val mediaBarViewModel by inject<MediaBarSlideshowViewModel>()
@@ -155,6 +157,7 @@ class HomeFragment : Fragment() {
 		trailerWebView?.setContent {
 			val trailerState by mediaBarViewModel.trailerState.collectAsState()
 			val previewAudioEnabled = remember { userSettingPreferences[UserSettingPreferences.previewAudioEnabled] }
+			val httpDataSourceFactory = koinInject<HttpDataSource.Factory>()
 
 			val activeInfo = when (val state = trailerState) {
 				is TrailerPreviewState.Buffering -> state.info
@@ -164,7 +167,7 @@ class HomeFragment : Fragment() {
 			val showTrailer = trailerState is TrailerPreviewState.Playing
 
 			if (activeInfo?.streamInfo != null) {
-				key(activeInfo.youtubeVideoId) {
+				key(activeInfo.previewKey) {
 					ExoPlayerTrailerView(
 						streamInfo = activeInfo.streamInfo,
 						startSeconds = activeInfo.startSeconds,
@@ -173,6 +176,7 @@ class HomeFragment : Fragment() {
 						isVisible = showTrailer,
 						onVideoEnded = { mediaBarViewModel.onTrailerEnded() },
 						onVideoReady = { mediaBarViewModel.onTrailerReady() },
+						dataSourceFactory = if (activeInfo.isLocal) httpDataSourceFactory else null,
 					)
 				}
 			}

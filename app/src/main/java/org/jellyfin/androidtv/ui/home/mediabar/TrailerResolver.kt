@@ -5,21 +5,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
+import org.jellyfin.sdk.api.client.extensions.videosApi
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 import timber.log.Timber
 import java.util.UUID
 
 data class TrailerPreviewInfo(
-	val youtubeVideoId: String,
-	val startSeconds: Double,
-	val segments: List<SponsorBlockApi.Segment>,
+	val youtubeVideoId: String? = null,
+	val startSeconds: Double = 0.0,
+	val segments: List<SponsorBlockApi.Segment> = emptyList(),
 	val streamInfo: YouTubeStreamResolver.StreamInfo? = null,
-)
+	val isLocal: Boolean = false,
+) {
+	val previewKey: String get() = youtubeVideoId ?: streamInfo?.videoUrl ?: ""
+}
 
-/**
- * Resolves YouTube trailer video IDs from Jellyfin items and fetches
- * SponsorBlock segments for intelligent start-time calculation.
- */
+/** Resolves trailer previews for Jellyfin items, preferring local trailers over YouTube. */
 object TrailerResolver {
 
 	private const val YOUTUBE_HOST = "youtube.com"
@@ -67,14 +69,53 @@ object TrailerResolver {
 				userId = userId,
 			)
 
-			resolveTrailerFromItem(item)
+			resolveLocalTrailer(apiClient, item)
+				?: resolveYouTubeTrailerFromItem(item)
 		} catch (e: Throwable) {
 			Timber.w(e, "TrailerResolver: Failed to fetch item $itemId for trailer resolution")
 			null
 		}
 	}
 
+	private suspend fun resolveLocalTrailer(
+		apiClient: ApiClient,
+		item: BaseItemDto,
+	): TrailerPreviewInfo? {
+		val localTrailerCount = item.localTrailerCount ?: 0
+		if (localTrailerCount < 1) return null
+
+		return try {
+			val trailers = apiClient.userLibraryApi.getLocalTrailers(itemId = item.id).content
+			val trailer = trailers.firstOrNull() ?: return null
+
+			val streamUrl = apiClient.videosApi.getVideoStreamUrl(
+				itemId = trailer.id,
+				static = false,
+				videoCodec = "h264",
+				audioCodec = "aac",
+				maxVideoBitDepth = 8,
+				audioBitRate = 128000,
+				audioChannels = 2,
+				subtitleMethod = SubtitleDeliveryMethod.DROP,
+			)
+
+			TrailerPreviewInfo(
+				streamInfo = YouTubeStreamResolver.StreamInfo(
+					videoUrl = streamUrl,
+					audioUrl = null,
+					isVideoOnly = false,
+				),
+				isLocal = true,
+			)
+		} catch (e: Exception) {
+			null
+		}
+	}
+
 	suspend fun resolveTrailerFromItem(item: BaseItemDto): TrailerPreviewInfo? =
+		resolveYouTubeTrailerFromItem(item)
+
+	private suspend fun resolveYouTubeTrailerFromItem(item: BaseItemDto): TrailerPreviewInfo? =
 		withContext(Dispatchers.IO) {
 			val trailers = item.remoteTrailers.orEmpty()
 			if (trailers.isEmpty()) {

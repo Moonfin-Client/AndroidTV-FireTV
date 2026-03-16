@@ -2132,7 +2132,7 @@ class ItemDetailsFragment : Fragment() {
 						TrailerResolver.resolveTrailerFromItem(item)
 					}
 
-					if (trailerInfo != null) {
+					if (trailerInfo?.youtubeVideoId != null) {
 						val segmentsJson = trailerInfo.segments.joinToString(",", "[", "]") { seg ->
 							"""{"start":${seg.startTime},"end":${seg.endTime},"category":"${seg.category}","action":"${seg.actionType}"}"""
 						}

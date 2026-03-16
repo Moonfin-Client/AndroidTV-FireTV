@@ -898,7 +898,6 @@ class MediaBarSlideshowViewModel(
 				if (cachedInfo != null) {
 					trailerReadyDeferred = CompletableDeferred()
 					_trailerState.value = TrailerPreviewState.Buffering(cachedInfo)
-					Timber.d("MediaBar: Cache hit - immediately buffering trailer for ${item.title} (YT: ${cachedInfo.youtubeVideoId})")
 
 					delay(IMAGE_DISPLAY_DELAY_MS)
 					withTimeoutOrNull(MAX_TRAILER_BUFFER_WAIT_MS) {
@@ -921,7 +920,6 @@ class MediaBarSlideshowViewModel(
 					if (trailerInfo != null) {
 						trailerReadyDeferred = CompletableDeferred()
 						_trailerState.value = TrailerPreviewState.Buffering(trailerInfo)
-						Timber.d("MediaBar: Buffering trailer for ${item.title} (YT: ${trailerInfo.youtubeVideoId})")
 
 						val elapsed = System.currentTimeMillis() - startTime
 						val remaining = IMAGE_DISPLAY_DELAY_MS - elapsed
@@ -943,7 +941,6 @@ class MediaBarSlideshowViewModel(
 				val playingInfo = cachedInfo ?: trailerCache[item.itemId] ?: return@launch
 				autoAdvanceJob?.cancel()
 				_trailerState.value = TrailerPreviewState.Playing(playingInfo)
-				Timber.d("MediaBar: Playing trailer for ${item.title} (YT: ${playingInfo.youtubeVideoId}, start: ${playingInfo.startSeconds}s)")
 
 				// Safety timeout: if ExoPlayer never fires onVideoEnded
 				// (network stall, stream issue, etc.),
@@ -987,7 +984,6 @@ class MediaBarSlideshowViewModel(
 					val apiClient = serverApiClients[item.serverId] ?: api
 					val info = TrailerResolver.resolveTrailerPreview(apiClient, item.itemId, userId)
 					trailerCache[item.itemId] = info
-					Timber.d("MediaBar: Pre-resolved trailer for ${item.title}: ${if (info != null) "YT:${info.youtubeVideoId}" else "none"}")
 				} catch (e: Exception) {
 					Timber.d("MediaBar: Pre-resolve failed for ${item.title}: ${e.message}")
 				}

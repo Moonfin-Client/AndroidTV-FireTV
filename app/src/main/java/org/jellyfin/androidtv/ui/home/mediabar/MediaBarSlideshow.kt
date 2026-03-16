@@ -54,22 +54,10 @@ data class SlideshowPlaybackState(
 	val isTransitioning: Boolean = false,
 )
 
-/**
- * State of the trailer preview for the current slide
- */
 sealed class TrailerPreviewState {
-	/** No trailer is being loaded or shown */
 	object Idle : TrailerPreviewState()
-
-	/** Waiting for trailer info to be resolved from API */
 	object WaitingToPlay : TrailerPreviewState()
-
-	/** Trailer info resolved - ExoPlayer is loading/buffering in the background (invisible) */
 	data class Buffering(val info: TrailerPreviewInfo) : TrailerPreviewState()
-
-	/** Image display delay has elapsed - trailer fades in and plays */
 	data class Playing(val info: TrailerPreviewInfo) : TrailerPreviewState()
-
-	/** No YouTube trailer available for this item */
 	object Unavailable : TrailerPreviewState()
 }

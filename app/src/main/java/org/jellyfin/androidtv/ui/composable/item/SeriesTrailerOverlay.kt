@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.media3.datasource.HttpDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -25,20 +26,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.koin.compose.koinInject
 import timber.log.Timber
 
-/** Delay before starting trailer resolution to debounce quick scrolling. */
 private const val TRAILER_START_DELAY_MS = 500L
-
-/**
- * A composable overlay that plays a muted YouTube trailer preview of a Series
- * directly on top of its card when focused.
- *
- * When [focused] becomes true:
- *  1. Waits [TRAILER_START_DELAY_MS] to avoid triggering on quick scrolls
- *  2. Resolves a YouTube trailer via [TrailerResolver]
- *  3. Plays the trailer muted via [ExoPlayerTrailerView], fading in over the poster
- *
- * When [focused] becomes false, the player is disposed.
- */
 @Composable
 fun SeriesTrailerOverlay(
 	item: BaseItemDto,
@@ -49,6 +37,7 @@ fun SeriesTrailerOverlay(
 	val api = koinInject<ApiClient>()
 	val apiClientFactory = koinInject<ApiClientFactory>()
 	val userRepository = koinInject<UserRepository>()
+	val httpDataSourceFactory = koinInject<HttpDataSource.Factory>()
 
 	var trailerInfo by remember { mutableStateOf<TrailerPreviewInfo?>(null) }
 
@@ -63,18 +52,10 @@ fun SeriesTrailerOverlay(
 			return@LaunchedEffect
 		}
 
-		Timber.d("SeriesTrailer: Card focused for ${item.name}, waiting ${TRAILER_START_DELAY_MS}ms")
-
 		delay(TRAILER_START_DELAY_MS)
 
-		Timber.d("SeriesTrailer: Resolving trailer for ${item.name}")
-
 		try {
-			val userId = userRepository.currentUser.value?.id
-			if (userId == null) {
-				Timber.w("SeriesTrailer: No current user, cannot resolve trailer")
-				return@LaunchedEffect
-			}
+			val userId = userRepository.currentUser.value?.id ?: return@LaunchedEffect
 
 			val info = withContext(Dispatchers.IO) {
 				TrailerResolver.resolveTrailerPreview(
@@ -84,12 +65,7 @@ fun SeriesTrailerOverlay(
 				)
 			}
 
-			if (info != null) {
-				Timber.d("SeriesTrailer: Trailer resolved for ${item.name}: ${info.youtubeVideoId}")
-				trailerInfo = info
-			} else {
-				Timber.d("SeriesTrailer: No trailer available for ${item.name}")
-			}
+			trailerInfo = info
 		} catch (e: Exception) {
 			Timber.w(e, "SeriesTrailer: Failed to resolve trailer for ${item.name}")
 		}
@@ -104,6 +80,7 @@ fun SeriesTrailerOverlay(
 			muted = muted,
 			isVisible = true,
 			onVideoEnded = { trailerInfo = null },
+			dataSourceFactory = if (info.isLocal) httpDataSourceFactory else null,
 			modifier = modifier
 				.fillMaxSize()
 				.clip(JellyfinTheme.shapes.medium),
@@ -111,6 +88,5 @@ fun SeriesTrailerOverlay(
 	}
 }
 
-/** Whether the given item type supports trailer preview. */
 fun isEligibleForTrailerPreview(item: BaseItemDto?): Boolean =
 	item?.type == BaseItemKind.SERIES
