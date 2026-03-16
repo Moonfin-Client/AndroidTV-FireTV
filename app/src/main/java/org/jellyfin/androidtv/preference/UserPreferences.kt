@@ -227,6 +227,17 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var preferExoPlayerFfmpeg = booleanPreference("exoplayer_prefer_ffmpeg", defaultValue = false)
 
+		/**
+		 * Enable Dolby Vision Compatibility Mode for Profile 7 sources.
+		 * Rewrites DV Profile 7 to Profile 8.1 for broader device support.
+		 */
+		var dolbyVisionCompatMode = booleanPreference("dolby_vision_compat_mode", false)
+
+		/**
+		 * Force DV compat mode even when the device reports Profile 7 support.
+		 */
+		var dolbyVisionForceCompatMode = booleanPreference("dolby_vision_force_compat_mode", false)
+
 		/* Playback - Audio related */
 		/**
 		 * Preferred behavior for audio streaming.

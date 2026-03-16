@@ -260,6 +260,31 @@ fun SettingsPlaybackAdvancedScreen() {
 			)
 		}
 
+		item {
+			var dvCompatMode by rememberPreference(userPreferences, UserPreferences.dolbyVisionCompatMode)
+
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_dv_compat_mode_title)) },
+				captionContent = { Text(stringResource(R.string.pref_dv_compat_mode_summary)) },
+				trailingContent = { Checkbox(checked = dvCompatMode) },
+				onClick = { dvCompatMode = !dvCompatMode }
+			)
+		}
+
+		item {
+			var dvCompatMode by rememberPreference(userPreferences, UserPreferences.dolbyVisionCompatMode)
+			var dvForceCompatMode by rememberPreference(userPreferences, UserPreferences.dolbyVisionForceCompatMode)
+
+			if (dvCompatMode) {
+				ListButton(
+					headingContent = { Text(stringResource(R.string.pref_dv_force_compat_title)) },
+					captionContent = { Text(stringResource(R.string.pref_dv_force_compat_summary)) },
+					trailingContent = { Checkbox(checked = dvForceCompatMode) },
+					onClick = { dvForceCompatMode = !dvForceCompatMode }
+				)
+			}
+		}
+
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_live_tv_cat)) }) }
 
 		item {

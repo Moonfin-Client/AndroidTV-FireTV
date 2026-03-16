@@ -671,6 +671,10 @@
     <string name="rewind">Rewind</string>
     <string name="preference_enable_libass">Enable Advanced SubStation Alpha subtitle client rendering</string>
     <string name="preference_enable_pgs">Direct play PGS subtitles</string>
+    <string name="pref_dv_compat_mode_title">Dolby Vision Compatibility</string>
+    <string name="pref_dv_compat_mode_summary">Rewrites DV Profile 7 sources as Profile 8.1 for broader device support. May fall back to HDR10 on unsupported devices.</string>
+    <string name="pref_dv_force_compat_title">Force Compatibility Mode</string>
+    <string name="pref_dv_force_compat_summary">Apply Profile 8.1 rewrite even when the device reports DV7 support. Use if DV playback is unstable.</string>
     <string name="speech_error_no_permission">No permission to use the microphone. Please enable it in system settings.</string>
     <string name="speech_error_unavailable">Speech recognition is unavailable on your device.</string>
     <string name="speech_error_unknown">An unexpected error occurred during speech recognition.</string>
