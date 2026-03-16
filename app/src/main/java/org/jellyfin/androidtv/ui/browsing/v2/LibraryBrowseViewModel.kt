@@ -111,13 +111,11 @@ class LibraryBrowseViewModel(
 		buildList {
 			add(SortOption(R.string.lbl_name, ItemSortBy.SORT_NAME, SortOrder.ASCENDING))
 			if (folder?.collectionType == CollectionType.TVSHOWS) {
+				add(SortOption(R.string.lbl_date_episode_added, ItemSortBy.DATE_LAST_CONTENT_ADDED, SortOrder.DESCENDING))
 				add(SortOption(R.string.lbl_date_series_added, ItemSortBy.DATE_CREATED, SortOrder.DESCENDING))
 			}
 			else {
 				add(SortOption(R.string.lbl_date_added, ItemSortBy.DATE_CREATED, SortOrder.DESCENDING))
-			}
-			if (folder?.collectionType == CollectionType.TVSHOWS) {
-				add(SortOption(R.string.lbl_date_episode_added, ItemSortBy.DATE_LAST_CONTENT_ADDED, SortOrder.DESCENDING))
 			}
 			add(SortOption(R.string.lbl_premier_date, ItemSortBy.PREMIERE_DATE, SortOrder.DESCENDING))
 			add(SortOption(R.string.lbl_rating, ItemSortBy.OFFICIAL_RATING, SortOrder.ASCENDING))
