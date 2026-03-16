@@ -63,6 +63,9 @@ class DvCompatVideoRenderer(
 	eventListener,
 	/* maxDroppedFramesToNotify= */ -1,
 ) {
+	/** Set in [getDecoderInfos] — true when we chose a P8 decoder for P7 content. */
+	private var useCompatMode = false
+
 	// ── Detection ─────────────────────────────────────────────────────────────
 
 	/**
@@ -279,7 +282,7 @@ class DvCompatVideoRenderer(
 			)
 		}
 
-		if (isDvProfile7(formatHolder.format)) {
+		if (isDvProfile7(formatHolder.format) && useCompatMode) {
 			Timber.d("DV compat: Profile 7 detected — rewriting as Profile 8.1 (force=$forceCompatMode)")
 			formatHolder.format = patchToProfile8(formatHolder.format!!)
 
@@ -297,6 +300,7 @@ class DvCompatVideoRenderer(
 	/**
 	 * Override decoder selection so that on Profile 7 content we query for
 	 * a Profile 8 decoder (broadly available) instead of a Profile 7 decoder (rare).
+	 * On devices with native P7 support (and force mode off), the native decoder is used instead.
 	 */
 	@Throws(MediaCodecUtil.DecoderQueryException::class)
 	override fun getDecoderInfos(
@@ -304,18 +308,26 @@ class DvCompatVideoRenderer(
 		format: Format,
 		requiresSecureDecoder: Boolean,
 	): List<MediaCodecInfo> {
-		Timber.d(
-			"DV compat: getDecoderInfos mime=${format.sampleMimeType} codecs=${format.codecs} " +
-				"isDvP7=${isDvProfile7(format)} dvP7Hint=${dvP7Hint.get()}"
-		)
 		if (isDvProfile7(format)) {
+			// Unless force mode is on, try the native P7 decoder first
+			if (!forceCompatMode) {
+				val nativeDecoders = super.getDecoderInfos(mediaCodecSelector, format, requiresSecureDecoder)
+				if (nativeDecoders.isNotEmpty()) {
+					Timber.d("DV compat: device supports P7 natively, using ${nativeDecoders.first().name}")
+					useCompatMode = false
+					return nativeDecoders
+				}
+			}
+			// No native P7 support (or force mode) — try P8 decoder
 			val p8Format = patchToProfile8(format)
 			val decoders = super.getDecoderInfos(mediaCodecSelector, p8Format, requiresSecureDecoder)
 			if (decoders.isNotEmpty()) {
 				Timber.d("DV compat: routing Profile 7 → Profile 8 decoder: ${decoders.first().name}")
+				useCompatMode = true
 				return decoders
 			}
 			Timber.d("DV compat: no Profile 8 DV decoder found — ExoPlayer fallback will handle it")
+			useCompatMode = false
 		}
 		return super.getDecoderInfos(mediaCodecSelector, format, requiresSecureDecoder)
 	}

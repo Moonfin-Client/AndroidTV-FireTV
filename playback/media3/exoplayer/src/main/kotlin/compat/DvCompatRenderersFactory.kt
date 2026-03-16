@@ -8,6 +8,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.mediacodec.MediaCodecAdapter
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -32,8 +33,14 @@ class DvCompatRenderersFactory(
 		allowedVideoJoiningTimeMs: Long,
 		out: ArrayList<Renderer>,
 	) {
-		out.add(
-			DvCompatVideoRenderer(
+		super.buildVideoRenderers(
+			context, extensionRendererMode, mediaCodecSelector,
+			enableDecoderFallback, eventHandler, eventListener,
+			allowedVideoJoiningTimeMs, out,
+		)
+		val idx = out.indexOfFirst { it is MediaCodecVideoRenderer }
+		if (idx >= 0) {
+			out[idx] = DvCompatVideoRenderer(
 				context = context,
 				codecAdapterFactory = MediaCodecAdapter.Factory.getDefault(context),
 				mediaCodecSelector = mediaCodecSelector,
@@ -44,6 +51,6 @@ class DvCompatRenderersFactory(
 				eventHandler = eventHandler,
 				eventListener = eventListener,
 			)
-		)
+		}
 	}
 }
