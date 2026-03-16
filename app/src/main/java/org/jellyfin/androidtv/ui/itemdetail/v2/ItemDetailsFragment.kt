@@ -907,7 +907,7 @@ class ItemDetailsFragment : Fragment() {
 
 					item {
 						Text(
-							text = stringResource(R.string.lbl_track),
+							text = stringResource(R.string.lbl_tracks),
 							fontSize = 22.sp,
 							fontWeight = FontWeight.W600,
 							color = Color.White,
@@ -1154,7 +1154,7 @@ class ItemDetailsFragment : Fragment() {
 				if (hasPlaybackPosition && canPlay) {
 					val resumeTime = item.userData?.playbackPositionTicks?.let { formatDuration(it) } ?: ""
 					DetailActionButton(
-						label = stringResource(R.string.lbl_resume_from),
+						label = stringResource(R.string.lbl_resume_from, resumeTime),
 						icon = ImageVector.vectorResource(R.drawable.ic_play),
 						onClick = { handleResume(item) },
 						detail = resumeTime,

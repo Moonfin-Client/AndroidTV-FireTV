@@ -266,6 +266,7 @@
     <string name="lbl_subtitle_track">Selecciona track de subtitulos</string>
     <string name="lbl_default">Predeterminado</string>
     <string name="lbl_track">Pista</string>
+    <string name="lbl_tracks">Pistas</string>
     <string name="lbl_audio_track">Selecciona un track de audio</string>
     <string name="lbl_shuffle">Aleatorio</string>
     <string name="lbl_pause">Pausar</string>

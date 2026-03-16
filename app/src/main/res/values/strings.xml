@@ -234,6 +234,7 @@
     <string name="lbl_fit">Normal</string>
     <string name="lbl_default">Default</string>
     <string name="lbl_track">Track</string>
+    <string name="lbl_tracks">Tracks</string>
     <string name="lbl_audio_track">Select audio track</string>
     <string name="lbl_audio_track2">Audio Track</string>
     <string name="lbl_audio_track_missing">No audio tracks available</string>

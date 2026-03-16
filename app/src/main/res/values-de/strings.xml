@@ -264,6 +264,7 @@
     <string name="lbl_subtitle_track">Untertitelspur auswählen</string>
     <string name="lbl_default">Standard</string>
     <string name="lbl_track">Titel</string>
+    <string name="lbl_tracks">Titel</string>
     <string name="lbl_audio_track">Audiospur auswählen</string>
     <string name="lbl_shuffle">Zufallswiedergabe</string>
     <string name="lbl_pause">Pause</string>
