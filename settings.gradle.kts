@@ -37,8 +37,12 @@ dependencyResolutionManagement {
 		mavenLocal {
 			content {
 				includeVersionByRegex("org.jellyfin.sdk", ".*", "latest-SNAPSHOT")
-				includeGroup("org.emby")
 			}
+		}
+
+		// Bundled local JARs (e.g. emby-client which is not on Maven Central)
+		flatDir {
+			dirs("libs")
 		}
 		maven("https://s01.oss.sonatype.org/content/repositories/snapshots/") {
 			content {
