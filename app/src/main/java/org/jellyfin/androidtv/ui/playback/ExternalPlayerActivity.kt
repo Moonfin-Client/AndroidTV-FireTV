@@ -159,24 +159,21 @@ class ExternalPlayerActivity : FragmentActivity() {
 			?.sortedWith(compareBy<MediaStream> { it.isDefault }.thenBy { it.index })
 			.orEmpty()
 
-		val subtitleUrls = externalSubtitles.map { mediaStream ->
-			// We cannot use the DeliveryUrl as that is only populated when using the playback info API, which we skip as we'll always direct
-			// play when using external players. We need to infer the subtitle format based on its path (similar to how the server
-			// calculates it)
+		val subtitleUris = externalSubtitles.map { mediaStream ->
 			val format = mediaStream.path?.substringAfterLast('.', missingDelimiterValue = mediaStream.codec.orEmpty()) ?: "srt"
 			api.subtitleApi.getSubtitleUrl(
 				routeItemId = item.id,
 				routeMediaSourceId = mediaSource.id.toString(),
 				routeIndex = mediaStream.index,
 				routeFormat = format,
-			)
+			).toUri()
 		}.toTypedArray()
 		val subtitleNames = externalSubtitles.map { it.displayTitle ?: it.title.orEmpty() }.toTypedArray()
 		val subtitleLanguages = externalSubtitles.map { it.language.orEmpty() }.toTypedArray()
 
 		Timber.i(
-			"Starting item ${item.id} from $position with ${subtitleUrls.size} external subtitles: $url${
-				subtitleUrls.joinToString(", ", ", ")
+			"Starting item ${item.id} from $position with ${subtitleUris.size} external subtitles: $url${
+				subtitleUris.joinToString(", ", ", ")
 			}"
 		)
 
@@ -200,11 +197,11 @@ class ExternalPlayerActivity : FragmentActivity() {
 			putExtra(API_MX_TITLE, title)
 			putExtra(API_MX_FILENAME, fileName)
 			putExtra(API_MX_SECURE_URI, true)
-			putExtra(API_MX_SUBS, subtitleUrls)
+			putExtra(API_MX_SUBS, subtitleUris)
 			putExtra(API_MX_SUBS_NAME, subtitleNames)
 			putExtra(API_MX_SUBS_FILENAME, subtitleLanguages)
 
-			if (subtitleUrls.isNotEmpty()) putExtra(API_VLC_SUBTITLES, subtitleUrls.first().toString())
+			if (subtitleUris.isNotEmpty()) putExtra(API_VLC_SUBTITLES, subtitleUris.first())
 
 			putExtra(API_VIMU_SEEK_POSITION, position.inWholeMilliseconds.toInt())
 			putExtra(API_VIMU_RESUME, false)
