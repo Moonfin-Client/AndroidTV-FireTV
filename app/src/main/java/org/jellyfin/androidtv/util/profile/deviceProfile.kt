@@ -17,7 +17,6 @@ import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 import org.jellyfin.sdk.model.api.VideoRangeType
 import org.jellyfin.sdk.model.deviceprofile.DeviceProfileBuilder
 import org.jellyfin.sdk.model.deviceprofile.buildDeviceProfile
-import timber.log.Timber
 import kotlin.math.roundToInt
 
 private val downmixSupportedAudioCodecs = arrayOf(
@@ -89,8 +88,6 @@ fun createDeviceProfile(
 	downMixAudio = userPreferences[UserPreferences.audioBehaviour] == AudioBehavior.DOWNMIX_TO_STEREO,
 	assDirectPlay = userPreferences[UserPreferences.assDirectPlay],
 	pgsDirectPlay = userPreferences[UserPreferences.pgsDirectPlay],
-	dvCompatMode = userPreferences[UserPreferences.dolbyVisionCompatMode],
-	dvForceCompatMode = userPreferences[UserPreferences.dolbyVisionForceCompatMode],
 )
 
 fun createDeviceProfile(
@@ -101,8 +98,6 @@ fun createDeviceProfile(
 	downMixAudio: Boolean,
 	assDirectPlay: Boolean,
 	pgsDirectPlay: Boolean,
-	dvCompatMode: Boolean = false,
-	dvForceCompatMode: Boolean = false,
 ) = buildDeviceProfile {
 	val allowedAudioCodecs = when {
 		downMixAudio -> downmixSupportedAudioCodecs
@@ -465,11 +460,7 @@ fun createDeviceProfile(
 	val unsupportedRangeTypesHevc = buildSet {
 		add(VideoRangeType.DOVI_INVALID)
 
-		// When dvCompatMode is ON, suppress EL exclusions so the server direct-plays
-		// Profile 7 streams. DvCompatVideoRenderer rewrites them as Profile 8.1.
-		val suppressElExclusion = dvCompatMode
-
-		if (!supportsHevcDolbyVisionEL && !suppressElExclusion) {
+		if (!supportsHevcDolbyVisionEL) {
 			add(VideoRangeType.DOVI_WITH_EL)
 			if (!supportsHevcHDR10Plus && !KnownDefects.hevcDoviHdr10PlusBug) add(VideoRangeType.DOVI_WITH_ELHDR10_PLUS)
 
@@ -490,8 +481,6 @@ fun createDeviceProfile(
 			add(VideoRangeType.DOVI_WITH_ELHDR10_PLUS)
 		}
 	}
-
-	Timber.d("DV compat=%s force=%s, HEVC unsupported range types: %s", dvCompatMode, dvForceCompatMode, unsupportedRangeTypesHevc)
 
 	// Note: The codec profiles use a workaround to create correct behavior
 	// The notEquals condition will always fail the ConditionProcessor test in the server so we use applyConditions to only have the codec

@@ -24,7 +24,6 @@ private fun MediaStream.toTrack() = when (type) {
 	)
 	MediaStreamType.VIDEO -> MediaStreamVideoTrack(
 		codec = requireNotNull(codec),
-		isDolbyVisionP7 = false,
 	)
 	else -> null
 }

@@ -9,6 +9,4 @@ data class ExoPlayerOptions(
 	val enableLibAssRenderer: Boolean = false,
 	val assSubtitleFontScale: Float = 1.0f,
 	val baseDataSourceFactory: DataSource.Factory = DefaultHttpDataSource.Factory(),
-	val dvCompatMode: Boolean = false,
-	val dvForceCompatMode: Boolean = false,
 )

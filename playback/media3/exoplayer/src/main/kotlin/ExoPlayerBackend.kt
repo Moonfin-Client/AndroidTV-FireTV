@@ -15,8 +15,6 @@ import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
-import org.jellyfin.playback.media3.exoplayer.compat.DvCompatRenderersFactory
-import org.jellyfin.playback.core.mediastream.MediaStreamVideoTrack
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -45,7 +43,6 @@ import org.jellyfin.playback.core.ui.PlayerSurfaceView
 import org.jellyfin.playback.media3.exoplayer.support.getPlaySupportReport
 import org.jellyfin.playback.media3.exoplayer.support.toFormats
 import timber.log.Timber
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -61,7 +58,6 @@ class ExoPlayerBackend(
 	}
 
 	private var currentStream: PlayableMediaStream? = null
-	private val currentStreamIsDvP7 = AtomicBoolean(false)
 	private var subtitleView: SubtitleView? = null
 	private val audioPipeline = ExoPlayerAudioPipeline()
 	private val audioAttributeState = AudioAttributeState()
@@ -84,10 +80,7 @@ class ExoPlayerBackend(
 		}
 
 		val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
-		// DvCompatRenderersFactory is always active — it only fires for Profile 7 content.
-		// The user preference controls the device profile (whether the server direct-plays
-		// Profile 7 or transcodes), so end-to-end behaviour is unchanged for non-DV content.
-		val renderersFactory = DvCompatRenderersFactory(context, exoPlayerOptions.dvForceCompatMode, currentStreamIsDvP7).apply {
+		val renderersFactory = DefaultRenderersFactory(context).apply {
 			setEnableDecoderFallback(true)
 			setExtensionRendererMode(
 				when (exoPlayerOptions.preferFfmpeg) {
@@ -230,9 +223,6 @@ class ExoPlayerBackend(
 		if (currentStream == stream) return
 
 		currentStream = stream
-		currentStreamIsDvP7.set(
-			stream.tracks.filterIsInstance<MediaStreamVideoTrack>().any { it.isDolbyVisionP7 }
-		)
 
 		var preparedItemIndex = (0 until exoPlayer.mediaItemCount).firstOrNull { index ->
 			exoPlayer.getMediaItemAt(index).mediaId == stream.hashCode().toString()
@@ -287,7 +277,6 @@ class ExoPlayerBackend(
 	override fun stop() {
 		exoPlayer.stop()
 		currentStream = null
-		currentStreamIsDvP7.set(false)
 	}
 
 	override fun seekTo(position: Duration) {

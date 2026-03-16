@@ -83,8 +83,6 @@ fun Scope.createPlaybackManager() = playbackManager(androidContext()) {
 		enableLibAssRenderer = userPreferences[UserPreferences.assDirectPlay],
 		assSubtitleFontScale = userPreferences[UserPreferences.subtitlesTextSize] / 24f,
 		baseDataSourceFactory = get<HttpDataSource.Factory>(),
-		dvCompatMode = userPreferences[UserPreferences.dolbyVisionCompatMode],
-		dvForceCompatMode = userPreferences[UserPreferences.dolbyVisionForceCompatMode],
 	)
 	install(exoPlayerPlugin(get(), exoPlayerOptions))
 
