@@ -488,7 +488,7 @@ class LibraryBrowseFragment : Fragment() {
 				}
 			}
 
-			if (item.type == BaseItemKind.FOLDER || item.type == BaseItemKind.PHOTO_ALBUM) {
+			if ((item.type == BaseItemKind.FOLDER || item.type == BaseItemKind.PHOTO_ALBUM) && !uiState.useAutoImageType) {
 				val folderHeight = (cardWidth * 9) / 16
 				LibraryFolderCard(
 					item = item,
