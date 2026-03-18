@@ -24,6 +24,7 @@ enum class HomeSectionType(
 	NEXT_UP("nextup", R.string.home_section_next_up),
 	PLAYLISTS("playlists", R.string.home_section_playlists),
 	PLAYLIST_ITEMS("playlistitems", R.string.home_section_playlist_items),
+	COLLECTIONS("collections", R.string.home_section_collections),
 	LIVE_TV("livetv", R.string.home_section_livetv),
 	NONE("none", R.string.home_section_none),
 }

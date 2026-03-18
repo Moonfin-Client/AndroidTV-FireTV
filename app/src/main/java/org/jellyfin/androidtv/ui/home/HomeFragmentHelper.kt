@@ -192,6 +192,10 @@ class HomeFragmentHelper(
 		return HomeFragmentPlaylistItemsRow(api)
 	}
 
+	fun loadCollections(): HomeFragmentRow {
+		return HomeFragmentCollectionsRow(api)
+	}
+
 	companion object {
 		// Initial items to load for a row (pagination chunk size)
 		private const val HOME_ROW_CHUNK_SIZE = 15

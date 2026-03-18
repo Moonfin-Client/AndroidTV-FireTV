@@ -59,6 +59,7 @@ data class HomeSectionConfig(
 			HomeSectionConfig(HomeSectionType.ACTIVE_RECORDINGS, enabled = false, order = 9),
 			HomeSectionConfig(HomeSectionType.PLAYLISTS, enabled = false, order = 10),
 			HomeSectionConfig(HomeSectionType.PLAYLIST_ITEMS, enabled = false, order = 11),
+			HomeSectionConfig(HomeSectionType.COLLECTIONS, enabled = false, order = 12),
 		)
 	}
 }

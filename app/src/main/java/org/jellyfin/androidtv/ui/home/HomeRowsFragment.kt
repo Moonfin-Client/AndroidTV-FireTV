@@ -223,6 +223,9 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 				HomeSectionType.PLAYLIST_ITEMS -> {
 					rows.add(helper.loadPlaylistItems())
 				}
+				HomeSectionType.COLLECTIONS -> {
+					rows.add(helper.loadCollections())
+				}
 				HomeSectionType.LIVE_TV -> if (includeLiveTvRows) {
 					rows.add(liveTVRow)
 					rows.add(helper.loadOnNow())
