@@ -23,6 +23,7 @@ enum class HomeSectionType(
 	ACTIVE_RECORDINGS("activerecordings", R.string.home_section_active_recordings),
 	NEXT_UP("nextup", R.string.home_section_next_up),
 	PLAYLISTS("playlists", R.string.home_section_playlists),
+	PLAYLIST_ITEMS("playlistitems", R.string.home_section_playlist_items),
 	LIVE_TV("livetv", R.string.home_section_livetv),
 	NONE("none", R.string.home_section_none),
 }
