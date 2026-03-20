@@ -531,9 +531,9 @@ class LibraryBrowseFragment : Fragment() {
 			BoxWithConstraints(modifier = modifier.fillMaxSize()) {
 				val availableHeight = maxHeight - minPadding * 2
 				val cellHeight = cardHeight.dp + 16.dp
-				val rowCount = (availableHeight / cellHeight).toInt().coerceAtLeast(2)
+				val rowCount = (availableHeight / cellHeight).toInt().coerceAtLeast(1)
 				val gridHeight = cardHeight.dp * rowCount + 16.dp * (rowCount - 1)
-				val verticalPadding = (maxHeight - gridHeight) / 2
+				val verticalPadding = ((maxHeight - gridHeight) / 2).coerceAtLeast(0.dp)
 
 				LazyHorizontalGrid(
 					rows = GridCells.Fixed(rowCount),
