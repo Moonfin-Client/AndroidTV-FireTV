@@ -507,6 +507,8 @@
     <string name="home_section_active_recordings">Active recordings</string>
     <string name="home_section_next_up">Next up</string>
     <string name="home_section_playlists">Playlists</string>
+    <string name="home_section_playlist_items">Playlist carousels</string>
+    <string name="home_section_collections">Collection carousels</string>
     <string name="home_section_livetv">Live TV</string>
     <string name="home_section_resume_book">Continue reading</string>
     <string name="home_section_none">None</string>
