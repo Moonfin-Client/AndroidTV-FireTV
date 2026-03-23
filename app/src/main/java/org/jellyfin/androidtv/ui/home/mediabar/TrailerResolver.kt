@@ -3,11 +3,14 @@ package org.jellyfin.androidtv.ui.home.mediabar
 import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.api.client.extensions.videosApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import timber.log.Timber
 import java.util.UUID
 
@@ -22,12 +25,13 @@ data class TrailerPreviewInfo(
 }
 
 /** Resolves trailer previews for Jellyfin items, preferring local trailers over YouTube. */
-object TrailerResolver {
+object TrailerResolver : KoinComponent {
 
 	private const val YOUTUBE_HOST = "youtube.com"
 	private const val YOUTUBE_SHORT_HOST = "youtu.be"
 	private const val YOUTUBE_ID_PARAMETER = "v"
 	private const val YOUTUBE_ID_LENGTH = 11
+	private val user: UserRepository by inject()
 
 	fun extractYoutubeVideoId(url: String): String? {
 		return try {
@@ -52,7 +56,7 @@ object TrailerResolver {
 				}
 				else -> null
 			}
-		} catch (e: Exception) {
+		} catch (_: Exception) {
 			Timber.d("TrailerResolver: Failed to parse URL: $url")
 			null
 		}
@@ -107,7 +111,7 @@ object TrailerResolver {
 				),
 				isLocal = true,
 			)
-		} catch (e: Exception) {
+		} catch (_: Exception) {
 			null
 		}
 	}
@@ -139,7 +143,12 @@ object TrailerResolver {
 
 			Timber.d("TrailerResolver: SponsorBlock returned ${segments.size} segments, start at ${startSeconds}s")
 
-			val streamInfo = YouTubeStreamResolver.resolveStream(youtubeVideoId)
+			// get preferred language from user configuration
+			val preferredLanguage = user.currentUser.value?.configuration?.audioLanguagePreference
+			val streamInfo = YouTubeStreamResolver.resolveStream(
+				youtubeVideoId,
+				preferredLanguage
+			)
 			if (streamInfo == null) {
 				Timber.w("TrailerResolver: Could not resolve stream for $youtubeVideoId")
 				return@withContext null

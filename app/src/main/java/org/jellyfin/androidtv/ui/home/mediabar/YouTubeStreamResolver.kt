@@ -8,6 +8,7 @@ import org.schabi.newpipe.extractor.stream.AudioStream
 import org.schabi.newpipe.extractor.stream.DeliveryMethod
 import org.schabi.newpipe.extractor.stream.VideoStream
 import timber.log.Timber
+import java.util.Locale
 
 /**
  * Resolves direct video stream URLs from YouTube video IDs using
@@ -17,7 +18,8 @@ import timber.log.Timber
  * This resolver picks:
  *  1. The best H.264 (avc1) video-only stream ≤ 720p (widest device compatibility)
  *  2. Falls back to VP9 or AV1 if no avc1 is available
- *  3. The best AAC (mp4a) audio stream for the audio track
+ *  3. The best AAC (mp4a) audio stream for the users preferred language or
+ *  4. The best AAC (mp4a) audio stream for the audio track if no language match
  */
 object YouTubeStreamResolver {
 
@@ -41,10 +43,10 @@ object YouTubeStreamResolver {
 		}
 	}
 
-	suspend fun resolveStream(videoId: String): StreamInfo? = withContext(Dispatchers.IO) {
+	suspend fun resolveStream(videoId: String, lang: String? = null): StreamInfo? = withContext(Dispatchers.IO) {
 		try {
 			ensureInitialized()
-			val result = extractStreams(videoId)
+			val result = extractStreams(videoId, lang)
 			if (result != null) {
 				Timber.d("$TAG: Resolved stream for $videoId via NewPipe Extractor")
 			} else {
@@ -57,7 +59,7 @@ object YouTubeStreamResolver {
 		}
 	}
 
-	private fun extractStreams(videoId: String): StreamInfo? {
+	private fun extractStreams(videoId: String, lang: String? = null): StreamInfo? {
 		val url = "https://www.youtube.com/watch?v=$videoId"
 		val extractor = ServiceList.YouTube.getStreamExtractor(url)
 		extractor.fetchPage()
@@ -76,11 +78,12 @@ object YouTubeStreamResolver {
 
 		val bestVideo = pickBestVideo(videoOnlyStreams)
 		if (bestVideo != null) {
-			val bestAudio = pickBestAudio(audioStreams)
+			val bestAudio = pickBestAudio(audioStreams, lang)
 			Timber.d(
-				"$TAG: Selected video-only %s@%sp, audio %s@%sbps",
+				"$TAG: Selected video-only: %s@%sp, audio: %s@%sbps, lang: %s",
 				bestVideo.codec, bestVideo.height,
 				bestAudio?.codec ?: "none", bestAudio?.averageBitrate ?: 0,
+				bestAudio?.audioLocale?.language ?: "none",
 			)
 			return StreamInfo(
 				videoUrl = bestVideo.content,
@@ -114,8 +117,24 @@ object YouTubeStreamResolver {
 			.firstOrNull()
 	}
 
-	private fun pickBestAudio(streams: List<AudioStream>): AudioStream? {
-		return streams
+	private fun pickBestAudio(streams: List<AudioStream>, lang: String? = null): AudioStream? {
+		val normalized = if (lang.isNullOrBlank()) null else iso3ToIso2(lang)
+		// Filter by preferred language, if provided
+		val languageMatches = if (normalized != null) {
+			streams.filter {
+				it.audioLocale?.language?.lowercase() == normalized
+			}
+		} else emptyList()
+		Timber.d("YoutubeStreamResolver: Found ${languageMatches.size} audio streams for language: $normalized")
+		// If we found any matching streams, pick from these
+		val candidates = languageMatches.ifEmpty {
+			// Otherwise, fall back to all streams
+			Timber.d("YoutubeStreamResolver: No matching streams found for language: $normalized -- falling back to all")
+			streams
+		}
+		Timber.d("YoutubeStreamResolver: Picking from ${candidates.size} streams that match language: $normalized")
+		// Pick the best quality from available streams
+		return candidates
 			.sortedWith(
 				compareBy<AudioStream> {
 					if (it.codec?.startsWith("mp4a") == true) 0 else 1
@@ -131,4 +150,39 @@ object YouTubeStreamResolver {
 		codec.startsWith("av01") -> 2
 		else -> 3
 	}
+	// lazy map to convert ISO 3 letter codes to 2 letter
+	// eng -> en, spa -> es, ...
+	private val iso3ToIso2Map: Map<String, String> by lazy {
+		Locale.getAvailableLocales()
+			.mapNotNull { locale ->
+				runCatching {
+					val iso3 = locale.isO3Language.lowercase()
+					val iso2 = locale.language.lowercase()
+					if (iso3.isNotBlank() && iso2.isNotBlank()) {
+						iso3 to iso2
+					} else {
+						null
+					}
+				}.getOrNull()
+			}
+			.toMap()
+	}
+
+	// convert ISO 3 letter codes to 2 letter
+	// eng -> en, spa -> es, ...
+	private fun iso3ToIso2(iso3: String): String? =
+		iso3ToIso2Map[iso3.lowercase()]
+
+	/*
+	// pretty print helper for AudioStream
+	private fun AudioStream.describe(): String {
+		val lang = audioLocale?.language ?: "?"
+		val country = audioLocale?.country ?: "?"
+		val tag = audioLocale?.toLanguageTag() ?: "?"
+		val codec = codec ?: "?"
+		val bitrate = averageBitrate
+
+		return "AudioStream(lang=$lang, country=$country, tag=$tag, codec=$codec, bitrate=${bitrate}bps)"
+	}
+	*/
 }
