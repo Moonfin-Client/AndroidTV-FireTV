@@ -132,7 +132,7 @@ object YouTubeStreamResolver {
 			Timber.d("YoutubeStreamResolver: No matching streams found for language: $normalized -- falling back to all")
 			streams
 		}
-		Timber.d("YoutubeStreamResolver: Picking from ${candidates.size} streams that match language: $normalized")
+		Timber.d("YoutubeStreamResolver: Picking from ${candidates.size} streams")
 		// Pick the best quality from available streams
 		return candidates
 			.sortedWith(
