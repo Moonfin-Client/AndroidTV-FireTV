@@ -186,6 +186,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var nextUpBehavior = enumPreference("next_up_behavior", NextUpBehavior.EXTENDED)
 
 		/**
+		 * Merge Skip Outro and Play Next Up
+		 */
+		var mergeSkipOutroNextUp = booleanPreference("pref_merge_skip_outro_next_up", true)
+
+		/**
 		 * Next up timeout before playing next item
 		 * Stored in milliseconds
 		 */

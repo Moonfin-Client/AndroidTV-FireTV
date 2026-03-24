@@ -67,6 +67,17 @@ fun SettingsPlaybackNextUpScreen() {
 		}
 
 		item {
+			var mergeSkipOutroNextUp by rememberPreference(userPreferences, UserPreferences.mergeSkipOutroNextUp)
+
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_merge_skip_outro_next_up)) },
+				trailingContent = { Checkbox(checked = mergeSkipOutroNextUp) },
+				captionContent = { Text(stringResource(R.string.pref_merge_skip_outro_next_up_description)) },
+				onClick = { mergeSkipOutroNextUp = !mergeSkipOutroNextUp }
+			)
+		}
+
+		item {
 			var nextUpTimeout by rememberPreference(userPreferences, UserPreferences.nextUpTimeout)
 			val interactionSource = remember { MutableInteractionSource() }
 

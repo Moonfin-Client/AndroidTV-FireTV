@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.model.DataRefreshService
 import org.jellyfin.androidtv.data.repository.ItemMutationRepository
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.GuideChannelHeader
 import org.jellyfin.androidtv.ui.asTimerInfoDto
 import org.jellyfin.androidtv.ui.livetv.TvManager
@@ -194,13 +195,14 @@ fun CustomPlaybackOverlayFragment.askToSkip(position: Duration, segmentType: Med
 	// Post to main thread since this is called from ExoPlayer's playback thread
 	lifecycleScope.launch(Dispatchers.Main) {
 		val playbackController = playbackController
-		
-		// Only show "Play Next Episode" for OUTRO segments
+
+		// Only show "Play Next Episode" for OUTRO segments (if the user wants it)
 		val isOutro = segmentType == MediaSegmentType.OUTRO
 		val hasNextEpisode = playbackController?.hasNextItem() == true
 		val nextEpisode = playbackController?.nextItem
-		
-		if (isOutro && hasNextEpisode && nextEpisode != null) {
+		val mergeSkipOutroNextUp = userPreferences.value[UserPreferences.mergeSkipOutroNextUp]
+
+		if (isOutro && hasNextEpisode && nextEpisode != null && mergeSkipOutroNextUp) {
 			// Show "Play Next Episode" button for outro segments
 			binding.skipOverlay.targetPosition = position
 			binding.skipOverlay.nextEpisodeTitle = nextEpisode.name
