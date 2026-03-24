@@ -17,7 +17,8 @@ import timber.log.Timber
  * This resolver picks:
  *  1. The best H.264 (avc1) video-only stream ≤ 720p (widest device compatibility)
  *  2. Falls back to VP9 or AV1 if no avc1 is available
- *  3. The best AAC (mp4a) audio stream for the audio track
+ *  3. The best AAC (mp4a) audio stream for the users preferred language or
+ *  4. The best AAC (mp4a) audio stream for the audio track if no language match
  */
 object YouTubeStreamResolver {
 
@@ -41,10 +42,10 @@ object YouTubeStreamResolver {
 		}
 	}
 
-	suspend fun resolveStream(videoId: String): StreamInfo? = withContext(Dispatchers.IO) {
+	suspend fun resolveStream(videoId: String, lang: String? = null): StreamInfo? = withContext(Dispatchers.IO) {
 		try {
 			ensureInitialized()
-			val result = extractStreams(videoId)
+			val result = extractStreams(videoId, lang)
 			if (result != null) {
 				Timber.d("$TAG: Resolved stream for $videoId via NewPipe Extractor")
 			} else {
@@ -57,7 +58,7 @@ object YouTubeStreamResolver {
 		}
 	}
 
-	private fun extractStreams(videoId: String): StreamInfo? {
+	private fun extractStreams(videoId: String, lang: String? = null): StreamInfo? {
 		val url = "https://www.youtube.com/watch?v=$videoId"
 		val extractor = ServiceList.YouTube.getStreamExtractor(url)
 		extractor.fetchPage()
@@ -76,11 +77,12 @@ object YouTubeStreamResolver {
 
 		val bestVideo = pickBestVideo(videoOnlyStreams)
 		if (bestVideo != null) {
-			val bestAudio = pickBestAudio(audioStreams)
+			val bestAudio = pickBestAudio(audioStreams, lang)
 			Timber.d(
-				"$TAG: Selected video-only %s@%sp, audio %s@%sbps",
+				"$TAG: Selected video-only: %s@%sp, audio: %s@%sbps, lang: %s",
 				bestVideo.codec, bestVideo.height,
 				bestAudio?.codec ?: "none", bestAudio?.averageBitrate ?: 0,
+				bestAudio?.audioLocale?.language ?: "none",
 			)
 			return StreamInfo(
 				videoUrl = bestVideo.content,
@@ -114,8 +116,23 @@ object YouTubeStreamResolver {
 			.firstOrNull()
 	}
 
-	private fun pickBestAudio(streams: List<AudioStream>): AudioStream? {
-		return streams
+	private fun pickBestAudio(streams: List<AudioStream>, lang: String? = null): AudioStream? {
+		// Filter by preferred language, if provided
+		val languageMatches = if (lang != null) {
+			streams.filter {
+				it.audioLocale?.language?.lowercase() == lang
+			}
+		} else emptyList()
+		Timber.d("YoutubeStreamResolver: Found ${languageMatches.size} audio streams for language: $lang")
+		// If we found any matching streams, pick from these
+		val candidates = languageMatches.ifEmpty {
+			// Otherwise, fall back to all streams
+			Timber.d("YoutubeStreamResolver: No matching streams found for language: $lang -- falling back to all")
+			streams
+		}
+		Timber.d("YoutubeStreamResolver: Picking from ${candidates.size} streams")
+		// Pick the best quality from available streams
+		return candidates
 			.sortedWith(
 				compareBy<AudioStream> {
 					if (it.codec?.startsWith("mp4a") == true) 0 else 1
