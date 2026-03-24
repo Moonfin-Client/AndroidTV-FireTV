@@ -435,4 +435,6 @@
     <string name="pref_telemetry_category">Aqau turaly habarlau</string>
     <string name="server_setup_incomplete">Būl serverdıñ ornatuy aiaqtalmady. Kıru aldynda ornatudy aiaqtau üşın ueb-şolğyşta Jellyfin jüiesın aşyñyz.</string>
     <string name="episode_name_special">arnaiy</string>
+    <string name="pref_merge_skip_outro_next_up">Өткізіп жіберуді біріктіріп, келесіні ойнатыңыз</string>
+    <string name="pref_merge_skip_outro_next_up_description">Ағымдағы ойнатылатын элемент ойнату тізімінде соңғы болмағанда - Skip Outro сұрауы ағымдағы элементтің соңына өтудің орнына келесі элементтің басына өтеді.</string>
 </resources>

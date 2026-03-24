@@ -521,4 +521,6 @@
     <string name="clear_image_cache_content">Користено: %1$s</string>
     <string name="lbl_runtime">Времетраење</string>
     <string name="dolby_vision">Dolby Vision</string>
+    <string name="pref_merge_skip_outro_next_up">Спојте ги Skip Outro и Play Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">Кога ставката што моментално се репродуцира не е последна во плејлистата - барањето Skip Outro ќе прескокне до почетокот на следната ставка наместо да прескокне до крајот на тековната ставка</string>
 </resources>

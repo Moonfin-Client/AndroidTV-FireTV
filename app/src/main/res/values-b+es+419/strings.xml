@@ -584,4 +584,6 @@
     <string name="lbl_still_watching_very_long">8 episodios o 240 minutos</string>
     <string name="pref_subtitles_bold">Texto ancho</string>
     <string name="pref_subtitles_position">Desplazamiento desde la parte inferior</string>
+    <string name="pref_merge_skip_outro_next_up">Fusionar Saltar Outro y reproducir el siguiente</string>
+    <string name="pref_merge_skip_outro_next_up_description">Cuando el elemento que se está reproduciendo actualmente no es el último en la lista de reproducción, el mensaje Saltar salida saltará al inicio del siguiente elemento en lugar de saltar al final del elemento actual.</string>
 </resources>

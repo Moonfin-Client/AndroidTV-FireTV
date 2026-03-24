@@ -575,4 +575,6 @@
     <string name="preference_enable_pgs">直接播放 PGS 字幕</string>
     <string name="still_watching_label">你還在觀看嗎？</string>
     <string name="pref_subtitles_position">從底部偏移</string>
+    <string name="pref_merge_skip_outro_next_up">合併跳過尾奏並播放下一個</string>
+    <string name="pref_merge_skip_outro_next_up_description">當目前播放的項目不是播放清單中的最後一個時 - 跳過結尾提示將跳到下一個項目的開頭，而不是跳到當前項目的結尾</string>
 </resources>

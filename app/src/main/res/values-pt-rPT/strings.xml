@@ -625,4 +625,6 @@
     <string name="video_player_external">Leitor de vídeo externo</string>
     <string name="playback_video_player_external_empty">Não tem nenhum reprodutor de vídeo instalado no seu dispositivo que possa abrir vídeos do Jellyfin.</string>
     <string name="filters">Filtros</string>
+    <string name="pref_merge_skip_outro_next_up">Mesclar Saltar Outro e reproduzir a seguir</string>
+    <string name="pref_merge_skip_outro_next_up_description">Quando o item que está a ser reproduzido não é o último da lista de reprodução - o aviso Saltar Outro irá saltar para o início do item seguinte em vez de saltar para o fim do item atual</string>
 </resources>

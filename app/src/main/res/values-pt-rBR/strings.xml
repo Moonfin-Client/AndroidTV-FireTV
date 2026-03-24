@@ -625,4 +625,6 @@
     <string name="pref_playback_prerolls">Vídeos de introdução</string>
     <string name="video_player_internal">Reprodutor nativo</string>
     <string name="pref_playback_inactivity_prompt">Aviso de inatividade</string>
+    <string name="pref_merge_skip_outro_next_up">Mesclar Pular Outro e reproduzir a seguir</string>
+    <string name="pref_merge_skip_outro_next_up_description">Quando o item atualmente sendo reproduzido não é o último da lista de reprodução - o prompt Pular Outro irá pular para o início do próximo item em vez de pular para o final do item atual</string>
 </resources>

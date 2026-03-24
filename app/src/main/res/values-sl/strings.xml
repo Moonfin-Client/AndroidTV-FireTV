@@ -605,4 +605,6 @@
     <string name="preference_enable_libass">Omogoči napredni prikaz podnapisov SubStation Alpha na odjemalcu</string>
     <string name="still_watching_label">Še vedno gledaš?</string>
     <string name="pref_subtitles_position">Spodnji odmik</string>
+    <string name="pref_merge_skip_outro_next_up">Združi Preskoči Outro in Predvajaj naprej</string>
+    <string name="pref_merge_skip_outro_next_up_description">Če element, ki se trenutno predvaja, ni zadnji na seznamu predvajanja - poziv Skip Outro bo preskočil na začetek naslednjega elementa, namesto da bi preskočil na konec trenutnega elementa</string>
 </resources>

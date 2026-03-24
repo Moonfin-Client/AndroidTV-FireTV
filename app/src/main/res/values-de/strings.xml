@@ -643,4 +643,6 @@
     <string name="lbl_movies_count">Filme (%1$d)</string>
     <string name="lbl_series_count">Serien (%1$d)</string>
     <string name="select_reorder_items">Um Elemente neu anzuordnen, drücken Sie links und rechts auf dem Steuerkreuz</string>
+    <string name="pref_merge_skip_outro_next_up">Zusammenführen, Outro überspringen und als Nächstes abspielen</string>
+    <string name="pref_merge_skip_outro_next_up_description">Wenn das aktuell wiedergegebene Element nicht das letzte in der Wiedergabeliste ist, springt die Aufforderung „Outro überspringen“ zum Anfang des nächsten Elements, anstatt zum Ende des aktuellen Elements</string>
 </resources>

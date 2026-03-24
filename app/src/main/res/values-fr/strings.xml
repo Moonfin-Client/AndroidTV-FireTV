@@ -654,4 +654,6 @@
     <string name="lbl_movies_count">Films (%1$d)</string>
     <string name="lbl_series_count">Séries (%1$d)</string>
     <string name="select_reorder_items">Pour réorganiser les éléments, appuyez sur gauche et droite du pavé directionnel</string>
+    <string name="pref_merge_skip_outro_next_up">Fusionner Skip Outro et Play Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">Lorsque l\'élément en cours de lecture n\'est pas le dernier de la liste de lecture - L\'invite Sauter l\'Outro passera au début de l\'élément suivant au lieu de passer à la fin de l\'élément en cours.</string>
 </resources>

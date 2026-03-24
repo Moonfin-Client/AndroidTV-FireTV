@@ -585,4 +585,6 @@
     <string name="pref_report_device_profile_success">Dokument indsendt som %1$s</string>
     <string name="pref_report_device_profile_failure">Det lykkedes ikke at sende dokumentet. Din Jellyfin-server tillader måske ikke indsendelse af klientlogge.</string>
     <string name="pref_subtitles_position">Afstand fra bunden</string>
+    <string name="pref_merge_skip_outro_next_up">Flet Skip Outro og Play Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">Når det aktuelt afspillede element ikke er det sidste på afspilningslisten - Spring Outro-prompten springer til starten på det næste element i stedet for at springe til slutningen af ​​det aktuelle element</string>
 </resources>

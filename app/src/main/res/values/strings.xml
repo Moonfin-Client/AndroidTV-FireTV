@@ -1170,4 +1170,6 @@
     </plurals>
     <string name="lbl_sort_and_filter">Sort and Filter</string>
     <string name="lbl_status_title">Status</string>
+    <string name="pref_merge_skip_outro_next_up">Merge Skip Outro and Play Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">When the currently playing item is not the last in the playlist - Skip Outro prompt will skip to the start on the next item instead of skipping to the end of the current item</string>
 </resources>

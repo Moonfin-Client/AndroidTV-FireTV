@@ -656,4 +656,6 @@
     <string name="lbl_movies_count">Películas (%1$d)</string>
     <string name="lbl_series_count">Series (%1$d)</string>
     <string name="select_reorder_items">Para reordenar los elementos, presiona izquierda y derecha en el D‑pad</string>
+    <string name="pref_merge_skip_outro_next_up">Fusionar Saltar Outro y reproducir el siguiente</string>
+    <string name="pref_merge_skip_outro_next_up_description">Cuando el elemento que se está reproduciendo actualmente no es el último en la lista de reproducción, el mensaje Saltar salida saltará al inicio del siguiente elemento en lugar de saltar al final del elemento actual.</string>
 </resources>

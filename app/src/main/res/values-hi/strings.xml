@@ -583,4 +583,6 @@
     <string name="pref_screensaver_ageratingmax">अधिकतम आयु रेटिंग</string>
     <string name="pref_screensaver_ageratingmax_zero">सभी उम्र</string>
     <string name="pref_subtitles_position">नीचे से अंतर</string>
+    <string name="pref_merge_skip_outro_next_up">मर्ज स्किप आउट्रो और प्ले नेक्स्ट अप</string>
+    <string name="pref_merge_skip_outro_next_up_description">जब वर्तमान में चल रहा आइटम प्लेलिस्ट में अंतिम नहीं है - तो स्किप आउट्रो प्रॉम्प्ट वर्तमान आइटम के अंत तक जाने के बजाय अगले आइटम की शुरुआत में चला जाएगा।</string>
 </resources>

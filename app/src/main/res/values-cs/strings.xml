@@ -626,4 +626,6 @@
     <string name="video_player_external">Externí aplikace</string>
     <string name="playback_video_player_external_empty">Na vašem zařízení nemáte nainstalované žádné videopřehrávače, které dokáží otevřít videa Jellyfin.</string>
     <string name="filters">Filtry</string>
+    <string name="pref_merge_skip_outro_next_up">Sloučit Přeskočit Outro a hrát jako další</string>
+    <string name="pref_merge_skip_outro_next_up_description">Když aktuálně přehrávaná položka není poslední v seznamu skladeb – výzva Skip Outro přeskočí na začátek další položky namísto přeskočení na konec aktuální položky</string>
 </resources>

@@ -344,4 +344,6 @@
     <string name="pref_live_tv_cat">തത്സമയ ടി വി</string>
     <string name="msg_subtitles_loading">സബ്ടൈറ്റിലുകൾ ലോഡ് ചെയ്യുന്നു…</string>
     <string name="because_you_watched">കാരണം നിങ്ങൾ %1$s കണ്ടു</string>
+    <string name="pref_merge_skip_outro_next_up">ലയിപ്പിക്കുക ഔട്ട്‌റോ ഒഴിവാക്കി അടുത്തത് പ്ലേ ചെയ്യുക</string>
+    <string name="pref_merge_skip_outro_next_up_description">നിലവിൽ പ്ലേ ചെയ്യുന്ന ഇനം പ്ലേലിസ്റ്റിൽ അവസാനത്തേതല്ലെങ്കിൽ - നിലവിലെ ഇനത്തിൻ്റെ അവസാനത്തിലേക്ക് കടക്കുന്നതിന് പകരം അടുത്ത ഇനത്തിൻ്റെ ആരംഭത്തിലേക്ക് ഒഴിവാക്കുക ഔട്ട്‌റോ പ്രോംപ്റ്റ് ഒഴിവാക്കും</string>
 </resources>

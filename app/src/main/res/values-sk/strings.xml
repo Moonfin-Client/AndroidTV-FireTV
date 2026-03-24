@@ -609,4 +609,6 @@
     <string name="pref_media_queueing_description">Pridanie ďalších epizód do frontu pri prehrávaní televízneho seriálu</string>
     <string name="pref_subtitles_weight">Hrúbka textu</string>
     <string name="font_weight_100">Tenký</string>
+    <string name="pref_merge_skip_outro_next_up">Zlúčiť Skip Outro a Play Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">Ak aktuálne prehrávaná položka nie je posledná v zozname skladieb – výzva Skip Outro preskočí na začiatok ďalšej položky namiesto preskočenia na koniec aktuálnej položky</string>
 </resources>

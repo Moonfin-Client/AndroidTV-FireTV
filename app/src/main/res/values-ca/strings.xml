@@ -625,4 +625,6 @@
     <string name="font_weight_100">Prima</string>
     <string name="pref_subtitles_weight">Gruix del text</string>
     <string name="filters">Filtres</string>
+    <string name="pref_merge_skip_outro_next_up">Combina Skip Outro i Play Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">Quan l\'element que s\'està reproduint actualment no és l\'últim de la llista de reproducció, el missatge de Saltar Outro saltarà al començament de l\'element següent en lloc de saltar al final de l\'element actual</string>
 </resources>

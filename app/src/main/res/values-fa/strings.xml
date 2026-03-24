@@ -458,4 +458,6 @@
     <string name="lbl_subtitle_text_color">رنگ نوشته زیرنویس</string>
     <string name="lbl_subtitle_text_stroke_color">رنگ زیرنویس</string>
     <string name="lbl_subtitle_background_color">رنگ پشت صفحه زیرنویس</string>
+    <string name="pref_merge_skip_outro_next_up">Skip Outro را ادغام کنید و Next Up را پخش کنید</string>
+    <string name="pref_merge_skip_outro_next_up_description">هنگامی که آیتم در حال پخش آخرین مورد در لیست پخش نیست - درخواست Skip Outro به جای پرش به انتهای آیتم فعلی به شروع مورد بعدی می‌رود.</string>
 </resources>

@@ -435,4 +435,6 @@
     <string name="pref_telemetry_description">Sendi kraŝraportojn, inkluzivi protokolojn</string>
     <string name="server_setup_incomplete">La agordo de ĉi tiu servilo ne estas finita. Malfermu Jellyfin en TTT-foliumilo por fini agordon antaŭ ensaluti.</string>
     <string name="episode_name_special">speciala</string>
+    <string name="pref_merge_skip_outro_next_up">Kunfandi Skip Outro kaj Ludu Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">Kiam la nun ludanta ero ne estas la lasta en la ludlisto - Skip Outro-programo saltos al la komenco de la sekva ero anstataŭ salti al la fino de la nuna ero</string>
 </resources>

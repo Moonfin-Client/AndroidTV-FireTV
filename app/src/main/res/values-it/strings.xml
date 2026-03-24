@@ -618,4 +618,6 @@
     <string name="font_weight_800">Extra grassetto</string>
     <string name="font_weight_900">Nero</string>
     <string name="subtitle_preview_text">I sottotitoli appariranno così</string>
+    <string name="pref_merge_skip_outro_next_up">Unisci Salta outro e Riproduci il successivo</string>
+    <string name="pref_merge_skip_outro_next_up_description">Quando l\'elemento attualmente in riproduzione non è l\'ultimo nella playlist: il messaggio Skip Outro salterà all\'inizio dell\'elemento successivo invece di saltare alla fine dell\'elemento corrente</string>
 </resources>

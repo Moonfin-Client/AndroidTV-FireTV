@@ -586,4 +586,6 @@
     <string name="still_watching_label">Még mindig figyel?</string>
     <string name="pref_subtitles_position">Alsó eltolás</string>
     <string name="settings">Beállítások</string>
+    <string name="pref_merge_skip_outro_next_up">Egyesítse a Skip Outro-t és a Play Next Up-ot</string>
+    <string name="pref_merge_skip_outro_next_up_description">Ha az éppen lejátszott elem nem az utolsó a lejátszási listában - a Skip Outro prompt a következő elem elejére ugrik, nem pedig az aktuális elem végére.</string>
 </resources>

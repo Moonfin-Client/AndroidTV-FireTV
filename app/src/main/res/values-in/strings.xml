@@ -538,4 +538,6 @@
     <string name="lbl_still_watching_very_long">8 episode atau 240 menit</string>
     <string name="pref_subtitles_bold">Teks tebal</string>
     <string name="dts_hd">DTS:HD</string>
+    <string name="pref_merge_skip_outro_next_up">Gabungkan Lewati Outro dan Mainkan Selanjutnya</string>
+    <string name="pref_merge_skip_outro_next_up_description">Jika item yang sedang diputar bukan yang terakhir dalam daftar putar - Perintah Lewati Outro akan melompat ke awal pada item berikutnya alih-alih melompat ke akhir item saat ini</string>
 </resources>

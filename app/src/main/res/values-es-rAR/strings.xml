@@ -626,4 +626,6 @@
     <string name="video_player_external">Aplicación externa</string>
     <string name="playback_video_player_external_empty">No tenés ninguna aplicación para reproducir video instalada en tu dispositivo que pueda abrir videos de Jellyfin.</string>
     <string name="filters">Filtros</string>
+    <string name="pref_merge_skip_outro_next_up">Fusionar Saltar Outro y reproducir el siguiente</string>
+    <string name="pref_merge_skip_outro_next_up_description">Cuando el elemento que se está reproduciendo actualmente no es el último en la lista de reproducción, el mensaje Saltar salida saltará al inicio del siguiente elemento en lugar de saltar al final del elemento actual.</string>
 </resources>

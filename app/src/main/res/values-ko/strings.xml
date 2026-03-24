@@ -553,4 +553,6 @@
     <string name="skip_forward_length">앞으로 건너뛰기 길이</string>
     <string name="runtime_hours_minutes">%1$d시간 %2$d분</string>
     <string name="runtime_minutes">%1$d분</string>
+    <string name="pref_merge_skip_outro_next_up">아웃트로 건너뛰기 및 다음 플레이 병합</string>
+    <string name="pref_merge_skip_outro_next_up_description">현재 재생 중인 항목이 재생 목록의 마지막 항목이 아닌 경우 - Skip Outro 프롬프트는 현재 항목의 끝으로 건너뛰는 대신 다음 항목의 시작 부분으로 건너뜁니다.</string>
 </resources>

@@ -570,4 +570,6 @@
     <string name="preference_enable_trickplay">Habilitar previsualizaciones en el reproductor</string>
     <string name="skip_forward_length">Duración del salto hacia adelante</string>
     <string name="lbl_exit">Salir</string>
+    <string name="pref_merge_skip_outro_next_up">Fusionar Saltar Outro y reproducir el siguiente</string>
+    <string name="pref_merge_skip_outro_next_up_description">Cuando el elemento que se está reproduciendo actualmente no es el último en la lista de reproducción, el mensaje Saltar salida saltará al inicio del siguiente elemento en lugar de saltar al final del elemento actual.</string>
 </resources>

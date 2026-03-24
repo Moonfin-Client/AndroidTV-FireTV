@@ -636,4 +636,6 @@
     <string name="video_player_internal">Встроенный видео проигрыватель</string>
     <string name="video_player_external">Внешнее приложение</string>
     <string name="playback_video_player_external_empty">У вас нет ни одного приложения для воспроизведения видео, которое может открывать видео из Jellyfin.</string>
+    <string name="pref_merge_skip_outro_next_up">Объединить Пропуск Аутро и Играть дальше</string>
+    <string name="pref_merge_skip_outro_next_up_description">Если воспроизводимый в данный момент элемент не является последним в списке воспроизведения, подсказка Skip Outro будет переходить к началу следующего элемента вместо перехода к концу текущего элемента.</string>
 </resources>

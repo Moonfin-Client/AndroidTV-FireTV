@@ -560,4 +560,6 @@
     <string name="font_weight_100">Λεπτό</string>
     <string name="font_weight_200">Πολύ λεπτό</string>
     <string name="filters">Φίλτρα</string>
+    <string name="pref_merge_skip_outro_next_up">Συγχώνευση Skip Outro και Play Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">Όταν το στοιχείο που παίζεται αυτήν τη στιγμή δεν είναι το τελευταίο στη λίστα αναπαραγωγής - Το μήνυμα Skip Outro θα μεταπηδήσει στην αρχή του επόμενου στοιχείου αντί να μεταπηδήσει στο τέλος του τρέχοντος στοιχείου</string>
 </resources>

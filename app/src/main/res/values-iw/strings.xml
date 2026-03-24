@@ -628,4 +628,6 @@
     <string name="video_player_external">אפליקציה חיצונית</string>
     <string name="playback_video_player_external_empty">אין לך אפליקציות נגן מותקנות על מכשירך שיודעות לנגן וידאו מ-Jellyfin.</string>
     <string name="filters">מסננים</string>
+    <string name="pref_merge_skip_outro_next_up">מיזוג Skip Outro ו-Play Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">כאשר הפריט המושמע כעת אינו האחרון ברשימת ההשמעה - הודעת דלג על Outro תדלג להתחלה בפריט הבא במקום לדלג לסוף הפריט הנוכחי</string>
 </resources>

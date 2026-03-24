@@ -636,4 +636,6 @@
     <string name="video_player_external">Зовнішній додаток</string>
     <string name="playback_video_player_external_empty">На вашому пристрої не встановлено програми відеопрогравача, які можуть відкривати відео Jellyfin.</string>
     <string name="filters">Фільтри</string>
+    <string name="pref_merge_skip_outro_next_up">Об’єднати, пропустити Outro та відтворити далі</string>
+    <string name="pref_merge_skip_outro_next_up_description">Якщо елемент, який зараз відтворюється, не є останнім у списку відтворення, підказка Skip Outro перейде до початку наступного елемента замість того, щоб перейти до кінця поточного елемента</string>
 </resources>

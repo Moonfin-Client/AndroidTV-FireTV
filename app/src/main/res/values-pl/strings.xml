@@ -636,4 +636,6 @@
     <string name="video_player_external">Zewnętrzna aplikacja</string>
     <string name="playback_video_player_external_empty">Na tym urządzeniu nie ma zainstalowanej żadnej aplikacji do odtwarzania wideo, która mogłaby otwierać pliki wideo Jellyfin.</string>
     <string name="filters">Filtry</string>
+    <string name="pref_merge_skip_outro_next_up">Połącz Pomiń zakończenie i zagraj w następny</string>
+    <string name="pref_merge_skip_outro_next_up_description">Gdy aktualnie odtwarzany element nie jest ostatnim na liście odtwarzania — monit o pominięcie zakończenia spowoduje przejście do początku następnego elementu zamiast do końca bieżącego elementu</string>
 </resources>

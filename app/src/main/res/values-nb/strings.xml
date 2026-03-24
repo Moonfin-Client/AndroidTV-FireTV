@@ -616,4 +616,6 @@
     <string name="video_player_external">Ekstern app</string>
     <string name="playback_video_player_external_empty">Du har ingen videospillere installert på enheten din som kan åpne videoer fra Jellyfin.</string>
     <string name="filters">Filtere</string>
+    <string name="pref_merge_skip_outro_next_up">Slå sammen Skip Outro og Play Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">Når elementet som spilles for øyeblikket ikke er det siste i spillelisten - Skip Outro-prompten vil hoppe til starten på neste element i stedet for å hoppe til slutten av gjeldende element</string>
 </resources>

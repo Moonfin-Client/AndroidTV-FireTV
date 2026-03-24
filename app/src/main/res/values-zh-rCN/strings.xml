@@ -606,4 +606,6 @@
     <string name="video_player_external">外部应用程序</string>
     <string name="playback_video_player_external_empty">您的设备上没有安装任何可以播放 Jellyfin 视频的播放器应用程序。</string>
     <string name="filters">筛选器</string>
+    <string name="pref_merge_skip_outro_next_up">合并跳过尾奏并播放下一个</string>
+    <string name="pref_merge_skip_outro_next_up_description">当当前播放的项目不是播放列表中的最后一个时 - 跳过结尾提示将跳到下一个项目的开头，而不是跳到当前项目的结尾</string>
 </resources>

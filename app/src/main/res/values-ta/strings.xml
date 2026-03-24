@@ -586,4 +586,6 @@
     <string name="pref_subtitles_position">கீழிருந்து ஆஃப்செட்</string>
     <string name="settings">அமைப்பு</string>
     <string name="settings_description">உங்கள் விருப்பப்படி பயன்பாட்டை மாற்றவும்</string>
+    <string name="pref_merge_skip_outro_next_up">ஸ்கிப் அவுட்ரோவை ஒன்றிணைத்து அடுத்து விளையாடவும்</string>
+    <string name="pref_merge_skip_outro_next_up_description">பிளேலிஸ்ட்டில் தற்போது இயங்கும் உருப்படி கடைசியாக இல்லாதபோது - Skip Outro ப்ராம்ட் தற்போதைய உருப்படியின் இறுதிக்குச் செல்வதற்குப் பதிலாக அடுத்த உருப்படியின் தொடக்கத்திற்குச் செல்லும்</string>
 </resources>

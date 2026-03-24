@@ -616,4 +616,6 @@
     <string name="video_player_internal">Ingebouwde videospeler</string>
     <string name="playback_video_player_external_empty">Je hebt geen apps op je apparaat staan die video\'s van Jellyfin kunnen afspelen.</string>
     <string name="filters">Filters</string>
+    <string name="pref_merge_skip_outro_next_up">Voeg Skip Outro samen en speel Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">Wanneer het momenteel afgespeelde item niet het laatste in de afspeellijst is, springt de Skip Outro-prompt naar het begin van het volgende item in plaats van naar het einde van het huidige item</string>
 </resources>

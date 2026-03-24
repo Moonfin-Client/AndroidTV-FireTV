@@ -655,4 +655,6 @@
     <string name="video_player_external">تطبيق خارجي</string>
     <string name="playback_video_player_external_empty">لا تملك أي تطبيق تشغيل فيديو مٌنصّب على جهازك لفتح فيديوات Jellyfin.</string>
     <string name="filters">مرشحات</string>
+    <string name="pref_merge_skip_outro_next_up">دمج تخطي الخاتمة واللعب التالي</string>
+    <string name="pref_merge_skip_outro_next_up_description">عندما لا يكون العنصر الذي يتم تشغيله حاليًا هو العنصر الأخير في قائمة التشغيل - ستنتقل رسالة Skip Outro إلى بداية العنصر التالي بدلاً من التخطي إلى نهاية العنصر الحالي</string>
 </resources>

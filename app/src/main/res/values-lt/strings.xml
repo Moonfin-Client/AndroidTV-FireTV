@@ -593,4 +593,6 @@
     <string name="rewind">Persukti</string>
     <string name="preference_enable_libass">Įjungti išplėstinį SubStation Alpha subtitrų kliento atvaizdavimą</string>
     <string name="still_watching_label">Ar vis dar žiūrite?</string>
+    <string name="pref_merge_skip_outro_next_up">Sujunkite Skip Outro ir Play Next Up</string>
+    <string name="pref_merge_skip_outro_next_up_description">Kai šiuo metu grojamas elementas grojaraštyje nėra paskutinis - Skip Outro raginimas pereis į kito elemento pradžią, o ne į dabartinio elemento pabaigą</string>
 </resources>

@@ -606,4 +606,6 @@
     <string name="video_player_external">Ứng dụng bên ngoài</string>
     <string name="playback_video_player_external_empty">Bạn chưa cài đặt bất kỳ ứng dụng trình phát video nào trên thiết bị của mình có thể mở video Jellyfin.</string>
     <string name="filters">Bộ lọc</string>
+    <string name="pref_merge_skip_outro_next_up">Hợp nhất Bỏ qua Outro và chơi tiếp theo</string>
+    <string name="pref_merge_skip_outro_next_up_description">Khi mục hiện đang phát không phải là mục cuối cùng trong danh sách phát - Lời nhắc Bỏ qua Outro sẽ chuyển sang phần đầu của mục tiếp theo thay vì bỏ qua đến cuối mục hiện tại</string>
 </resources>
