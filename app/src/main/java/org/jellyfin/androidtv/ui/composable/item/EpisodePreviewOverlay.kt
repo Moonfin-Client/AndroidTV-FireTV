@@ -40,15 +40,19 @@ import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.playback.segment.MediaSegmentRepository
 import org.jellyfin.androidtv.util.UUIDUtils
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
+import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.api.client.extensions.videosApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.MediaSegmentType
+import org.jellyfin.sdk.model.api.MediaStream
+import org.jellyfin.sdk.model.api.MediaStreamType
 import org.koin.compose.koinInject
 import timber.log.Timber
 
@@ -90,6 +94,7 @@ fun EpisodePreviewOverlay(
 	val context = LocalContext.current
 	val api = koinInject<ApiClient>()
 	val apiClientFactory = koinInject<ApiClientFactory>()
+	val userRepository = koinInject<UserRepository>()
 	val mediaSegmentRepository = koinInject<MediaSegmentRepository>()
 	val httpDataSourceFactory = koinInject<HttpDataSource.Factory>()
 
@@ -121,16 +126,29 @@ fun EpisodePreviewOverlay(
 
 		delay(PREVIEW_START_DELAY_MS)
 
+		val userId = userRepository.currentUser.value?.id ?: return@LaunchedEffect
 		try {
 			val (primaryUrl, introEndMs) = withContext(Dispatchers.IO) {
+				// get users preferred audio language
+				val preferredLanguage = userRepository.currentUser.value?.configuration?.audioLanguagePreference
+				val itemDetails = effectiveApi.userLibraryApi.getItem(item.id, userId).content
+				// jellyfin uses 3 letter country codes here, no need to convert to 2 letter
+				var audioStreams: List<MediaStream>? = itemDetails.mediaSources?.firstOrNull()?.mediaStreams?.filter { it.type == MediaStreamType.AUDIO }
+				val match = audioStreams?.find { it.language?.equals(preferredLanguage, ignoreCase = true) == true }
+				// use matched language index, or try first audio track, null otherwise
+				val audioIndex = match?.index ?: audioStreams?.firstOrNull()?.index
+				Timber.d("EpisodePreviewOverlay: ${item.name}, audio lang: ${if (match != null) "${match.language}" else if (audioIndex != null) "Default" else "None"}, index: $audioIndex")
+
 				// Transcoded stream first: forces H.264 8-bit (SDR), no Dolby Vision/HDR
 				val transcoded = effectiveApi.videosApi.getVideoStreamUrl(
 					itemId = item.id,
 					static = false,
 					videoCodec = "h264",
-					audioCodec = "aac",
 					maxVideoBitDepth = 8,
-					audioBitRate = 128000,
+					videoBitRate = 1_000_000, // 1 Mbps, force a bitrate or jellyfin will try something stupid
+					audioCodec = "aac",
+					audioStreamIndex = audioIndex,
+					audioBitRate = 128_000,
 					audioChannels = 2,
 					subtitleMethod = org.jellyfin.sdk.model.api.SubtitleDeliveryMethod.DROP,
 				)
